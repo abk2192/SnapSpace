@@ -125,7 +125,7 @@ export class EditorView {
 
     updateToolbarState() {
         document.querySelectorAll('.wysiwyg-toolbar .btn').forEach(b => b.classList.remove('active-format'));
-        document.querySelectorAll('.tbl-btn').forEach(b => b.style.display = 'none');
+        document.querySelectorAll('.tbl-controls').forEach(b => b.style.display = 'none');
         
         const sel = window.getSelection(); if (!sel || !sel.rangeCount) return; 
         let node = sel.anchorNode; if (node?.nodeType === 3) node = node.parentNode || null; if (!node || typeof node.closest !== 'function') return;
@@ -147,15 +147,21 @@ export class EditorView {
                 const top = cellRect.top - wrapRect.top;
                 const left = cellRect.left - wrapRect.left;
                 
-                const bAR = wrap.querySelector('.tbl-add-row');
-                const bAC = wrap.querySelector('.tbl-add-col');
-                const bDR = wrap.querySelector('.tbl-del-row');
-                const bDC = wrap.querySelector('.tbl-del-col');
+                const rCtrl = wrap.querySelector('.tbl-row-controls');
+                const cCtrl = wrap.querySelector('.tbl-col-controls');
                 
-                if (bAR) { bAR.style.display = 'grid'; bAR.style.top = `${top + cellRect.height - 9}px`; bAR.style.left = `${left + cellRect.width / 2 - 20}px`; }
-                if (bDR) { bDR.style.display = 'grid'; bDR.style.top = `${top + cellRect.height - 9}px`; bDR.style.left = `${left + cellRect.width / 2 + 2}px`; }
-                if (bAC) { bAC.style.display = 'grid'; bAC.style.top = `${top + cellRect.height / 2 - 20}px`; bAC.style.left = `${left + cellRect.width - 9}px`; }
-                if (bDC) { bDC.style.display = 'grid'; bDC.style.top = `${top + cellRect.height / 2 + 2}px`; bDC.style.left = `${left + cellRect.width - 9}px`; }
+                if (rCtrl) { 
+                    rCtrl.style.display = 'flex'; 
+                    rCtrl.style.top = `${top + cellRect.height}px`; 
+                    rCtrl.style.left = `${left + cellRect.width / 2}px`; 
+                    rCtrl.style.transform = `translateX(-50%)`;
+                }
+                if (cCtrl) { 
+                    cCtrl.style.display = 'flex'; 
+                    cCtrl.style.top = `${top + cellRect.height / 2}px`; 
+                    cCtrl.style.left = `${left + cellRect.width}px`; 
+                    cCtrl.style.transform = `translateY(-50%)`;
+                }
             }
         }
     }

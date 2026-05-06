@@ -74,6 +74,17 @@
   #workspaceTitleInput:hover { background: var(--surface-2); border-color: var(--outline); }
   #workspaceTitleInput:focus { background: var(--input-bg); border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
 
+  /* Unified Title Group Component */
+  .title-group { display: flex; align-items: center; background: var(--surface-2); padding: 4px 6px 4px 4px; border-radius: 12px; border: 1px solid transparent; transition: all 0.2s ease; margin-right: auto; max-width: 100%; flex: 0 1 auto; overflow: hidden;}
+  .title-group:hover { border-color: var(--outline); background: var(--surface); }
+  .title-group:focus-within { background: var(--input-bg); border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
+  
+  .title-group .title { margin-right: 6px; padding-right: 10px; border-right: 2px solid var(--outline-2); font-size: 15px; min-width: auto; gap: 8px;}
+  .title-group .title .badge { width: 30px; height: 30px; border-radius: 8px; margin-right: 0;}
+  .title-group .title .badge svg { width: 16px; height: 16px; }
+  
+  .title-group #workspaceTitleInput { background: transparent !important; border: none !important; box-shadow: none !important; padding: 4px; font-size: 15px; margin: 0; flex: 1; min-width: 80px; }
+
   .actions{ display:flex; gap:8px; flex: none; flex-wrap: nowrap; justify-content:flex-end; align-items: center; overflow: visible; scrollbar-width: none; }
   .actions::-webkit-scrollbar { display: none; } /* Hide scrollbar for clean look */
   
@@ -211,11 +222,14 @@
   .summary-sub{ font-size: 12px; color: var(--muted); }
   
   /* INLINE HEADER INPUT */
-  .header-name-input { flex: 1; background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 4px 8px; font-family: inherit; font-size: 14px; font-weight: 750; color: var(--text); transition: all 0.2s ease; min-width: 150px; outline: none; }
-  .header-name-input:hover { background: var(--surface-2); border-color: var(--outline); }
-  .header-name-input:focus { background: var(--input-bg); border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
+  .header-name-input { flex: 1; background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 4px 8px; font-family: inherit; font-size: 14px; font-weight: 750; color: var(--text); transition: all 0.2s ease; min-width: 150px; outline: none; cursor: pointer; pointer-events: none; text-overflow: ellipsis; }
   .header-name-input::placeholder { color: var(--muted); opacity: 0.7; font-weight: 600; }
-  details:not([open]) .header-name-input { pointer-events: none; } /* Passes clicks through to expand card */
+  .header-name-input.editing { pointer-events: auto; cursor: text; background: var(--input-bg); border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
+
+  .edit-name-btn { opacity: 0; transition: opacity 0.2s ease; margin-left: -4px; padding: 4px; }
+  details[open] summary:hover .edit-name-btn { opacity: 1; }
+  .edit-name-btn:hover { color: var(--primary); background: var(--primary-light); border-radius: 4px; }
+  details:not([open]) .edit-name-btn { display: none; } /* Hide edit inline button when collapsed (use kebab menu instead) */
 
   .summary-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
   .summary-actions .btn { padding: 6px 10px; font-size: 12px; }
@@ -267,19 +281,36 @@
   .evidence-table td:focus { outline: 2px solid var(--primary-light); background: var(--surface-2); }
 
   .evidence-wrap{ position: relative; margin-top: 16px; }
-  .tbl-btn {
-      position: absolute; display: none; width: 18px; height: 18px;
-      color: #fff; border: 1.5px solid var(--surface);
-      border-radius: 50%; cursor: pointer; z-index: 10;
-      place-items: center; box-shadow: var(--shadow); padding: 0;
-      transition: transform 0.15s ease; outline: none;
+  /* Refined Contextual Table Controls */
+  .tbl-controls {
+      position: absolute; display: none; align-items: center;
+      background: var(--surface); border: 1px solid var(--outline);
+      box-shadow: var(--shadow-2); z-index: 10;
   }
-  .tbl-btn span { font-size: 14px; font-weight: bold; line-height: 1; }
-  .tbl-btn:hover { transform: scale(1.2); }
-  .tbl-btn.tbl-add-row, .tbl-btn.tbl-add-col { background: #10b981; }
-  .tbl-btn.tbl-add-row:hover, .tbl-btn.tbl-add-col:hover { background: #059669; }
-  .tbl-btn.tbl-del-row, .tbl-btn.tbl-del-col { background: var(--danger); }
-  .tbl-btn.tbl-del-row:hover, .tbl-btn.tbl-del-col:hover { background: var(--danger-border); }
+  .tbl-row-controls {
+      border-radius: 0 0 8px 8px; /* Bottom trapezoid feel */
+      border-top: none;
+      clip-path: polygon(0 0, 100% 0, 90% 100%, 10% 100%);
+      padding: 0 6px 2px 6px;
+  }
+  .tbl-col-controls {
+      border-radius: 0 8px 8px 0; /* Right trapezoid feel */
+      border-left: none;
+      flex-direction: column;
+      clip-path: polygon(0 0, 100% 10%, 100% 90%, 0 100%);
+      padding: 6px 2px 6px 0;
+  }
+  .tbl-btn {
+      background: transparent; color: var(--muted); border: none;
+      cursor: pointer; display: grid; place-items: center;
+      padding: 2px; transition: color 0.2s, transform 0.15s; outline: none;
+  }
+  .tbl-btn .material-symbols-outlined { font-size: 16px; font-weight: 800; }
+  .tbl-btn:hover { color: var(--primary); transform: scale(1.1); }
+  .tbl-btn.tbl-del-row:hover, .tbl-btn.tbl-del-col:hover { color: var(--danger); }
+  .tbl-divider { background: var(--outline-2); }
+  .tbl-row-controls .tbl-divider { width: 1px; height: 14px; margin: 0 4px; }
+  .tbl-col-controls .tbl-divider { width: 14px; height: 1px; margin: 4px 0; }
 
   .evidence{ border: 1px dashed var(--outline-2); background: var(--evidence-bg); color: var(--text); border-radius: var(--r12); padding: 12px; min-height: 130px; outline:none; line-height: 1.5; transition: all 0.3s ease; }
   .evidence:focus{ border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-light); background: var(--input-bg); }
@@ -319,20 +350,22 @@
   @media (max-width: 768px){
     /* Mobile Appbar - Keep the Badge, Hide the Text */
     .appbar-inner { padding: 0 12px; gap: 8px; flex-wrap: nowrap; }
-    .title { font-size: 0; gap: 0; min-width: auto; margin-right: 4px; } 
     .tab-label { max-width: 90px; }
-    .title .badge { margin-right: 0; width: 32px; height: 32px; }
-    #workspaceTitleInput { flex: 1; font-size: 16px; min-width: 0; padding: 4px; }
+    .title-group { padding: 4px; margin-right: auto; flex: 1; min-width: 0; background: transparent; border-color: transparent;}
+    .title-group .title { border-right: none; padding-right: 0; margin-right: 4px; gap: 0; font-size: 0; }
+    .title-group .title .badge { width: 30px; height: 30px; }
+    .title-group #workspaceTitleInput { font-size: 16px; padding: 2px 4px; min-width: 0;}
     
     .search-trigger-btn { display: none !important; }
     
     /* The Mobile Pill (Neutral & Grounded) */
-    .mobile-action-pill { display: flex; position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--surface); border: 1px solid var(--outline); border-radius: 999px; padding: 6px 8px; gap: 8px; box-shadow: var(--shadow-2); z-index: 100; align-items: center; }
+    .mobile-action-pill { display: flex; position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--surface); border: 1px solid var(--outline); border-radius: 999px; padding: 6px 16px; gap: 24px; box-shadow: var(--shadow-2); z-index: 100; align-items: center; height: 56px; }
     .pill-btn { background: transparent; border: none; color: var(--muted); padding: 8px; border-radius: 50%; display: grid; place-items: center; cursor: pointer; transition: all 0.2s; }
     .pill-btn:hover, .pill-btn:active { background: var(--surface-2); color: var(--text); }
-    .pill-btn.pill-add { background: var(--primary); color: #fff; border-radius: 50%; padding: 12px; display: grid; place-items: center; box-shadow: 0 4px 10px var(--primary-light); }
+    .pill-btn.pill-add { background: linear-gradient(135deg, var(--grad-1), var(--grad-2)); color: #fff; border-radius: 50%; width: 64px; height: 64px; margin-top: -32px; display: grid; place-items: center; box-shadow: 0 6px 16px var(--primary-light), 0 0 0 6px var(--bg); transition: transform 0.2s ease, box-shadow 0.2s ease; }
+    .pill-btn.pill-add .material-symbols-outlined { font-size: 32px; }
     .pill-btn.pill-add .pill-text { display: none; }
-    .pill-btn.pill-add:hover, .pill-btn.pill-add:active { background: var(--primary-2); }
+    .pill-btn.pill-add:hover, .pill-btn.pill-add:active { transform: translateY(-2px); box-shadow: 0 8px 20px var(--primary-light), 0 0 0 6px var(--bg); }
     
     /* The Actions Bottom Sheet (Pop-up from Pill) */
     .appbar .actions {

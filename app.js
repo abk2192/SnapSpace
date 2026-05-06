@@ -78,6 +78,17 @@ async function bootApp() {
   
     document.getElementById("renameTabBtn")?.remove();
 
+    // Wrap title and input into a single unified Appbar component
+    const titleEl = document.querySelector('.title');
+    const wsInput = document.getElementById("workspaceTitleInput");
+    if (titleEl && wsInput && titleEl.parentNode === wsInput.parentNode && !titleEl.closest('.title-group')) {
+        const group = document.createElement('div');
+        group.className = 'title-group';
+        titleEl.parentNode.insertBefore(group, titleEl);
+        group.appendChild(titleEl);
+        group.appendChild(wsInput);
+    }
+
     // Reorder Global Kebab Menu Actions (Only the tools meant for the top bar)
     const actionsContainer = document.querySelector('.appbar .actions');
     if (actionsContainer) {
@@ -270,7 +281,28 @@ document.addEventListener("click", (e) => {
           document.body.classList.remove("show-mobile-actions");
       }
   }
-});
+
+  // Handle Edit Name Pencil/Action
+  const editNameBtn = e.target.closest(".edit-name-btn, [data-edit-name]");
+  if (editNameBtn) {
+      e.preventDefault(); e.stopPropagation();
+      const scId = editNameBtn.dataset.editName || editNameBtn.closest('.scenario')?.dataset.sid;
+      if (scId) {
+          const input = document.querySelector(`input[data-sid="${scId}"][data-field="name"]`);
+          if (input) {
+              const card = input.closest('details');
+              if (card && !card.open) card.open = true; // ensure card is open
+              input.classList.add("editing");
+              setTimeout(() => {
+                  input.focus();
+                  input.setSelectionRange(input.value.length, input.value.length);
+              }, 50);
+          }
+      }
+  }
+      e.target.classList.remove('editing');
+  }
+);
 
 
 // File Preview & Image Lightbox Modals
