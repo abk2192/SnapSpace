@@ -252,7 +252,7 @@ function render(){ globalEvents.publish('tabs:changed'); globalEvents.publish('s
 
 /* ========= Interactions ========= */
 
-// Prevent item cards from expanding/collapsing when interacting with field tags
+// Global Click Handler: Manage scenario interactions, editing states, and dropdowns
 document.addEventListener("click", (e) => {
   // Close open scenario more menus
   const moreBtn = e.target.closest('.scen-more-btn');
@@ -275,9 +275,9 @@ document.addEventListener("click", (e) => {
   // Close mobile action menu when clicking outside
   if (document.body.classList.contains("show-mobile-actions")) {
       const actions = document.querySelector('.appbar .actions');
-      const moreBtn = document.getElementById("pillMoreBtn");
+      const mobileMoreBtn = document.getElementById("pillMoreBtn");
       const clickedActionBtn = e.target.closest('.appbar .actions .btn');
-      if ((actions && !actions.contains(e.target) && e.target !== moreBtn) || clickedActionBtn) {
+      if ((actions && !actions.contains(e.target) && e.target !== mobileMoreBtn) || clickedActionBtn) {
           document.body.classList.remove("show-mobile-actions");
       }
   }
