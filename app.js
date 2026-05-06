@@ -1385,6 +1385,12 @@ document.addEventListener("input", (e) => {
 });
 
 document.addEventListener("click", (e) => {
+  const pMeta = e.target.closest(".panel-meta");
+  if (pMeta) {
+      pMeta.classList.toggle("expanded-tip");
+      return;
+  }
+
   const actionBtn = e.target.closest('.action-btn');
   if(actionBtn && e.target.closest('summary')) { e.preventDefault(); }
 
