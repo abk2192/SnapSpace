@@ -1,12 +1,10 @@
-/* ========= PWA Service Worker Registration ========= */
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').catch(err => {
-      console.error('SW registration failed:', err);
-    });
-  });
-}
+import { escapeHtml, escapeAttr, uid, moveCursorToEnd } from './src/utils/dom.js';
+import { registerServiceWorker } from './src/services/pwa.js';
+import { dbService } from './src/services/Database.js';
+import { themeService } from './src/services/Theme.js';
 
+/* ========= PWA Service Worker Registration ========= */
+registerServiceWorker();
 
 /* ========= Documentation Dialog ========= */
 const docsBtn = document.getElementById("docsBtn");
@@ -21,20 +19,7 @@ docsCloseBtn?.addEventListener("click", () => { if(docsBackdrop) docsBackdrop.st
 docsBackdrop?.addEventListener("click", (e) => { if(e.target === docsBackdrop) docsBackdrop.style.display = "none"; });
 
 /* ========= Theme Engine ========= */
-const rootParams = document.documentElement;
-let currentTheme = localStorage.getItem('test_recorder_theme') || 'light';
-let currentColor = localStorage.getItem('test_recorder_color') || 'blue';
-
-function applyTheme() {
-  rootParams.setAttribute('data-theme', currentTheme);
-  rootParams.setAttribute('data-color', currentColor);
-  localStorage.setItem('test_recorder_theme', currentTheme);
-  localStorage.setItem('test_recorder_color', currentColor);
-  
-  document.querySelectorAll('[data-set-theme]').forEach(el => { el.classList.toggle('active', el.dataset.setTheme === currentTheme); });
-  document.querySelectorAll('[data-set-color]').forEach(el => { el.classList.toggle('active', el.dataset.setColor === currentColor); });
-}
-applyTheme();
+themeService.applyTheme();
 
 const themeBtn = document.getElementById("themeBtn");
 const themeBackdrop = document.getElementById("themeBackdrop");
@@ -42,8 +27,8 @@ const themeClose = document.getElementById("themeClose");
 themeBtn?.addEventListener("click", () => { document.body.classList.remove("sidebar-show"); if(themeBackdrop) themeBackdrop.style.display = "flex"; });
 themeClose?.addEventListener("click", () => { if(themeBackdrop) themeBackdrop.style.display = "none"; });
 themeBackdrop?.addEventListener("click", (e) => { if(e.target === themeBackdrop) themeBackdrop.style.display = "none"; });
-document.querySelectorAll('[data-set-theme]').forEach(el => { el.addEventListener('click', (e) => { currentTheme = e.target.dataset.setTheme; applyTheme(); }); });
-document.querySelectorAll('[data-set-color]').forEach(el => { el.addEventListener('click', (e) => { currentColor = e.target.dataset.setColor; applyTheme(); }); });
+document.querySelectorAll('[data-set-theme]').forEach(el => { el.addEventListener('click', (e) => { themeService.setTheme(e.target.dataset.setTheme); }); });
+document.querySelectorAll('[data-set-color]').forEach(el => { el.addEventListener('click', (e) => { themeService.setColor(e.target.dataset.setColor); }); });
 
 /* ========= Sidebar Resizer ========= */
 const sidebarResizer = document.getElementById("sidebarResizer");
@@ -114,55 +99,20 @@ document.querySelectorAll('#sidebarMenu .menu-item:not(#addWorkspaceBtn)').forEa
 });
 
 /* ========= Async Database Engine (IndexedDB) ========= */
-const DB_NAME = "SnapSpaceDB";
-const STORE_NAME = "workspace";
-const DB_VERSION = 1;
-const STATE_KEY = "test_recorder_tabs_v18"; 
-
-let dbInstance = null;
-
-function initDB() {
-    return new Promise((resolve, reject) => {
-        if (dbInstance) return resolve(dbInstance);
-        const request = indexedDB.open(DB_NAME, DB_VERSION);
-        request.onerror = (e) => reject("DB Error: " + e.target.errorCode);
-        request.onsuccess = (e) => { dbInstance = e.target.result; resolve(dbInstance); };
-        request.onupgradeneeded = (e) => {
-            const db = e.target.result;
-            if (!db.objectStoreNames.contains(STORE_NAME)) {
-                db.createObjectStore(STORE_NAME);
-            }
-        };
-    });
-}
-
 async function saveState() {
-    try {
-        const db = await initDB();
-        const tx = db.transaction(STORE_NAME, "readwrite");
-        const store = tx.objectStore(STORE_NAME);
-        store.put(JSON.stringify(appState), STATE_KEY);
-        
+    const success = await dbService.save(appState);
+    if (success) {
         const ind = document.getElementById("saveIndicator");
         if(ind) {
             ind.style.opacity = "1";
             clearTimeout(ind.timer);
             ind.timer = setTimeout(() => ind.style.opacity = "0", 2000);
         }
-    } catch (err) { console.error("Failed to save state:", err); }
+    }
 }
 
 async function loadStateFromDB() {
-    return new Promise(async (resolve) => {
-        try {
-            const db = await initDB();
-            const tx = db.transaction(STORE_NAME, "readonly");
-            const store = tx.objectStore(STORE_NAME);
-            const request = store.get(STATE_KEY);
-            request.onsuccess = () => { if (request.result) resolve(JSON.parse(request.result)); else resolve(null); };
-            request.onerror = () => resolve(null);
-        } catch (err) { resolve(null); }
-    });
+    return await dbService.load();
 }
 
 /* ========= State Initialization (Multi-Project) ========= */
@@ -176,7 +126,6 @@ let state = null; // Pointer to the active project
 
 let templates = JSON.parse(localStorage.getItem('test_recorder_templates') || '[]');
 function saveTemplates(){ localStorage.setItem('test_recorder_templates', JSON.stringify(templates)); }
-function uid(){ return Math.random().toString(36).slice(2) + Date.now().toString(36); }
 
 // ========= Backup and Restore UI Injection & Logic =========
 function injectBackupRestoreButtons() {
@@ -1778,7 +1727,6 @@ function renderPanelOnly(){
 
 function findScenario(sid){ for (const ws of appState.workspaces) { for (const t of ws.tabs){ const sc = t.scenarios.find(s => s.id === sid); if (sc) return sc; } } return null; }
 function deleteScenario(sid){ const tab = activeTab(); if(confirm("Are you sure you want to delete this item?")) { tab.scenarios = tab.scenarios.filter(s => s.id !== sid); render(); } }
-function moveCursorToEnd(el) { el.focus(); const range = document.createRange(); range.selectNodeContents(el); range.collapse(false); const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range); }
 
 function openFilePicker(sid){
   const input = document.querySelector(`input[type="file"][data-file="${sid}"]`); const ev = document.querySelector(`.evidence[data-evidence="${sid}"]`);
@@ -1828,7 +1776,7 @@ function exportHTML(exportData, filename){
   const payloadStr = JSON.stringify(exportData).replace(/</g, '\\u003c');
 
   const exportTemplate = `<!DOCTYPE html>
-<html lang="en" data-theme="${currentTheme}" data-color="${currentColor}">
+<html lang="en" data-theme="${themeService.getTheme()}" data-color="${themeService.getColor()}">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -2046,10 +1994,6 @@ dlgInput?.addEventListener("keydown", (e) => { if(e.key === "Enter" && dlgBackdr
 dlgCancel?.addEventListener("click", () => { if(dlgBackdrop) dlgBackdrop.style.display = "none"; dlgCallback = null; });
 dlgOk?.addEventListener("click", () => { const val = dlgInput?.value; if(dlgBackdrop) dlgBackdrop.style.display = "none"; const cb = dlgCallback; dlgCallback = null; if (cb) cb(val); });
 if(dlgBackdrop) dlgBackdrop.addEventListener("click", (e) => { if (e.target === dlgBackdrop) dlgCancel?.click(); });
-
-/* ========= Utils ========= */
-function escapeHtml(str){ return String(str).replace(/[&<>"']/g, s => ({"&":"&","<":"<",">":">",'"':"&quot;","'":"&#39;"}[s])); }
-function escapeAttr(str){ return escapeHtml(str).replace(/"/g, "&quot;"); }
 
 /* Initial render */
 bootApp();
