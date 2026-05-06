@@ -300,16 +300,18 @@ async function bootApp() {
     injectBackupRestoreButtons();
     document.getElementById("renameTabBtn")?.remove();
 
-    // Move view-related buttons to the panel header for better context
+    // Move view-related buttons to the tabs bar for better context and space saving
     const expandAllBtn = document.getElementById('expandAllBtn');
     const collapseAllBtn = document.getElementById('collapseAllBtn');
-    const panelHead = document.querySelector('.panel-head');
-    if (expandAllBtn && collapseAllBtn && panelHead && !panelHead.querySelector('.actions')) {
-        const panelActions = document.createElement('div');
-        panelActions.className = 'actions'; // Reuse existing .actions class for styling
-        panelActions.appendChild(expandAllBtn);
-        panelActions.appendChild(collapseAllBtn);
-        panelHead.appendChild(panelActions);
+    const tabsbar = document.querySelector('.tabsbar');
+    if (expandAllBtn && collapseAllBtn && tabsbar && !tabsbar.querySelector('.tab-tools')) {
+        expandAllBtn.classList.add('icon-only', 'secondary');
+        collapseAllBtn.classList.add('icon-only', 'secondary');
+        const tabTools = document.createElement('div');
+        tabTools.className = 'tab-tools actions';
+        tabTools.appendChild(expandAllBtn);
+        tabTools.appendChild(collapseAllBtn);
+        tabsbar.appendChild(tabTools);
     }
     
     // Ensure all buttons in header/panel actions have icons and titles for mobile icon-only mode
@@ -715,11 +717,8 @@ function renderTabs(){
     btn.className = "tab" + (tab.id === state.activeTabId ? " active" : "");
     btn.type = "button";
     
-    let finalHtml = `<span>${escapeHtml(tab.name)}</span>`;
+    let finalHtml = `<span class="tab-label" title="${escapeAttr(tab.name)}">${escapeHtml(tab.name)}</span>`;
     finalHtml += `<span class="tab-count">${tab.scenarios.length}</span>`;
-    if (tab.id === state.activeTabId) {
-        finalHtml += `<span class="material-symbols-outlined rename-tab-icon" data-rename-tab="${tab.id}" title="Rename Tab">edit</span>`;
-    }
     if (state.tabs.length > 1) {
         finalHtml += `<span class="x" title="Close tab" data-close-tab="${tab.id}">×</span>`;
     }
@@ -743,8 +742,7 @@ function renderTabs(){
       const close = e.target.closest("[data-close-tab]");
       if (close){ e.stopPropagation(); closeTab(close.getAttribute("data-close-tab")); return; }
 
-      const rename = e.target.closest("[data-rename-tab]");
-      if (rename) {
+      if (tab.id === state.activeTabId) {
           e.stopPropagation();
           promptDialog("Rename tab", tab.name, "Give this tab a short name.", (val) => { tab.name = (val || "Untitled").trim(); render(); });
           return;
@@ -812,12 +810,8 @@ function renderScenarioCard(sc, idx){
     <summary>
       <div class="summary-content">
         <div style="display:flex; align-items:center; gap:6px; width: 100%;">
-          <div style="font-weight: 750; font-size: 14px; color: var(--text); white-space:nowrap;">
-            <span class="material-symbols-outlined" style="font-size: 16px; cursor: grab; color: var(--muted); margin-right: 4px;" onmousedown="this.closest('details').draggable=true" onmouseup="this.closest('details').draggable=false" onmouseleave="this.closest('details').draggable=false">drag_indicator</span>
-            Item ${idx+1}
-          </div>
-          <span style="color: var(--muted); font-weight: 400;">—</span>
-          <input class="header-name-input" data-field="name" data-sid="${sc.id}" value="${escapeAttr(sc.name||"")}" placeholder="Item Name..." onclick="event.stopPropagation()" />
+          <span class="material-symbols-outlined" style="font-size: 18px; cursor: grab; color: var(--muted);" onmousedown="this.closest('details').draggable=true" onmouseup="this.closest('details').draggable=false" onmouseleave="this.closest('details').draggable=false">drag_indicator</span>
+          <input class="header-name-input" data-field="name" data-sid="${sc.id}" value="${escapeAttr(sc.name||"")}" placeholder="Item ${idx+1}" onclick="event.stopPropagation()" />
         </div>
         ${tagsHtml ? `<div class="summary-tags">${tagsHtml}</div>` : `<div class="summary-sub">Click to expand/collapse</div>`}
       </div>
@@ -1194,7 +1188,7 @@ function updateCompScenarios(tabSelect, scenSelect) {
   if(t) {
     t.scenarios.forEach((sc, idx) => {
       const name = (sc.name || "").trim();
-      const label = name ? `Item ${idx+1} — ${name}` : `Item ${idx+1}`;
+      const label = name || `Item ${idx+1}`;
       scenSelect.innerHTML += `<option value="${sc.id}">${escapeHtml(label)}</option>`;
     });
   }
@@ -1768,11 +1762,9 @@ function persistEvidence(ev){ const sid = ev.getAttribute("data-evidence"); cons
 
 /* ========= Tabs CRUD ========= */
 function promptNewTab(){
-  promptDialog("New tab", `Tab ${state.tabs.length+1}`, "Enter a name for the new tab.", (val) => {
-    const name = (val || "Untitled").trim(); const id = uid(); const newScenId = uid();
-    state.tabs.push({ id, name, scenarios: [{ id: newScenId, name:"", fields: [], evidenceHtml:"", isOpen: true }] }); state.activeTabId = id; render();
-    setTimeout(() => { const inp = document.querySelector(`input[data-sid="${newScenId}"][data-field="name"]`); if (inp) inp.focus(); }, 50);
-  });
+  const name = `Tab ${state.tabs.length+1}`; const id = uid(); const newScenId = uid();
+  state.tabs.push({ id, name, scenarios: [{ id: newScenId, name:"", fields: [], evidenceHtml:"", isOpen: true }] }); state.activeTabId = id; render();
+  setTimeout(() => { const inp = document.querySelector(`input[data-sid="${newScenId}"][data-field="name"]`); if (inp) inp.focus(); }, 50);
 }
 
 function closeTab(id){
@@ -1813,7 +1805,7 @@ function exportHTML(exportData, filename){
 
     function renderView() {
       const tabsEl = document.getElementById("tabs");
-      tabsEl.innerHTML = state.tabs.map(tab => \`<button class="tab \${tab.id === activeTabId ? 'active' : ''}" data-tab="\${tab.id}">\${escapeHtml(tab.name)}</button>\`).join("");
+      tabsEl.innerHTML = state.tabs.map(tab => \`<button class="tab \${tab.id === activeTabId ? 'active' : ''}" data-tab="\${tab.id}"><span class="tab-label" title="\${escapeAttr(tab.name)}">\${escapeHtml(tab.name)}</span></button>\`).join("");
       const panelEl = document.getElementById("panel");
       const activeTab = state.tabs.find(t => t.id === activeTabId);
       if(!activeTab) return;
@@ -1838,9 +1830,7 @@ function exportHTML(exportData, filename){
             <summary>
               <div class="summary-content">
                 <div style="display:flex; align-items:center; gap:6px; width: 100%;">
-                  <div style="font-weight: 750; font-size: 14px; color: var(--text); white-space:nowrap;">Item \${idx+1}</div>
-                  <span style="color: var(--muted); font-weight: 400;">—</span>
-                  <input class="header-name-input" value="\${escapeAttr(sc.name||"")}" placeholder="Untitled Item" readonly />
+                  <input class="header-name-input" value="\${escapeAttr(sc.name||"")}" placeholder="Item \${idx+1}" readonly style="padding-left: 0;" />
                 </div>
                 \${tagsHtml ? \`<div class="summary-tags">\${tagsHtml}</div>\` : ''}
               </div>
