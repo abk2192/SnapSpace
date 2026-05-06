@@ -178,8 +178,97 @@ let templates = JSON.parse(localStorage.getItem('test_recorder_templates') || '[
 function saveTemplates(){ localStorage.setItem('test_recorder_templates', JSON.stringify(templates)); }
 function uid(){ return Math.random().toString(36).slice(2) + Date.now().toString(36); }
 
+// ========= Backup and Restore UI Injection & Logic =========
+function injectBackupRestoreButtons() {
+    const actions = document.querySelector('.actions');
+    if (actions && !document.getElementById('backupBtn')) {
+        const backupBtn = document.createElement('button');
+        backupBtn.className = 'btn secondary icon-only';
+        backupBtn.id = 'backupBtn';
+        backupBtn.title = 'Backup Database (JSON)';
+        backupBtn.innerHTML = '<span class="material-symbols-outlined">save</span>';
+        
+        const restoreBtn = document.createElement('button');
+        restoreBtn.className = 'btn secondary icon-only';
+        restoreBtn.id = 'restoreBtn';
+        restoreBtn.title = 'Restore Database (JSON)';
+        restoreBtn.innerHTML = '<span class="material-symbols-outlined">settings_backup_restore</span>';
+        
+        const themeBtn = document.getElementById('themeBtn');
+        if (themeBtn) {
+            actions.insertBefore(restoreBtn, themeBtn);
+            actions.insertBefore(backupBtn, restoreBtn);
+        } else {
+            actions.appendChild(backupBtn);
+            actions.appendChild(restoreBtn);
+        }
+    }
+}
+
+document.addEventListener('click', (e) => {
+    const backupBtn = e.target.closest('#backupBtn');
+    if (backupBtn) {
+        const dataStr = JSON.stringify(appState, null, 2);
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const date = new Date().toISOString().slice(0, 10);
+        a.download = `SnapSpace_Backup_${date}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        return;
+    }
+
+    const restoreBtn = e.target.closest('#restoreBtn');
+    if (restoreBtn) {
+        let fileInput = document.getElementById('restoreFileInput');
+        if (!fileInput) {
+            fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.id = 'restoreFileInput';
+            fileInput.accept = '.json';
+            fileInput.style.display = 'none';
+            document.body.appendChild(fileInput);
+            
+            fileInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    try {
+                        const importedData = JSON.parse(event.target.result);
+                        if (importedData && importedData.workspaces) {
+                            if (confirm("WARNING: This will replace ALL your current projects and data. Are you sure you want to proceed?")) {
+                                appState = importedData;
+                                state = appState.workspaces.find(w => w.id === appState.activeWorkspaceId) || appState.workspaces[0];
+                                workspaceTitleInput.value = state.title || "Project";
+                                renderWorkspaces();
+                                render();
+                                await saveState();
+                                alert("Data restored successfully!");
+                            }
+                        } else {
+                            alert("Invalid backup file format.");
+                        }
+                    } catch (err) {
+                        alert("Error parsing backup file.");
+                    }
+                    fileInput.value = ""; 
+                };
+                reader.readAsText(file);
+            });
+        }
+        fileInput.click();
+        return;
+    }
+});
+
 async function bootApp() {
   
+    injectBackupRestoreButtons();
     
     let loadedState = await loadStateFromDB();
     
@@ -371,13 +460,21 @@ function performSearch(query) {
     let matchCount = 0;
 
     appState.workspaces.forEach(ws => {
+        const wsMatch = (ws.title || "").toLowerCase().includes(q);
         ws.tabs.forEach(tab => {
+            const tabMatch = (tab.name || "").toLowerCase().includes(q);
             tab.scenarios.forEach((sc, idx) => {
                 let hasMatch = false;
                 let snippets = [];
 
+                if (wsMatch) {
+                    hasMatch = true; snippets.push(`<b>Project:</b> ${highlightText(ws.title || "", query)}`);
+                }
+                if (tabMatch) {
+                    hasMatch = true; snippets.push(`<b>Tab:</b> ${highlightText(tab.name || "", query)}`);
+                }
                 if ((sc.name || "").toLowerCase().includes(q)) {
-                    hasMatch = true; snippets.push(`<b>Title:</b> ${highlightText(sc.name, query)}`);
+                    hasMatch = true; snippets.push(`<b>Title:</b> ${highlightText(sc.name || "", query)}`);
                 }
                 
                 (sc.fields || []).forEach(f => {
@@ -401,11 +498,15 @@ function performSearch(query) {
 
                 if (hasMatch) {
                     matchCount++;
+                    const wsTitleDisp = wsMatch ? highlightText(ws.title || "", query) : escapeHtml(ws.title || "");
+                    const tabNameDisp = tabMatch ? highlightText(tab.name || "", query) : escapeHtml(tab.name || "");
+                    const scNameDisp = ((sc.name || "").toLowerCase().includes(q)) ? highlightText(sc.name || "", query) : escapeHtml(sc.name || `Item ${idx+1}`);
+
                     resultsHtml += `
                         <div class="search-result" data-ws="${ws.id}" data-tab="${tab.id}" data-sc="${sc.id}">
                             <div class="res-title">
-                               <span class="res-tab">${escapeHtml(ws.title)} > ${escapeHtml(tab.name)}</span>
-                               ${escapeHtml(sc.name || `Item ${idx+1}`)}
+                               <span class="res-tab">${wsTitleDisp} > ${tabNameDisp}</span>
+                               ${scNameDisp}
                             </div>
                             <div class="res-snip">${snippets.join("<br>")}</div>
                         </div>

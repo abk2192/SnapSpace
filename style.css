@@ -118,6 +118,8 @@
     body.sidebar-show .sidebar-backdrop { display: none; }
     .app-content { padding-left: var(--sidebar-width); }
     body.sidebar-hide .app-content { padding-left: 0; }
+    .app-content .appbar { width: calc(100% + var(--sidebar-width)); margin-left: calc(-1 * var(--sidebar-width)); }
+    body.sidebar-hide .app-content .appbar { width: 100%; margin-left: 0; }
   }
 
   /* ===== Search Bar Dropdown ===== */
