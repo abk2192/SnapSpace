@@ -2,6 +2,8 @@ import { escapeHtml, escapeAttr, uid, moveCursorToEnd } from './src/utils/dom.js
 import { registerServiceWorker } from './src/services/pwa.js';
 import { dbService } from './src/services/Database.js';
 import { themeService } from './src/services/Theme.js';
+import { store } from './src/core/Store.js';
+import { globalEvents } from './src/core/PubSub.js';
 
 /* ========= PWA Service Worker Registration ========= */
 registerServiceWorker();
@@ -98,22 +100,20 @@ document.querySelectorAll('#sidebarMenu .menu-item:not(#addWorkspaceBtn)').forEa
     });
 });
 
-/* ========= Async Database Engine (IndexedDB) ========= */
-async function saveState() {
-    const success = await dbService.save(appState);
-    if (success) {
-        const ind = document.getElementById("saveIndicator");
-        if(ind) {
-            ind.style.opacity = "1";
-            clearTimeout(ind.timer);
-            ind.timer = setTimeout(() => ind.style.opacity = "0", 2000);
-        }
+/* ========= Global Reactivity Subscribers ========= */
+globalEvents.subscribe('store:saved', () => {
+    const ind = document.getElementById("saveIndicator");
+    if(ind) {
+        ind.style.opacity = "1";
+        clearTimeout(ind.timer);
+        ind.timer = setTimeout(() => ind.style.opacity = "0", 2000);
     }
-}
+});
 
-async function loadStateFromDB() {
-    return await dbService.load();
-}
+/* ========= Reactivity Compatibility ========= */
+// The Store Proxy now automatically handles saving on data mutation.
+// We leave this empty function to safely absorb legacy saveState() calls until Phase 3/4.
+function saveState() {}
 
 /* ========= State Initialization (Multi-Project) ========= */
 let lastFocusedScenarioId = null; 
@@ -222,10 +222,11 @@ document.addEventListener('click', (e) => {
                             if (confirm("WARNING: This will replace ALL your current projects and data. Are you sure you want to proceed?")) {
                                 appState = importedData;
                                 state = appState.workspaces.find(w => w.id === appState.activeWorkspaceId) || appState.workspaces[0];
+                                store.state = appState; // Re-sync proxy baseline
                                 workspaceTitleInput.value = state.title || "Project";
                                 renderWorkspaces();
                                 render();
-                                await saveState();
+                                store.scheduleSave();
                                 alert("Data restored successfully!");
                             }
                         } else {
@@ -353,38 +354,8 @@ async function bootApp() {
         });
     }
 
-    let loadedState = await loadStateFromDB();
-    
-    if (!loadedState) {
-        try { 
-            const oldLocal = localStorage.getItem("test_recorder_tabs_v17");
-            if (oldLocal) loadedState = JSON.parse(oldLocal); 
-        } catch (e) {}
-    }
-
-    if (loadedState && loadedState.workspaces) {
-        appState = loadedState;
-    } else if (loadedState) {
-        appState = {
-            activeWorkspaceId: "default",
-            workspaces: [{
-                id: "default",
-                title: loadedState.workspaceTitle || "Project 1",
-                activeTabId: loadedState.activeTabId,
-                tabs: loadedState.tabs || []
-            }]
-        };
-    } else {
-        const defaultWsId = uid(); const defaultTabId = uid();
-        appState = {
-            activeWorkspaceId: defaultWsId,
-            workspaces: [{
-                id: defaultWsId, title: "Project 1", activeTabId: defaultTabId,
-                tabs: [{ id: defaultTabId, name: "Tab 1", scenarios: [{ id: uid(), name:"", fields: [], evidenceHtml:"", isOpen: true }] }]
-            }]
-        };
-
-    }
+    // Load the reactive proxy state
+    appState = await store.init();
     
     state = appState.workspaces.find(w => w.id === appState.activeWorkspaceId) || appState.workspaces[0];
     workspaceTitleInput.value = state.title || "Project";
@@ -470,7 +441,7 @@ document.getElementById("addWorkspaceBtn")?.addEventListener("click", () => {
     const newId = uid(); const newTabId = uid();
     const newWs = {
         id: newId, title: "New Project", activeTabId: newTabId,
-        tabs: [{ id: newTabId, name: "Tab 1", scenarios: [{ id: uid(), name:"", fields: [], evidenceHtml:"", isOpen: true }] }]
+        tabs: [{ id: newTabId, name: "Tab 1", scenarios: [{ id: uid(), name:"Item 1", fields: [], evidenceHtml:"", isOpen: true }] }]
     };
     appState.workspaces.push(newWs);
     appState.activeWorkspaceId = newId;
@@ -487,7 +458,7 @@ document.getElementById("addWorkspaceBtn")?.addEventListener("click", () => {
 const resetBtn = document.getElementById("resetBtn");
 resetBtn?.addEventListener("click", () => {
     if(confirm("Are you sure you want to reset the CURRENT project? This will delete all tabs and items inside it.")) {
-        state.tabs = [{ id: uid(), name: "Tab 1", scenarios: [{ id: uid(), name:"", fields: [], evidenceHtml:"", isOpen: true }] }];
+        state.tabs = [{ id: uid(), name: "Tab 1", scenarios: [{ id: uid(), name:"Item 1", fields: [], evidenceHtml:"", isOpen: true }] }];
         state.activeTabId = state.tabs[0].id;
         render();
     }
@@ -1342,9 +1313,10 @@ importConfirmBtn?.addEventListener("click", () => {
 
 document.getElementById("addScenarioBtn")?.addEventListener("click", () => {
   const tab = activeTab(); const newId = uid();
-  tab.scenarios.push({ id: newId, name:"", fields: [], evidenceHtml:"", isOpen: true });
+  const defaultName = `Item ${tab.scenarios.length + 1}`;
+  tab.scenarios.push({ id: newId, name: defaultName, fields: [], evidenceHtml:"", isOpen: true });
   render();
-  setTimeout(() => { const inp = document.querySelector(`input[data-sid="${newId}"][data-field="name"]`); if (inp) inp.focus(); }, 50);
+  setTimeout(() => { const inp = document.querySelector(`input[data-sid="${newId}"][data-field="name"]`); if (inp) { inp.focus(); inp.select(); } }, 50);
 });
 
 // ========= EXPORT LOGIC =========
@@ -1757,8 +1729,8 @@ function persistEvidence(ev){ const sid = ev.getAttribute("data-evidence"); cons
 /* ========= Tabs CRUD ========= */
 function promptNewTab(){
   const name = `Tab ${state.tabs.length+1}`; const id = uid(); const newScenId = uid();
-  state.tabs.push({ id, name, scenarios: [{ id: newScenId, name:"", fields: [], evidenceHtml:"", isOpen: true }] }); state.activeTabId = id; render();
-  setTimeout(() => { const inp = document.querySelector(`input[data-sid="${newScenId}"][data-field="name"]`); if (inp) inp.focus(); }, 50);
+  state.tabs.push({ id, name, scenarios: [{ id: newScenId, name:"Item 1", fields: [], evidenceHtml:"", isOpen: true }] }); state.activeTabId = id; render();
+  setTimeout(() => { const inp = document.querySelector(`input[data-sid="${newScenId}"][data-field="name"]`); if (inp) { inp.focus(); inp.select(); } }, 50);
 }
 
 function closeTab(id){
