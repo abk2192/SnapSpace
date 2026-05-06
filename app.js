@@ -1,4 +1,3 @@
-
 /* ========= PWA Service Worker Registration ========= */
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -628,7 +627,7 @@ document.addEventListener("click", (e) => {
 });
 
 /* ========= Expand / Collapse All ========= */
-document.getElementById("expandAllBtn").addEventListener("click", () => {
+document.getElementById("expandAllBtn")?.addEventListener("click", () => {
   const tab = activeTab();
   if (tab && tab.scenarios) {
     tab.scenarios.forEach(sc => sc.isOpen = true);
@@ -636,7 +635,6 @@ document.getElementById("expandAllBtn").addEventListener("click", () => {
   }
 });
 
-document.getElementById("expandAllBtn")?.addEventListener("click", () => {
 document.getElementById("collapseAllBtn")?.addEventListener("click", () => {
   const tab = activeTab();
   if (tab && tab.scenarios) {
