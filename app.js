@@ -181,7 +181,7 @@ function uid(){ return Math.random().toString(36).slice(2) + Date.now().toString
 // ========= Backup and Restore UI Injection & Logic =========
 function injectBackupRestoreButtons() {
     try {
-        let sidebarInner = document.querySelector('.sidebar-inner') || document.querySelector('.sidebar');
+        let sidebarInner = document.getElementById('sidebarMenu') || document.querySelector('.sidebar-inner') || document.querySelector('.sidebar');
         
         if (sidebarInner && !document.getElementById('backupBtn')) {
             const backupBtn = document.createElement('button');
@@ -573,6 +573,8 @@ if (!searchTriggerBtn && searchWrap) {
 
 // Click outside to close dropdown and shrink bar
 document.addEventListener("click", (e) => {
+    const pillSearchBtn = document.getElementById("pillSearchBtn");
+    if (pillSearchBtn && pillSearchBtn.contains(e.target)) return;
     if (searchTriggerBtn && searchTriggerBtn.contains(e.target)) return;
     if(searchWrap && !searchWrap.contains(e.target) && searchWrap.classList.contains("active-search")) {
         closeCommandPalette();
@@ -893,7 +895,8 @@ document.addEventListener("click", (e) => {
   if (document.body.classList.contains("show-mobile-actions")) {
       const actions = document.querySelector('.appbar .actions');
       const moreBtn = document.getElementById("pillMoreBtn");
-      if (actions && !actions.contains(e.target) && e.target !== moreBtn) {
+      const clickedActionBtn = e.target.closest('.appbar .actions .btn');
+      if ((actions && !actions.contains(e.target) && e.target !== moreBtn) || clickedActionBtn) {
           document.body.classList.remove("show-mobile-actions");
       }
   }
