@@ -6,6 +6,8 @@ import { store } from './src/core/Store.js';
 import { globalEvents } from './src/core/PubSub.js';
 import { SidebarVM } from './src/viewmodels/SidebarVM.js';
 import { SidebarView } from './src/views/SidebarView.js';
+import { MainPanelVM } from './src/viewmodels/MainPanelVM.js';
+import { MainPanelView } from './src/views/MainPanelView.js';
 
 /* ========= PWA Service Worker Registration ========= */
 registerServiceWorker();
@@ -217,15 +219,6 @@ async function bootApp() {
         toggleAllBtn.innerHTML = '<span class="material-symbols-outlined">unfold_less</span>';
         toggleAllBtn.title = "Collapse All";
         
-        toggleAllBtn.addEventListener('click', () => {
-            const tab = activeTab();
-            if (tab && tab.scenarios) {
-                const anyOpen = tab.scenarios.some(sc => sc.isOpen !== false);
-                tab.scenarios.forEach(sc => sc.isOpen = !anyOpen);
-                render();
-            }
-        });
-        
         tabTools.appendChild(toggleAllBtn);
         tabsbar.appendChild(tabTools);
     }
@@ -303,6 +296,12 @@ async function bootApp() {
     const sidebarVM = new SidebarVM();
     const sidebarView = new SidebarView(sidebarVM);
     sidebarView.render();
+    
+    // Initialize Main Panel Subsystem
+    window.mainPanelVM = new MainPanelVM();
+    const mainPanelView = new MainPanelView(window.mainPanelVM);
+    mainPanelView.render();
+    window.promptDialog = promptDialog;
     
     workspaceTitleInput.value = state.title || "Project";
     
@@ -511,193 +510,9 @@ searchDropdown?.addEventListener("click", (e) => {
 
 
 /* ========= Rendering ========= */
-const tabsEl = document.getElementById("tabs");
-const panelEl = document.getElementById("panel");
-
-function activeTab(){ return state.tabs.find(t => t.id === state.activeTabId); }
-
-function render(){ renderTabs(); renderPanel(); saveState(); }
-
-let draggedTabIdx = null;
-function renderTabs(){
-  tabsEl.innerHTML = "";
-  state.tabs.forEach((tab, index) => {
-    const btn = document.createElement("button");
-    btn.className = "tab" + (tab.id === state.activeTabId ? " active" : "");
-    btn.type = "button";
-    
-    let finalHtml = `
-      <span class="tab-name-wrapper">
-        <span class="tab-label" title="${escapeAttr(tab.name)}">${escapeHtml(tab.name)}</span>
-        <span class="tab-count">${tab.scenarios.length}</span>
-      </span>
-    `;
-    if (state.tabs.length > 1) {
-        finalHtml += `<span class="x" title="Close tab" data-close-tab="${tab.id}">×</span>`;
-    }
-    btn.innerHTML = finalHtml;
-
-    btn.draggable = true;
-    btn.ondragstart = (e) => { draggedTabIdx = index; e.dataTransfer.effectAllowed = 'move'; setTimeout(()=>btn.classList.add('dragging'), 0); };
-    btn.ondragend = () => { draggedTabIdx = null; btn.classList.remove('dragging'); };
-    btn.ondragover = (e) => { e.preventDefault(); btn.classList.add('drag-over'); };
-    btn.ondragleave = () => { btn.classList.remove('drag-over'); };
-    btn.ondrop = (e) => {
-        e.preventDefault(); btn.classList.remove('drag-over');
-        if (draggedTabIdx !== null && draggedTabIdx !== index) {
-            const moved = state.tabs.splice(draggedTabIdx, 1)[0];
-            state.tabs.splice(index, 0, moved);
-            render();
-        }
-    };
-
-    btn.addEventListener("click", (e) => {
-      const close = e.target.closest("[data-close-tab]");
-      if (close){ e.stopPropagation(); closeTab(close.getAttribute("data-close-tab")); return; }
-
-      if (tab.id === state.activeTabId) {
-          e.stopPropagation();
-          promptDialog("Rename tab", tab.name, "Give this tab a short name.", (val) => { tab.name = (val || "Untitled").trim(); render(); });
-          return;
-      }
-
-      state.activeTabId = tab.id; render();
-    });
-    tabsEl.appendChild(btn);
-  });
-  const plus = document.createElement("button");
-  plus.className = "tab plus"; plus.type = "button"; plus.textContent = "＋ New tab";
-  plus.addEventListener("click", () => promptNewTab());
-  tabsEl.appendChild(plus);
-}
-
-function renderPanel(){
-  if(!tabsEl) return;
-  if(!panelEl) return;
-  panelEl.innerHTML = "";
-  state.tabs.forEach(tab => {
-    const wrap = document.createElement("div");
-    wrap.className = "tab-panel";
-    if (tab.id === state.activeTabId) wrap.style.display = "block";
-    tab.scenarios.forEach((sc, idx) => { wrap.appendChild(renderScenarioCard(sc, idx)); });
-    panelEl.appendChild(wrap);
-  });
-  const active = activeTab();
-  const pMeta = document.getElementById("panelMeta");
-  if (pMeta) pMeta.style.display = "none";
-
-  // Update toggle button icon based on current tab state
-  const toggleAllBtn = document.getElementById('toggleAllBtn');
-  if (toggleAllBtn && active) {
-      const anyOpen = active.scenarios.some(sc => sc.isOpen !== false);
-      toggleAllBtn.innerHTML = `<span class="material-symbols-outlined">${anyOpen ? 'unfold_less' : 'unfold_more'}</span>`;
-      toggleAllBtn.title = anyOpen ? 'Collapse All' : 'Expand All';
-  }
-}
-
-function renderScenarioCard(sc, idx){
-  const d = document.createElement("details");
-  d.className = "scenario"; d.dataset.sid = sc.id; d.open = sc.isOpen !== false; 
-  d.draggable = false; 
-  
-  d.ondragstart = (e) => { e.dataTransfer.setData('text/plain', idx); e.dataTransfer.effectAllowed = 'move'; setTimeout(() => d.classList.add('dragging'), 0); };
-  d.ondragend = () => { d.classList.remove('dragging'); d.draggable = false; };
-  d.ondragover = (e) => { e.preventDefault(); d.classList.add('drag-over-scenario'); };
-  d.ondragleave = () => { d.classList.remove('drag-over-scenario'); };
-  d.ondrop = (e) => {
-      e.preventDefault(); d.classList.remove('drag-over-scenario');
-      d.draggable = false;
-      const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
-      if (!isNaN(fromIdx) && fromIdx !== idx) {
-          const tab = activeTab();
-          const moved = tab.scenarios.splice(fromIdx, 1)[0];
-          tab.scenarios.splice(idx, 0, moved);
-          render();
-      }
-  };
-
-  const validFields = (sc.fields || []).filter(f => f.key.trim() || f.val.trim());
-  const tagsHtml = validFields.map(f => `<span class="tag"><b>${escapeHtml(f.key || "Field")}:</b> ${escapeHtml(f.val || "-")}</span>`).join("");
-
-  const fieldsHtml = (sc.fields || []).map(f => `
-    <div class="field-row">
-      <input class="input" data-fkey="${f.id}" data-sid="${sc.id}" value="${escapeAttr(f.key)}" placeholder="Field Name (e.g., Env, Policy)" />
-      <input class="input" data-fval="${f.id}" data-sid="${sc.id}" value="${escapeAttr(f.val)}" placeholder="Value" />
-      <button class="btn secondary del action-btn icon-only" type="button" data-delfield="${f.id}" data-sid="${sc.id}"><span class="material-symbols-outlined">close</span></button>
-    </div>
-  `).join("");
-
-  d.innerHTML = `
-    <summary>
-      <div class="summary-content">
-        <div style="display:flex; align-items:center; gap:6px; width: 100%;">
-          <span class="material-symbols-outlined" style="font-size: 18px; cursor: grab; color: var(--muted);" onmousedown="this.closest('details').draggable=true" onmouseup="this.closest('details').draggable=false" onmouseleave="this.closest('details').draggable=false">drag_indicator</span>
-          <input class="header-name-input" data-field="name" data-sid="${sc.id}" value="${escapeAttr(sc.name||"")}" placeholder="Item ${idx+1}" onclick="event.stopPropagation()" />
-        </div>
-        ${tagsHtml ? `<div class="summary-tags">${tagsHtml}</div>` : `<div class="summary-sub">Click to expand/collapse</div>`}
-      </div>
-      <div class="summary-actions">
-        <div class="scen-more-wrap">
-          <button class="btn secondary action-btn icon-only scen-more-btn" type="button" title="More Actions"><span class="material-symbols-outlined">more_vert</span></button>
-          <div class="scen-more-menu">
-            <button class="btn secondary action-btn" type="button" title="Save as Template" data-template="${sc.id}"><span class="material-symbols-outlined">bookmark_add</span> <span class="btn-text">Save Template</span></button>
-            <button class="btn secondary action-btn" type="button" title="Duplicate Item" data-duplicate="${sc.id}"><span class="material-symbols-outlined">content_copy</span> <span class="btn-text">Duplicate</span></button>
-            <button class="btn secondary action-btn" type="button" title="Move Item" data-move="${sc.id}"><span class="material-symbols-outlined">move_item</span> <span class="btn-text">Move</span></button>
-          </div>
-        </div>
-        <button class="btn danger action-btn icon-only" type="button" title="Delete Item" data-delete="${sc.id}"><span class="material-symbols-outlined">delete</span></button>
-        <div class="chev"><span class="material-symbols-outlined">expand_more</span></div>
-      </div>
-    </summary>
-
-    <div class="card-body">
-      <div class="label"><span class="material-symbols-outlined" style="font-size: 14px;">tune</span> Properties</div>
-      <div class="field-list">
-        ${fieldsHtml}
-        <div><button class="btn secondary action-btn" type="button" data-addfield="${sc.id}" style="font-size: 12px; padding: 6px 12px;"><span class="material-symbols-outlined">add</span> Add Field</button></div>
-      </div>
-
-      <div class="evidence-wrap">
-        <div class="label" style="margin-bottom: 6px;"><span class="material-symbols-outlined" style="font-size: 14px;">image</span> Notes & Media</div>
-        <div class="wysiwyg-toolbar action-btn">
-           <button class="btn secondary" type="button" data-cmd="bold" title="Bold"><span class="material-symbols-outlined" style="margin:0;">format_bold</span></button>
-           <button class="btn secondary" type="button" data-cmd="italic" title="Italic"><span class="material-symbols-outlined" style="margin:0;">format_italic</span></button>
-           <button class="btn secondary" type="button" data-cmd="insertUnorderedList" title="Bullet List"><span class="material-symbols-outlined" style="margin:0;">format_list_bulleted</span> <span class="btn-text">List</span></button>
-			<button class="btn secondary" type="button" data-cmd="createLink" title="Insert Link"><span class="material-symbols-outlined" style="margin:0;">link</span></button>
-           
-           <div style="width: 1px; height: 20px; background: var(--outline-2); margin: 0 4px;"></div>
-           
-           <button class="btn secondary action-btn" type="button" data-createfile="${sc.id}" title="Create Text/XML File"><span class="material-symbols-outlined" style="font-size: 16px;">note_add</span> <span class="btn-text">New File</span></button>
-           <button class="btn secondary action-btn" type="button" data-attach="${sc.id}" title="Attach File"><span class="material-symbols-outlined" style="font-size: 16px;">attach_file</span> <span class="btn-text">Attach</span></button>
-        </div>
-        <div class="evidence" contenteditable="true" data-evidence="${sc.id}" spellcheck="false"></div>
-        <div class="hint"><span class="material-symbols-outlined" style="font-size: 14px;">info</span> Paste screenshots (Ctrl+V) or use the toolbar to format. Double-click images to view full size.</div>
-        <input type="file" hidden data-file="${sc.id}" />
-      </div>
-    </div>
-  `;
-
-  const evidence = d.querySelector(`[data-evidence="${sc.id}"]`);
-  evidence.innerHTML = sc.evidenceHtml || "";
-
-  let htmlUpdated = false;
-  evidence.querySelectorAll('.attachment').forEach(att => {
-    if(!att.querySelector('.copy-att')) {
-      const link = att.querySelector('a');
-      if(link && link.dataset.dataurl) {
-        const copyBtn = document.createElement("span");
-        copyBtn.className = "copy-att material-symbols-outlined"; copyBtn.textContent = "content_copy"; 
-        copyBtn.title = "Copy content"; copyBtn.dataset.copy = link.dataset.dataurl;
-        copyBtn.contentEditable = "false";
-        att.appendChild(copyBtn);
-        htmlUpdated = true;
-      }
-    }
-  });
-  if (htmlUpdated) { sc.evidenceHtml = evidence.innerHTML; saveState(); }
-
-  return d;
-}
+// Expose Bridge functions for Modals until Phase 5
+function activeTab(){ return window.mainPanelVM?.activeTab; }
+function render(){ globalEvents.publish('tabs:changed'); globalEvents.publish('scenarios:changed'); }
 
 /* ========= Interactions ========= */
 
@@ -1174,14 +989,6 @@ importConfirmBtn?.addEventListener("click", () => {
   render(); if(importBackdrop) importBackdrop.style.display = "none"; pendingImportData = null;
 });
 
-document.getElementById("addScenarioBtn")?.addEventListener("click", () => {
-  const tab = activeTab(); const newId = uid();
-  const defaultName = `Item ${tab.scenarios.length + 1}`;
-  tab.scenarios.push({ id: newId, name: defaultName, fields: [], evidenceHtml:"", isOpen: true });
-  render();
-  setTimeout(() => { const inp = document.querySelector(`input[data-sid="${newId}"][data-field="name"]`); if (inp) { inp.focus(); inp.select(); } }, 50);
-});
-
 // ========= EXPORT LOGIC =========
 const exportHtmlBtn = document.getElementById("exportHtmlBtn");
 const exportBackdrop = document.getElementById("exportBackdrop");
@@ -1274,11 +1081,11 @@ document.addEventListener("focusout", (e) => {
 
 document.addEventListener("input", (e) => {
   const nameInp = e.target.closest("input[data-field='name']");
-  if (nameInp) { const sc = findScenario(nameInp.dataset.sid); if (sc) { sc.name = nameInp.value; saveState(); } return; }
+  if (nameInp) { const sc = findScenario(nameInp.dataset.sid); if (sc) { sc.name = nameInp.value; } return; }
   const keyInp = e.target.closest("input[data-fkey]");
-  if (keyInp) { const sc = findScenario(keyInp.dataset.sid); const field = sc.fields.find(f => f.id === keyInp.dataset.fkey); if (field) { field.key = keyInp.value; saveState(); renderPanelOnly(); } return; }
+  if (keyInp) { const sc = findScenario(keyInp.dataset.sid); const field = sc.fields.find(f => f.id === keyInp.dataset.fkey); if (field) { field.key = keyInp.value; globalEvents.publish('tags:updated'); } return; }
   const valInp = e.target.closest("input[data-fval]");
-  if (valInp) { const sc = findScenario(valInp.dataset.sid); const field = sc.fields.find(f => f.id === valInp.dataset.fval); if (field) { field.val = valInp.value; saveState(); renderPanelOnly(); } return; }
+  if (valInp) { const sc = findScenario(valInp.dataset.sid); const field = sc.fields.find(f => f.id === valInp.dataset.fval); if (field) { field.val = valInp.value; globalEvents.publish('tags:updated'); } return; }
 });
 
 document.addEventListener("input", (e) => {
@@ -1527,7 +1334,7 @@ document.addEventListener("keydown", (e) => {
     const key = e.key.toLowerCase();
     if (key === 'n') { e.preventDefault(); document.getElementById("addScenarioBtn")?.click(); }
     if (key === 'r') { e.preventDefault(); document.getElementById("renameTabBtn")?.click(); }
-    if (key === 't') { e.preventDefault(); promptNewTab(); }
+    if (key === 't') { e.preventDefault(); window.mainPanelVM?.addTab(); }
     if (key === 'c') { e.preventDefault(); document.getElementById("themeBtn")?.click(); }
     if (key === 'v') { e.preventDefault(); document.getElementById("compareBtn")?.click(); }
     if (key === 'f') { 
@@ -1543,25 +1350,9 @@ document.addEventListener("keydown", (e) => {
 });
 
 /* ========= Helpers ========= */
-function renderPanelOnly(){
-  const tab = activeTab(); if (!tab) return;
-  const panels = [...document.querySelectorAll(".tab-panel")];
-  panels.forEach(panel => {
-    const cards = [...panel.querySelectorAll("details.scenario")];
-    cards.forEach((card, idx) => {
-      const sid = card.dataset.sid; const sc = findScenario(sid); if(!sc) return;
-      const tagsContainer = card.querySelector(".summary-tags") || card.querySelector(".summary-sub");
-      const validFields = sc.fields.filter(f => f.key.trim() || f.val.trim());
-      if(validFields.length > 0) {
-        const tagsHtml = validFields.map(f => `<span class="tag"><b>${escapeHtml(f.key || "Field")}:</b> ${escapeHtml(f.val || "-")}</span>`).join("");
-        if(tagsContainer.className === "summary-sub") { tagsContainer.outerHTML = `<div class="summary-tags">${tagsHtml}</div>`; } else { tagsContainer.innerHTML = tagsHtml; }
-      } else { if(tagsContainer.className === "summary-tags") { tagsContainer.outerHTML = `<div class="summary-sub">Click to expand/collapse</div>`; } }
-    });
-  });
-}
 
 function findScenario(sid){ for (const ws of appState.workspaces) { for (const t of ws.tabs){ const sc = t.scenarios.find(s => s.id === sid); if (sc) return sc; } } return null; }
-function deleteScenario(sid){ const tab = activeTab(); if(confirm("Are you sure you want to delete this item?")) { tab.scenarios = tab.scenarios.filter(s => s.id !== sid); render(); } }
+function deleteScenario(sid){ window.mainPanelVM?.deleteScenario(sid); }
 
 function openFilePicker(sid){
   const input = document.querySelector(`input[type="file"][data-file="${sid}"]`); const ev = document.querySelector(`.evidence[data-evidence="${sid}"]`);
@@ -1589,21 +1380,6 @@ function insertImageFileIntoEvidence(file, ev, altText){
 
 function persistEvidence(ev){ const sid = ev.getAttribute("data-evidence"); const sc = findScenario(sid); if (!sc) return; sc.evidenceHtml = ev.innerHTML; saveState(); }
 
-/* ========= Tabs CRUD ========= */
-function promptNewTab(){
-  const name = `Tab ${state.tabs.length+1}`; const id = uid(); const newScenId = uid();
-  state.tabs.push({ id, name, scenarios: [{ id: newScenId, name:"Item 1", fields: [], evidenceHtml:"", isOpen: true }] }); state.activeTabId = id; render();
-  setTimeout(() => { const inp = document.querySelector(`input[data-sid="${newScenId}"][data-field="name"]`); if (inp) { inp.focus(); inp.select(); } }, 50);
-}
-
-function closeTab(id){
-  const idx = state.tabs.findIndex(t => t.id === id); if (idx < 0) return;
-  if(confirm("Are you sure you want to delete this tab and all its items?")) {
-    state.tabs.splice(idx, 1);
-    if (state.activeTabId === id){ state.activeTabId = state.tabs[Math.max(0, idx-1)]?.id || null; if (!state.activeTabId) { state.tabs.push({ id: uid(), name: "Tab 1", scenarios: [] }); state.activeTabId = state.tabs[0].id; } }
-    render();
-  }
-}
 
 /* ========= Export HTML ========= */
 function exportHTML(exportData, filename){
