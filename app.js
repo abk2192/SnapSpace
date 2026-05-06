@@ -181,38 +181,23 @@ function uid(){ return Math.random().toString(36).slice(2) + Date.now().toString
 // ========= Backup and Restore UI Injection & Logic =========
 function injectBackupRestoreButtons() {
     try {
-        let actions = document.querySelector('.appbar .actions') || document.querySelector('.actions');
+        let sidebarInner = document.querySelector('.sidebar-inner') || document.querySelector('.sidebar');
         
-        if (!actions) {
-            const appbarInner = document.querySelector('.appbar-inner');
-            if (appbarInner) {
-                actions = document.createElement('div');
-                actions.className = 'actions';
-                appbarInner.appendChild(actions);
-            }
-        }
-        
-        if (actions && !document.getElementById('backupBtn')) {
+        if (sidebarInner && !document.getElementById('backupBtn')) {
             const backupBtn = document.createElement('button');
-            backupBtn.className = 'btn secondary icon-only';
+            backupBtn.className = 'menu-item';
             backupBtn.id = 'backupBtn';
             backupBtn.title = 'Backup Database (JSON)';
-            backupBtn.innerHTML = '<span class="material-symbols-outlined">save</span>';
+            backupBtn.innerHTML = '<span class="material-symbols-outlined">save</span> Backup Data';
             
             const restoreBtn = document.createElement('button');
-            restoreBtn.className = 'btn secondary icon-only';
+            restoreBtn.className = 'menu-item';
             restoreBtn.id = 'restoreBtn';
             restoreBtn.title = 'Restore Database (JSON)';
-            restoreBtn.innerHTML = '<span class="material-symbols-outlined">settings_backup_restore</span>';
+            restoreBtn.innerHTML = '<span class="material-symbols-outlined">settings_backup_restore</span> Restore Data';
             
-            const themeBtn = document.getElementById('themeBtn');
-            if (themeBtn && themeBtn.parentNode === actions) {
-                actions.insertBefore(restoreBtn, themeBtn);
-                actions.insertBefore(backupBtn, restoreBtn);
-            } else {
-                actions.appendChild(backupBtn);
-                actions.appendChild(restoreBtn);
-            }
+            sidebarInner.appendChild(backupBtn);
+            sidebarInner.appendChild(restoreBtn);
         }
     } catch(err) {
         console.error("Backup button injection failed:", err);
@@ -492,8 +477,10 @@ function performSearch(query) {
                 }
                 
                 (sc.fields || []).forEach(f => {
-                    if (f.key.toLowerCase().includes(q) || f.val.toLowerCase().includes(q)) {
-                        hasMatch = true; snippets.push(`<b>Field:</b> ${highlightText(f.key, query)} = ${highlightText(f.val, query)}`);
+                    const keyStr = f.key || "";
+                    const valStr = f.val || "";
+                    if (keyStr.toLowerCase().includes(q) || valStr.toLowerCase().includes(q)) {
+                        hasMatch = true; snippets.push(`<b>Field:</b> ${highlightText(keyStr, query)} = ${highlightText(valStr, query)}`);
                     }
                 });
 
