@@ -32,6 +32,11 @@ export class EditorView {
                 if (cmd === 'createLink') {
                     val = prompt("Enter the URL:"); if (!val) return;
                     if (!/^https?:\/\//i.test(val)) val = 'https://' + val; 
+                } else if (cmd === 'insertCheckbox') {
+                    document.execCommand("insertHTML", false, '<input type="checkbox" class="editor-checkbox" style="width:14px;height:14px;margin-right:6px;vertical-align:middle;cursor:pointer;" contenteditable="false">&nbsp;');
+                    const ev = cmdBtn.closest('.evidence-wrap').querySelector('.evidence');
+                    if (ev) ev.dispatchEvent(new Event('input', { bubbles: true }));
+                    return;
                 } else if (cmd === 'insertTable') {
                     document.execCommand("insertHTML", false, this.vm.generateTableHtml());
                     return;
@@ -97,6 +102,15 @@ export class EditorView {
             if (img) { clearTimeout(this.imgClickTimer); const el = document.getElementById("imgPreviewEl"); if(el) el.src = img.src; document.getElementById("imgPreviewBackdrop").style.display = "flex"; window.getSelection().removeAllRanges(); }
         });
 
+        document.addEventListener("change", (e) => {
+            if (e.target.type === 'checkbox' && e.target.classList.contains('editor-checkbox')) {
+                if (e.target.checked) e.target.setAttribute('checked', 'checked');
+                else e.target.removeAttribute('checked');
+                const ev = e.target.closest('.evidence');
+                if (ev) ev.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        });
+
         document.addEventListener("paste", (e) => {
             const ev = e.target.closest(".evidence[data-evidence]"); if (!ev) return;
             const dt = e.clipboardData; if (!dt) return;
@@ -133,7 +147,7 @@ export class EditorView {
         if (ev) {
             const toolbar = ev.previousElementSibling;
             if (toolbar && toolbar.classList.contains('wysiwyg-toolbar')) {
-                ['bold', 'italic', 'insertUnorderedList', 'strikeThrough'].forEach(cmd => { if (document.queryCommandState(cmd)) { const btn = toolbar.querySelector(`[data-cmd="${cmd}"]`); if (btn) btn.classList.add('active-format'); } });
+                ['bold', 'italic', 'insertUnorderedList', 'insertOrderedList', 'strikeThrough'].forEach(cmd => { if (document.queryCommandState(cmd)) { const btn = toolbar.querySelector(`[data-cmd="${cmd}"]`); if (btn) btn.classList.add('active-format'); } });
             }
             
             const cell = node.closest('td, th');
