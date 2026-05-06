@@ -59,7 +59,11 @@
   .title{ display:flex; align-items:center; gap:10px; flex:none; min-width: 150px; font-weight: 750; font-size: 16px; margin-right: 12px; }
   .title .badge{ width:34px; height:34px; display:grid; place-items:center; border-radius: 12px; background: linear-gradient(135deg, var(--grad-1), var(--grad-2)); color:white; box-shadow: var(--shadow-2); }
   
-  .actions{ display:flex; gap:8px; flex: none; flex-wrap: nowrap; justify-content:flex-end; align-items: center; overflow-x: auto; scrollbar-width: none; }
+  #workspaceTitleInput { flex: 1; field-sizing: content; min-width: 100px; background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 4px 8px; font-family: inherit; font-size: 16px; font-weight: 750; color: var(--text); outline: none; text-overflow: ellipsis; transition: all 0.2s ease; }
+  #workspaceTitleInput:hover { background: var(--surface-2); border-color: var(--outline); }
+  #workspaceTitleInput:focus { background: var(--input-bg); border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
+
+  .actions{ display:flex; gap:8px; flex: none; flex-wrap: nowrap; justify-content:flex-end; align-items: center; overflow: visible; scrollbar-width: none; }
   .actions::-webkit-scrollbar { display: none; } /* Hide scrollbar for clean look */
   
   .btn{ display: inline-flex; align-items: center; justify-content: center; appearance:none; border: 1px solid transparent; background: var(--primary); color:#fff; padding: 9px 12px; border-radius: 999px; cursor:pointer; font-weight: 650; font-size: 13px; box-shadow: 0 4px 10px var(--primary-light); transition: all .15s ease; user-select:none; white-space:nowrap; flex-shrink: 0; }
@@ -123,7 +127,7 @@
   }
 
   /* ===== Search Bar Dropdown ===== */
-  .search-wrap { position: relative; flex: 1; min-width: 120px; transition: flex 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+  .search-wrap { position: relative; flex: 0 1 200px; min-width: 120px; transition: flex 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
   .search-wrap.active-search { flex: 1; }
   #searchInput { width: 100%; transition: all 0.3s ease; }
   .search-dropdown { display: none; position: absolute; top: calc(100% + 8px); left: 0; right: 0; background: var(--surface); border: 1px solid var(--outline); border-radius: 12px; box-shadow: var(--shadow); max-height: 60vh; overflow-y: auto; z-index: 100; padding: 8px; flex-direction: column; gap: 4px;}

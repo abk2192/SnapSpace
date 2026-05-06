@@ -753,7 +753,7 @@ function updateToolbarState() {
   if (!sel || !sel.rangeCount) return; 
   let node = sel.anchorNode; 
   if (!node) return; 
-  if (node.nodeType === 3) node = node.parentNode;
+  if (node?.nodeType === 3) node = node.parentNode || null;
   if (!node || typeof node.closest !== 'function') return;
   const ev = node.closest('.evidence');
   if (ev) {
@@ -771,8 +771,8 @@ document.addEventListener("selectionchange", () => {
   const sel = window.getSelection();
   if (sel && sel.rangeCount > 0) {
     const range = sel.getRangeAt(0);
-    let node = range ? range.commonAncestorContainer : null;
-    if (node && node.nodeType === 3) node = node.parentNode;
+    let node = range?.commonAncestorContainer || null;
+    if (node?.nodeType === 3) node = node.parentNode || null;
     if (node && typeof node.closest === 'function' && node.closest('.evidence')) { savedRange = range; }
   }
 });
@@ -780,8 +780,8 @@ document.addEventListener("selectionchange", () => {
 function restoreSelectionAndInsert(ev, html) {
   ev.focus();
   if (savedRange && savedRange.commonAncestorContainer) {
-    let node = savedRange.commonAncestorContainer;
-    if (node && node.nodeType === 3) node = node.parentNode;
+    let node = savedRange?.commonAncestorContainer || null;
+    if (node?.nodeType === 3) node = node.parentNode || null;
     if (node && typeof node.closest === 'function' && node.closest('.evidence') === ev) {
        const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(savedRange);
     } else { moveCursorToEnd(ev); }
