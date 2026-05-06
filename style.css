@@ -168,13 +168,24 @@
   .tabs::-webkit-scrollbar { display: none; }
   .tab-tools { display: flex; align-items: center; gap: 6px; padding-bottom: 6px; }
   .tab{ display:flex; align-items:center; gap:4px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--outline); background: var(--surface); color: var(--text); cursor:pointer; user-select:none; white-space:nowrap; transition: all .15s ease; font-weight: 500; font-size: 13px; }
+  .tab-name-wrapper { position: relative; display: inline-block; }
   .tab-label { max-width: 140px; overflow: hidden; text-overflow: ellipsis; display: inline-block; vertical-align: middle; }
   .tab:hover{ background: var(--surface-2); }
   .tab:active{ transform: translateY(1px); }
   .tab.active{ border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
   .tab .x{ width: 18px; height:18px; display:grid; place-items:center; border-radius: 999px; border: 1px solid transparent; color: var(--muted); font-weight: 900; font-size: 14px; margin-left: 2px; }
-  .tab-count { display: inline-flex; align-items: center; justify-content: center; min-width: 18px; height: 18px; padding: 0 5px; font-size: 11px; font-weight: 700; background: var(--surface-2); color: var(--muted); border-radius: 10px; margin-left: 2px; transition: all 0.2s ease; }
-  .tab.active .tab-count { background: var(--primary); color: #fff; box-shadow: 0 2px 4px var(--primary-light); }
+  .tab-count {
+    position: absolute;
+    top: -6px;
+    right: -8px;
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 16px; height: 16px; padding: 0 4px;
+    font-size: 10px; font-weight: 700; line-height: 1;
+    background: var(--surface-2); color: var(--muted);
+    border-radius: 8px; border: 1px solid var(--bg);
+    transition: all 0.2s ease; z-index: 1;
+  }
+  .tab.active .tab-count { background: var(--primary); color: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.2); border-color: var(--primary-light); }
   .tab .x:hover{ background: var(--danger-hover); color: var(--danger); }
   .tab.plus{ border-style:dashed; color: var(--muted); background: transparent; }
 
@@ -216,6 +227,14 @@
   .chev{ width: 30px; height:30px; display:grid; place-items:center; border-radius: 10px; border: 1px solid var(--outline-2); background: var(--surface); color: var(--muted); flex: none; }
   .chev span.material-symbols-outlined { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
   details[open] summary .chev span.material-symbols-outlined { transform: rotate(180deg); }
+  
+  .scen-more-wrap { position: relative; }
+  .scen-more-menu { position: absolute; right: 0; top: 100%; margin-top: 8px; background: var(--surface); border: 1px solid var(--outline-2); border-radius: 8px; box-shadow: var(--shadow-2); display: flex; flex-direction: column; opacity: 0; pointer-events: none; transform: translateY(-10px); transition: all 0.2s ease; z-index: 100; min-width: 160px; padding: 4px; }
+  .scen-more-wrap.active .scen-more-menu { opacity: 1; pointer-events: auto; transform: translateY(0); }
+  .scen-more-menu .btn { width: 100%; justify-content: flex-start; padding: 10px 12px; border-radius: 6px; box-shadow: none; border: none; font-size: 13px; font-weight: 500; background: transparent; color: var(--text); }
+  .scen-more-menu .btn:hover { background: var(--surface-2); }
+  .scen-more-menu .btn .btn-text { display: inline; }
+  .scen-more-menu .btn .material-symbols-outlined { margin-right: 8px; font-size: 18px; color: var(--muted); }
 
   .card-body{ padding: 14px 16px 16px; }
   
@@ -271,8 +290,8 @@
     .appbar .actions { width: auto; margin-top: 0; justify-content: flex-end; margin-left: auto; }
     main{ padding: 12px 12px 22px; }
     .tabsbar { top: 0; position: relative; padding-top: 4px; }
-    summary { top: auto; flex-direction: column; }
-    .summary-actions { width: 100%; justify-content: flex-end; flex-wrap: wrap;}
+    summary { top: auto; flex-direction: row; align-items: flex-start; }
+    .summary-actions { width: auto; justify-content: flex-end; flex-wrap: nowrap;}
     .panel-head { flex-direction: column; align-items: flex-start; gap: 12px; }
     .panel-head .actions { width: 100%; margin-top: 0; justify-content: flex-start; }
   }

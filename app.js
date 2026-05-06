@@ -300,6 +300,16 @@ async function bootApp() {
     injectBackupRestoreButtons();
     document.getElementById("renameTabBtn")?.remove();
 
+    // Reorder Global Kebab Menu Actions
+    const actionsContainer = document.querySelector('.appbar .actions');
+    if (actionsContainer) {
+        const btnOrder = ['importBtn', 'exportHtmlBtn', 'compareBtn', 'themeBtn', 'docsBtn', 'resetBtn'];
+        btnOrder.forEach(id => {
+            const btn = document.getElementById(id);
+            if (btn) actionsContainer.appendChild(btn);
+        });
+    }
+
     // Move view-related buttons to the tabs bar for better context and space saving
     const expandAllBtn = document.getElementById('expandAllBtn');
     const collapseAllBtn = document.getElementById('collapseAllBtn');
@@ -308,7 +318,7 @@ async function bootApp() {
         expandAllBtn.classList.add('icon-only', 'secondary');
         collapseAllBtn.classList.add('icon-only', 'secondary');
         const tabTools = document.createElement('div');
-        tabTools.className = 'tab-tools actions';
+        tabTools.className = 'tab-tools';
         tabTools.appendChild(expandAllBtn);
         tabTools.appendChild(collapseAllBtn);
         tabsbar.appendChild(tabTools);
@@ -327,7 +337,7 @@ async function bootApp() {
         'addScenarioBtn': 'add'
     };
     
-    document.querySelectorAll('.appbar .actions .btn, .panel-head .actions .btn').forEach(btn => {
+    document.querySelectorAll('.appbar .actions .btn, .tab-tools .btn').forEach(btn => {
         if (!btn.title) {
             let text = "";
             btn.childNodes.forEach(n => { if (n.nodeType === 3) text += n.textContent; });
@@ -717,8 +727,12 @@ function renderTabs(){
     btn.className = "tab" + (tab.id === state.activeTabId ? " active" : "");
     btn.type = "button";
     
-    let finalHtml = `<span class="tab-label" title="${escapeAttr(tab.name)}">${escapeHtml(tab.name)}</span>`;
-    finalHtml += `<span class="tab-count">${tab.scenarios.length}</span>`;
+    let finalHtml = `
+      <span class="tab-name-wrapper">
+        <span class="tab-label" title="${escapeAttr(tab.name)}">${escapeHtml(tab.name)}</span>
+        <span class="tab-count">${tab.scenarios.length}</span>
+      </span>
+    `;
     if (state.tabs.length > 1) {
         finalHtml += `<span class="x" title="Close tab" data-close-tab="${tab.id}">×</span>`;
     }
@@ -816,9 +830,14 @@ function renderScenarioCard(sc, idx){
         ${tagsHtml ? `<div class="summary-tags">${tagsHtml}</div>` : `<div class="summary-sub">Click to expand/collapse</div>`}
       </div>
       <div class="summary-actions">
-        <button class="btn secondary action-btn icon-only" type="button" title="Save as Template" data-template="${sc.id}"><span class="material-symbols-outlined">bookmark_add</span></button>
-        <button class="btn secondary action-btn icon-only" type="button" title="Duplicate Item" data-duplicate="${sc.id}"><span class="material-symbols-outlined">content_copy</span></button>
-        <button class="btn secondary action-btn icon-only" type="button" title="Move Item" data-move="${sc.id}"><span class="material-symbols-outlined">move_item</span></button>
+        <div class="scen-more-wrap" onclick="event.stopPropagation()">
+          <button class="btn secondary action-btn icon-only scen-more-btn" type="button" title="More Actions"><span class="material-symbols-outlined">more_vert</span></button>
+          <div class="scen-more-menu">
+            <button class="btn secondary action-btn" type="button" title="Save as Template" data-template="${sc.id}"><span class="material-symbols-outlined">bookmark_add</span> <span class="btn-text">Save Template</span></button>
+            <button class="btn secondary action-btn" type="button" title="Duplicate Item" data-duplicate="${sc.id}"><span class="material-symbols-outlined">content_copy</span> <span class="btn-text">Duplicate</span></button>
+            <button class="btn secondary action-btn" type="button" title="Move Item" data-move="${sc.id}"><span class="material-symbols-outlined">move_item</span> <span class="btn-text">Move</span></button>
+          </div>
+        </div>
         <button class="btn danger action-btn icon-only" type="button" title="Delete Item" data-delete="${sc.id}"><span class="material-symbols-outlined">delete</span></button>
         <div class="chev"><span class="material-symbols-outlined">expand_more</span></div>
       </div>
@@ -877,6 +896,16 @@ function renderScenarioCard(sc, idx){
 
 // Prevent item cards from expanding/collapsing when interacting with field tags
 document.addEventListener("click", (e) => {
+  // Close open scenario more menus
+  const moreBtn = e.target.closest('.scen-more-btn');
+  document.querySelectorAll('.scen-more-wrap.active').forEach(w => {
+      if (moreBtn && w === moreBtn.parentElement) return;
+      w.classList.remove('active');
+  });
+  if (moreBtn) {
+      moreBtn.parentElement.classList.toggle('active');
+  }
+
   const summary = e.target.closest("summary");
   if (summary) {
     // If clicking directly on a tag, OR if text is currently highlighted (drag-select)
@@ -1441,6 +1470,15 @@ document.addEventListener("toggle", (e) => {
     if (sc) { sc.isOpen = e.target.open; saveState(); }
   }
 }, true);
+
+document.addEventListener("focusout", (e) => {
+  if (e.target.matches("input[data-field='name']")) {
+      if (!e.target.value.trim()) {
+          e.target.value = e.target.placeholder;
+          e.target.dispatchEvent(new Event("input", {bubbles: true}));
+      }
+  }
+});
 
 document.addEventListener("input", (e) => {
   const nameInp = e.target.closest("input[data-field='name']");
