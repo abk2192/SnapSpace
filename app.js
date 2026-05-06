@@ -268,6 +268,19 @@ document.addEventListener('click', (e) => {
 async function bootApp() {
   
     injectBackupRestoreButtons();
+    document.getElementById("renameTabBtn")?.remove();
+
+    // Move view-related buttons to the panel header for better context
+    const expandAllBtn = document.getElementById('expandAllBtn');
+    const collapseAllBtn = document.getElementById('collapseAllBtn');
+    const panelHead = document.querySelector('.panel-head');
+    if (expandAllBtn && collapseAllBtn && panelHead && !panelHead.querySelector('.actions')) {
+        const panelActions = document.createElement('div');
+        panelActions.className = 'actions'; // Reuse existing .actions class for styling
+        panelActions.appendChild(expandAllBtn);
+        panelActions.appendChild(collapseAllBtn);
+        panelHead.appendChild(panelActions);
+    }
     
     let loadedState = await loadStateFromDB();
     
@@ -422,14 +435,16 @@ if (!searchBackdrop && searchDropdown) {
     document.body.appendChild(searchBackdrop);
 }
 
-// Fix stacking context issue: move the search dropdown to the body
-if (searchDropdown && searchDropdown.parentElement !== document.body) {
-    document.body.appendChild(searchDropdown);
+// Keep search dropdown inside the wrap to position it below the search bar
+if (searchDropdown && searchWrap && searchDropdown.parentElement !== searchWrap) {
+    searchWrap.appendChild(searchDropdown);
 }
 
 // Focus handling for expanding the bar
 searchInput?.addEventListener("focus", () => {
     if(searchWrap) searchWrap.classList.add("active-search");
+    const appbar = document.querySelector('.appbar');
+    if(appbar) appbar.classList.add("search-active");
     const q = searchInput.value.trim();
     if(q.length >= 3) {
         if(searchDropdown) searchDropdown.style.display = "flex";
@@ -445,6 +460,8 @@ searchInput?.addEventListener("focus", () => {
 document.addEventListener("click", (e) => {
     if(searchWrap && !searchWrap.contains(e.target) && (!searchDropdown || !searchDropdown.contains(e.target))) {
         searchWrap.classList.remove("active-search");
+        const appbar = document.querySelector('.appbar');
+        if(appbar) appbar.classList.remove("search-active");
         if(searchDropdown) searchDropdown.style.display = "none";
         if(searchBackdrop) searchBackdrop.style.display = "none";
     }
@@ -554,6 +571,8 @@ searchDropdown?.addEventListener("click", (e) => {
         renderWorkspaces();
         render();
         if(searchWrap) searchWrap.classList.remove("active-search");
+        const appbar = document.querySelector('.appbar');
+        if(appbar) appbar.classList.remove("search-active");
         if(searchDropdown) searchDropdown.style.display = "none";
         if(searchBackdrop) searchBackdrop.style.display = "none";
         if(searchInput) searchInput.value = ""; // Clear after selection
@@ -586,8 +605,16 @@ function renderTabs(){
     const btn = document.createElement("button");
     btn.className = "tab" + (tab.id === state.activeTabId ? " active" : "");
     btn.type = "button";
-    btn.innerHTML = `<span>${escapeHtml(tab.name)}</span>${state.tabs.length > 1 ? `<span class="x" title="Close tab" data-close-tab="${tab.id}">×</span>` : ``}`;
     
+    let finalHtml = `<span>${escapeHtml(tab.name)}</span>`;
+    if (tab.id === state.activeTabId) {
+        finalHtml += `<span class="material-symbols-outlined rename-tab-icon" data-rename-tab="${tab.id}" title="Rename Tab">edit</span>`;
+    }
+    if (state.tabs.length > 1) {
+        finalHtml += `<span class="x" title="Close tab" data-close-tab="${tab.id}">×</span>`;
+    }
+    btn.innerHTML = finalHtml;
+
     btn.draggable = true;
     btn.ondragstart = (e) => { draggedTabIdx = index; e.dataTransfer.effectAllowed = 'move'; setTimeout(()=>btn.classList.add('dragging'), 0); };
     btn.ondragend = () => { draggedTabIdx = null; btn.classList.remove('dragging'); };
@@ -605,6 +632,14 @@ function renderTabs(){
     btn.addEventListener("click", (e) => {
       const close = e.target.closest("[data-close-tab]");
       if (close){ e.stopPropagation(); closeTab(close.getAttribute("data-close-tab")); return; }
+
+      const rename = e.target.closest("[data-rename-tab]");
+      if (rename) {
+          e.stopPropagation();
+          promptDialog("Rename tab", tab.name, "Give this tab a short name.", (val) => { tab.name = (val || "Untitled").trim(); render(); });
+          return;
+      }
+
       state.activeTabId = tab.id; render();
     });
     tabsEl.appendChild(btn);
@@ -1212,11 +1247,6 @@ document.getElementById("addScenarioBtn")?.addEventListener("click", () => {
   setTimeout(() => { const inp = document.querySelector(`input[data-sid="${newId}"][data-field="name"]`); if (inp) inp.focus(); }, 50);
 });
 
-document.getElementById("renameTabBtn")?.addEventListener("click", () => {
-  const tab = activeTab();
-  promptDialog("Rename tab", tab.name, "Give this tab a short name.", (val) => { tab.name = (val || "Untitled").trim(); render(); });
-});
-
 // ========= EXPORT LOGIC =========
 const exportHtmlBtn = document.getElementById("exportHtmlBtn");
 const exportBackdrop = document.getElementById("exportBackdrop");
@@ -1536,6 +1566,8 @@ document.addEventListener("keydown", (e) => {
              document.getElementById("searchBackdrop").style.display = "none";
              if(document.getElementById("searchDropdown")) document.getElementById("searchDropdown").style.display = "none";
              if(document.getElementById("searchWrap")) document.getElementById("searchWrap").classList.remove("active-search");
+             const appbar = document.querySelector('.appbar');
+             if(appbar) appbar.classList.remove("search-active");
          }
       }
       return; 

@@ -55,6 +55,7 @@
 
   /* ===== App bar ===== */
   .appbar{ position: sticky; top:0; height: 64px; z-index: 95; border-bottom: 1px solid var(--outline); transition: all 0.3s ease; }
+  .appbar.search-active { z-index: 121; }
   .appbar::before {
     content: '';
     position: absolute;
@@ -135,10 +136,10 @@
   }
 
   /* ===== Search Bar Dropdown ===== */
-  .search-wrap { position: relative; flex: 0 1 200px; min-width: 120px; transition: flex 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+  .search-wrap { position: relative; flex: 1 1 280px; min-width: 180px; max-width: 600px; transition: flex 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
   .search-wrap.active-search { flex: 1; }
   #searchInput { width: 100%; transition: all 0.3s ease; }
-  .search-dropdown { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(600px, 90vw); background: var(--surface); border: 1px solid var(--outline); border-radius: 12px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); max-height: 80vh; overflow-y: auto; z-index: 125; padding: 16px; flex-direction: column; gap: 8px;}
+  .search-dropdown { display: none; position: absolute; top: calc(100% + 12px); right: 0; left: auto; transform: none; width: 400px; max-width: calc(100vw - 32px); background: var(--surface); border: 1px solid var(--outline); border-radius: 12px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); max-height: calc(100vh - 100px); overflow-y: auto; z-index: 125; padding: 16px; flex-direction: column; gap: 8px;}
   .search-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(3px); z-index: 120; }
 
   /* Search Modal Results */
@@ -157,6 +158,13 @@
   .tab:active{ transform: translateY(1px); }
   .tab.active{ border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
   .tab .x{ width: 20px; height:20px; display:grid; place-items:center; border-radius: 999px; border: 1px solid transparent; color: var(--muted); font-weight: 900; font-size: 14px; }
+  .tab .rename-tab-icon { font-size: 16px; margin-left: 8px; margin-right: 4px; padding: 2px; border-radius: 4px; color: var(--muted); opacity: 0; transition: all 0.2s ease; vertical-align: middle; }
+  .tab.active:hover .rename-tab-icon { opacity: 0.6; }
+  .tab .rename-tab-icon:hover {
+    opacity: 1;
+    color: var(--primary);
+    background: var(--surface-2);
+  }
   .tab .x:hover{ background: var(--danger-hover); color: var(--danger); }
   .tab.plus{ border-style:dashed; color: var(--muted); background: transparent; }
 
