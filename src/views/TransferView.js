@@ -198,27 +198,65 @@ export class TransferView {
 <body class="readonly">
   <header class="appbar"><div class="appbar-inner"><div class="title"><div class="badge"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M9 15l2 2 4-4"></path></svg></div> SnapSpace Export</div></div></header>
   <div class="tabsbar"><div class="tabs" id="tabs"></div></div>
-  <main><div id="panel"></div></main>
+  <main>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 12px; flex-wrap: wrap;">
+      <input type="text" id="reportSearchInput" placeholder="Search report..." style="padding: 6px 12px; border-radius: 18px; border: 1px solid var(--outline); background: var(--surface); color: var(--text); outline: none; flex: 1; min-width: 200px; max-width: 400px; font-size: 13px;" />
+      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button class="btn secondary" id="expandAllBtn" style="padding: 6px 10px; font-size: 12px;"><span class="material-symbols-outlined" style="font-size: 16px;">unfold_more</span> Expand All</button>
+        <button class="btn secondary" id="collapseAllBtn" style="padding: 6px 10px; font-size: 12px;"><span class="material-symbols-outlined" style="font-size: 16px;">unfold_less</span> Collapse All</button>
+      </div>
+    </div>
+    <div id="panel"></div>
+  </main>
   <script id="data-payload" type="application/json">${payloadStr}<\/script>
   <script>
     const state = JSON.parse(document.getElementById('data-payload').textContent);
     let activeTabId = state.activeTabId;
     function escapeHtml(str){ return String(str).replace(/[&<>"']/g, s => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[s])); }
     function escapeAttr(str){ return escapeHtml(str).replace(/"/g, "&quot;"); }
+    
+    let searchQuery = "";
+    document.addEventListener("input", (e) => {
+      if(e.target.id === "reportSearchInput") {
+        searchQuery = e.target.value.toLowerCase();
+        renderView();
+      }
+    });
+
     function renderView() {
+      const filteredTabs = state.tabs.map(t => {
+          const matchingScenarios = t.scenarios.filter(sc => {
+              if(!searchQuery) return true;
+              const evText = (sc.evidenceHtml || "").replace(/<[^>]*>?/gm, ' ');
+              const fieldText = (sc.fields || []).map(f => (f.key||"") + " " + (f.val||"")).join(" ");
+              return ((sc.name||"") + " " + fieldText + " " + evText).toLowerCase().includes(searchQuery);
+          });
+          return { ...t, scenarios: matchingScenarios };
+      });
+
       const tabsEl = document.getElementById("tabs");
-      tabsEl.innerHTML = state.tabs.map(tab => \`<button class="tab \${tab.id === activeTabId ? 'active' : ''}" data-tab="\${tab.id}"><span class="tab-name-wrapper"><span class="tab-label" title="\${escapeAttr(tab.name)}">\${escapeHtml(tab.name)}</span></span></button>\`).join("");
-      const panelEl = document.getElementById("panel"); const activeTab = state.tabs.find(t => t.id === activeTabId); if(!activeTab) return;
+      tabsEl.innerHTML = filteredTabs.map(tab => {
+          const cnt = tab.scenarios.length;
+          const op = (cnt === 0 && searchQuery) ? 'opacity:0.6;' : '';
+          return \`<button class="tab \${tab.id === activeTabId ? 'active' : ''}" data-tab="\${tab.id}" style="\${op}"><span class="tab-name-wrapper"><span class="tab-label" title="\${escapeAttr(tab.name)}">\${escapeHtml(tab.name)}</span>\${searchQuery ? \`<span class="tab-count" style="position:static; margin-left: 4px; border-radius:12px; padding: 2px 6px;">\${cnt}</span>\` : ''}</span></button>\`;
+      }).join("");
+      const panelEl = document.getElementById("panel"); const activeTab = filteredTabs.find(t => t.id === activeTabId); 
+      if(!activeTab) { panelEl.innerHTML = ""; return; }
+      if(activeTab.scenarios.length === 0 && searchQuery) { panelEl.innerHTML = '<div style="padding: 32px; text-align: center; color: var(--muted);">No matching items in this tab.</div>'; return; }
+      
       panelEl.innerHTML = activeTab.scenarios.map((sc, idx) => {
         const validFields = (sc.fields || []).filter(f => f.key.trim() || f.val.trim());
         const tagsHtml = validFields.map(f => \`<span class="tag"><b>\${escapeHtml(f.key || "Field")}:</b> \${escapeHtml(f.val || "-")}</span>\`).join("");
         const fieldsHtml = validFields.map(f => \`<div class="field-row" style="margin-bottom: 8px; display: flex; gap: 8px;"><input class="input" value="\${escapeAttr(f.key)}" readonly style="width: 30%; background: transparent; border-color: var(--outline-2); font-weight: 700; user-select: text;" /><input class="input" value="\${escapeAttr(f.val)}" readonly style="flex: 1; background: var(--surface-2); border-color: var(--outline-2); user-select: text;" /></div>\`).join("");
         const fieldsSection = fieldsHtml ? \`<div class="label" style="margin-bottom: 8px;"><span class="material-symbols-outlined" style="font-size: 14px;">tune</span> Properties</div><div class="field-list" style="margin-bottom: 16px;">\${fieldsHtml}</div>\` : '';
-        return \`<details class="scenario" \${sc.isOpen !== false ? 'open' : ''}><summary><div class="summary-content"><div style="display:flex; align-items:center; gap:6px; width: 100%;"><input class="header-name-input" value="\${escapeAttr(sc.name||"")}" placeholder="Item \${idx+1}" readonly style="padding-left: 0;" /></div>\${tagsHtml ? \`<div class="summary-tags">\${tagsHtml}</div>\` : ''}</div><div class="summary-actions"><div class="chev"><span class="material-symbols-outlined">expand_more</span></div></div></summary><div class="card-body">\${fieldsSection}<div class="evidence-wrap" style="margin-top: 0;"><div class="label" style="margin-bottom: 6px;"><span class="material-symbols-outlined" style="font-size: 14px;">image</span> Notes & Media</div><div class="evidence">\${sc.evidenceHtml}</div></div></div></details>\`;
+        const isOpenAttr = (searchQuery || sc.isOpen !== false) ? 'open' : '';
+        return \`<details class="scenario" \${isOpenAttr}><summary><div class="summary-content"><div style="display:flex; align-items:center; gap:6px; width: 100%;"><input class="header-name-input" value="\${escapeAttr(sc.name||"")}" placeholder="Item \${idx+1}" readonly style="padding-left: 0;" /></div>\${tagsHtml ? \`<div class="summary-tags">\${tagsHtml}</div>\` : ''}</div><div class="summary-actions"><div class="chev"><span class="material-symbols-outlined">expand_more</span></div></div></summary><div class="card-body">\${fieldsSection}<div class="evidence-wrap" style="margin-top: 0;"><div class="label" style="margin-bottom: 6px;"><span class="material-symbols-outlined" style="font-size: 14px;">image</span> Notes & Media</div><div class="evidence">\${sc.evidenceHtml}</div></div></div></details>\`;
       }).join("");
     }
     let imgClickTimerExport = null;
     document.addEventListener("click", (e) => {
+      if (e.target.closest("#expandAllBtn")) { document.querySelectorAll("details.scenario").forEach(d => d.open = true); return; }
+      if (e.target.closest("#collapseAllBtn")) { document.querySelectorAll("details.scenario").forEach(d => d.open = false); return; }
       const img = e.target.closest(".evidence img"); 
       if (img){ if(e.detail > 1) return; clearTimeout(imgClickTimerExport); imgClickTimerExport = setTimeout(() => { let w = Number(img.dataset.w || 100); w = (w <= 40) ? 100 : (w - 20); img.dataset.w = String(w); img.style.width = w + "%"; }, 200); return; }
       const tabBtn = e.target.closest(".tab"); if(tabBtn) { activeTabId = tabBtn.dataset.tab; renderView(); return; }
