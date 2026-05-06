@@ -152,10 +152,10 @@ export class EditorView {
                 const bDR = wrap.querySelector('.tbl-del-row');
                 const bDC = wrap.querySelector('.tbl-del-col');
                 
-                if (bAR) { bAR.style.display = 'grid'; bAR.style.top = `${top + cellRect.height - 11}px`; bAR.style.left = `${left + cellRect.width / 2 - 11}px`; }
-                if (bAC) { bAC.style.display = 'grid'; bAC.style.top = `${top + cellRect.height / 2 - 11}px`; bAC.style.left = `${left + cellRect.width - 11}px`; }
-                if (bDR) { bDR.style.display = 'grid'; bDR.style.top = `${top + cellRect.height / 2 - 11}px`; bDR.style.left = `${left - 11}px`; }
-                if (bDC) { bDC.style.display = 'grid'; bDC.style.top = `${top - 11}px`; bDC.style.left = `${left + cellRect.width / 2 - 11}px`; }
+                if (bAR) { bAR.style.display = 'grid'; bAR.style.top = `${top + cellRect.height - 9}px`; bAR.style.left = `${left + cellRect.width / 2 - 20}px`; }
+                if (bDR) { bDR.style.display = 'grid'; bDR.style.top = `${top + cellRect.height - 9}px`; bDR.style.left = `${left + cellRect.width / 2 + 2}px`; }
+                if (bAC) { bAC.style.display = 'grid'; bAC.style.top = `${top + cellRect.height / 2 - 20}px`; bAC.style.left = `${left + cellRect.width - 9}px`; }
+                if (bDC) { bDC.style.display = 'grid'; bDC.style.top = `${top + cellRect.height / 2 + 2}px`; bDC.style.left = `${left + cellRect.width - 9}px`; }
             }
         }
     }
