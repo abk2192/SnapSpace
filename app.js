@@ -180,28 +180,42 @@ function uid(){ return Math.random().toString(36).slice(2) + Date.now().toString
 
 // ========= Backup and Restore UI Injection & Logic =========
 function injectBackupRestoreButtons() {
-    const actions = document.querySelector('.actions');
-    if (actions && !document.getElementById('backupBtn')) {
-        const backupBtn = document.createElement('button');
-        backupBtn.className = 'btn secondary icon-only';
-        backupBtn.id = 'backupBtn';
-        backupBtn.title = 'Backup Database (JSON)';
-        backupBtn.innerHTML = '<span class="material-symbols-outlined">save</span>';
+    try {
+        let actions = document.querySelector('.appbar .actions') || document.querySelector('.actions');
         
-        const restoreBtn = document.createElement('button');
-        restoreBtn.className = 'btn secondary icon-only';
-        restoreBtn.id = 'restoreBtn';
-        restoreBtn.title = 'Restore Database (JSON)';
-        restoreBtn.innerHTML = '<span class="material-symbols-outlined">settings_backup_restore</span>';
-        
-        const themeBtn = document.getElementById('themeBtn');
-        if (themeBtn) {
-            actions.insertBefore(restoreBtn, themeBtn);
-            actions.insertBefore(backupBtn, restoreBtn);
-        } else {
-            actions.appendChild(backupBtn);
-            actions.appendChild(restoreBtn);
+        if (!actions) {
+            const appbarInner = document.querySelector('.appbar-inner');
+            if (appbarInner) {
+                actions = document.createElement('div');
+                actions.className = 'actions';
+                appbarInner.appendChild(actions);
+            }
         }
+        
+        if (actions && !document.getElementById('backupBtn')) {
+            const backupBtn = document.createElement('button');
+            backupBtn.className = 'btn secondary icon-only';
+            backupBtn.id = 'backupBtn';
+            backupBtn.title = 'Backup Database (JSON)';
+            backupBtn.innerHTML = '<span class="material-symbols-outlined">save</span>';
+            
+            const restoreBtn = document.createElement('button');
+            restoreBtn.className = 'btn secondary icon-only';
+            restoreBtn.id = 'restoreBtn';
+            restoreBtn.title = 'Restore Database (JSON)';
+            restoreBtn.innerHTML = '<span class="material-symbols-outlined">settings_backup_restore</span>';
+            
+            const themeBtn = document.getElementById('themeBtn');
+            if (themeBtn && themeBtn.parentNode === actions) {
+                actions.insertBefore(restoreBtn, themeBtn);
+                actions.insertBefore(backupBtn, restoreBtn);
+            } else {
+                actions.appendChild(backupBtn);
+                actions.appendChild(restoreBtn);
+            }
+        }
+    } catch(err) {
+        console.error("Backup button injection failed:", err);
     }
 }
 
@@ -764,8 +778,8 @@ document.addEventListener("selectionchange", () => {
   updateToolbarState();
   const sel = window.getSelection();
   if (sel.rangeCount > 0) {
-    let node = sel.commonAncestorContainer;
-    if (node.nodeType === 3) node = node.parentNode;
+    let node = sel.getRangeAt(0).commonAncestorContainer;
+    if (node && node.nodeType === 3) node = node.parentNode;
     if (node && node.closest && node.closest('.evidence')) { savedRange = sel.getRangeAt(0); }
   }
 });
@@ -1477,32 +1491,32 @@ document.addEventListener("keydown", (e) => {
     if (e.key === "Enter") { e.preventDefault(); e.target.blur(); return; }
   }
 
-  if (document.getElementById("dlgBackdrop").style.display === "flex" || 
-      document.getElementById("themeBackdrop").style.display === "flex" ||
-      document.getElementById("docsBackdrop").style.display === "flex" ||
-      document.getElementById("cfBackdrop").style.display === "flex" ||
-      document.getElementById("exportBackdrop").style.display === "flex" ||
-      document.getElementById("importBackdrop").style.display === "flex" ||
-      document.getElementById("compareBackdrop").style.display === "flex" ||
-      document.getElementById("filePreviewBackdrop").style.display === "flex" ||
-      document.getElementById("imgPreviewBackdrop").style.display === "flex" ||
-      document.getElementById("tplBackdrop").style.display === "flex" ||
-      document.getElementById("moveBackdrop").style.display === "flex" ||
-      document.getElementById("restoreBackdrop").style.display === "flex") {
+  if (document.getElementById("dlgBackdrop")?.style.display === "flex" || 
+      document.getElementById("themeBackdrop")?.style.display === "flex" ||
+      document.getElementById("docsBackdrop")?.style.display === "flex" ||
+      document.getElementById("cfBackdrop")?.style.display === "flex" ||
+      document.getElementById("exportBackdrop")?.style.display === "flex" ||
+      document.getElementById("importBackdrop")?.style.display === "flex" ||
+      document.getElementById("compareBackdrop")?.style.display === "flex" ||
+      document.getElementById("filePreviewBackdrop")?.style.display === "flex" ||
+      document.getElementById("imgPreviewBackdrop")?.style.display === "flex" ||
+      document.getElementById("tplBackdrop")?.style.display === "flex" ||
+      document.getElementById("moveBackdrop")?.style.display === "flex" ||
+      document.getElementById("restoreBackdrop")?.style.display === "flex") {
       
       if (e.key === "Escape") {
-         document.getElementById("dlgCancel").click();
-         document.getElementById("themeClose").click();
+         document.getElementById("dlgCancel")?.click();
+         document.getElementById("themeClose")?.click();
          const docsClose = document.getElementById("docsCloseBtn");
          if(docsClose) docsClose.click();
-         document.getElementById("cfCancel").click();
-         document.getElementById("exportCancelBtn").click();
-         document.getElementById("importCancelBtn").click();
-         document.getElementById("compCloseBtn").click();
-         document.getElementById("fpCloseBtn").click();
-         document.getElementById("tplCloseBtn").click();
-         document.getElementById("moveCancelBtn").click();
-         document.getElementById("imgPreviewBackdrop").style.display = "none";
+         document.getElementById("cfCancel")?.click();
+         document.getElementById("exportCancelBtn")?.click();
+         document.getElementById("importCancelBtn")?.click();
+         document.getElementById("compCloseBtn")?.click();
+         document.getElementById("fpCloseBtn")?.click();
+         document.getElementById("tplCloseBtn")?.click();
+         document.getElementById("moveCancelBtn")?.click();
+         if (document.getElementById("imgPreviewBackdrop")) document.getElementById("imgPreviewBackdrop").style.display = "none";
          const restoreCancel = document.getElementById("restoreCancelBtn");
          if (restoreCancel) restoreCancel.click();
       }
