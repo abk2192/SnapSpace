@@ -4,6 +4,8 @@ import { dbService } from './src/services/Database.js';
 import { themeService } from './src/services/Theme.js';
 import { store } from './src/core/Store.js';
 import { globalEvents } from './src/core/PubSub.js';
+import { SidebarVM } from './src/viewmodels/SidebarVM.js';
+import { SidebarView } from './src/views/SidebarView.js';
 
 /* ========= PWA Service Worker Registration ========= */
 registerServiceWorker();
@@ -32,74 +34,6 @@ themeBackdrop?.addEventListener("click", (e) => { if(e.target === themeBackdrop)
 document.querySelectorAll('[data-set-theme]').forEach(el => { el.addEventListener('click', (e) => { themeService.setTheme(e.target.dataset.setTheme); }); });
 document.querySelectorAll('[data-set-color]').forEach(el => { el.addEventListener('click', (e) => { themeService.setColor(e.target.dataset.setColor); }); });
 
-/* ========= Sidebar Resizer ========= */
-const sidebarResizer = document.getElementById("sidebarResizer");
-let isResizingSidebar = false;
-
-// Load saved width
-const savedSidebarWidth = localStorage.getItem('snapspace_sidebar_width');
-if (savedSidebarWidth) { document.documentElement.style.setProperty('--sidebar-width', savedSidebarWidth); }
-
-sidebarResizer?.addEventListener("mousedown", (e) => {
-    isResizingSidebar = true;
-    sidebarResizer.classList.add('active');
-    document.body.style.cursor = 'ew-resize';
-    document.body.style.userSelect = 'none';
-});
-document.addEventListener("mousemove", (e) => {
-    if (!isResizingSidebar) return;
-    let newWidth = e.clientX;
-    if (newWidth < 200) newWidth = 200;
-    if (newWidth > 600) newWidth = 600;
-    document.documentElement.style.setProperty('--sidebar-width', `${newWidth}px`);
-});
-document.addEventListener("mouseup", () => {
-    if (isResizingSidebar) {
-        isResizingSidebar = false;
-        sidebarResizer.classList.remove('active');
-        document.body.style.cursor = '';
-        document.body.style.userSelect = '';
-        localStorage.setItem('snapspace_sidebar_width', document.documentElement.style.getPropertyValue('--sidebar-width'));
-    }
-});
-
-/* ========= Sidebar Hamburger Menu Logic ========= */
-const mainMenuBtn = document.getElementById("mainMenuBtn");
-const sidebarBackdrop = document.getElementById("sidebarBackdrop");
-const mobileSidebarClose = document.getElementById("mobileSidebarClose");
-
-mainMenuBtn?.addEventListener("click", (e) => {
-    e.stopPropagation();
-    if (window.innerWidth >= 1100) {
-        document.body.classList.toggle("sidebar-hide");
-    } else {
-        document.body.classList.toggle("sidebar-show");
-        if(sidebarBackdrop) setTimeout(() => sidebarBackdrop.style.opacity = "1", 10);
-    }
-});
-
-mobileSidebarClose?.addEventListener("click", () => {
-   if(!sidebarBackdrop) return;
-   sidebarBackdrop.style.opacity = "0";
-   setTimeout(() => document.body.classList.remove("sidebar-show"), 300);
-});
-
-if(sidebarBackdrop) {
-    sidebarBackdrop.addEventListener("click", () => {
-        sidebarBackdrop.style.opacity = "0";
-        setTimeout(() => document.body.classList.remove("sidebar-show"), 300);
-    });
-}
-
-document.querySelectorAll('#sidebarMenu .menu-item:not(#addWorkspaceBtn)').forEach(item => {
-    item.addEventListener("click", () => {
-        if(window.innerWidth < 1100) {
-           sidebarBackdrop.style.opacity = "0";
-           setTimeout(() => document.body.classList.remove("sidebar-show"), 300);
-        }
-    });
-});
-
 /* ========= Global Reactivity Subscribers ========= */
 globalEvents.subscribe('store:saved', () => {
     const ind = document.getElementById("saveIndicator");
@@ -108,6 +42,12 @@ globalEvents.subscribe('store:saved', () => {
         clearTimeout(ind.timer);
         ind.timer = setTimeout(() => ind.style.opacity = "0", 2000);
     }
+});
+
+globalEvents.subscribe('workspace:selected', () => {
+    state = store.state.workspaces.find(w => w.id === store.state.activeWorkspaceId);
+    workspaceTitleInput.value = state.title || "Project";
+    render();
 });
 
 /* ========= Reactivity Compatibility ========= */
@@ -224,8 +164,8 @@ document.addEventListener('click', (e) => {
                                 state = appState.workspaces.find(w => w.id === appState.activeWorkspaceId) || appState.workspaces[0];
                                 store.state = appState; // Re-sync proxy baseline
                                 workspaceTitleInput.value = state.title || "Project";
-                                renderWorkspaces();
                                 render();
+                                globalEvents.publish('workspaces:changed');
                                 store.scheduleSave();
                                 alert("Data restored successfully!");
                             }
@@ -358,9 +298,14 @@ async function bootApp() {
     appState = await store.init();
     
     state = appState.workspaces.find(w => w.id === appState.activeWorkspaceId) || appState.workspaces[0];
+    
+    // Initialize Sidebar Subsystem
+    const sidebarVM = new SidebarVM();
+    const sidebarView = new SidebarView(sidebarVM);
+    sidebarView.render();
+    
     workspaceTitleInput.value = state.title || "Project";
     
-    renderWorkspaces();
     render(); 
 }
 
@@ -368,91 +313,9 @@ const workspaceTitleInput = document.getElementById("workspaceTitleInput");
 workspaceTitleInput.addEventListener("input", (e) => {
     if (state) {
         state.title = e.target.value;
-        renderWorkspaces();
+        globalEvents.publish('workspaces:changed');
         saveState();
     }
-});
-
-/* ========= Sidebar Project Management (Drag & Drop added) ========= */
-let draggedWsId = null;
-
-function renderWorkspaces() {
-    const list = document.getElementById("workspaceListItems");
-    list.innerHTML = "";
-    appState.workspaces.forEach((ws) => {
-        const btn = document.createElement("button");
-        btn.className = "menu-item ws-item" + (ws.id === appState.activeWorkspaceId ? " active-ws" : "");
-        
-        btn.innerHTML = `
-           <span class="material-symbols-outlined" style="font-size:18px;">workspaces</span> 
-           <span class="ws-name">${escapeHtml(ws.title || 'Untitled')}</span>
-           ${appState.workspaces.length > 1 ? `<span class="material-symbols-outlined ws-del" data-del-ws="${ws.id}" title="Delete Project">delete</span>` : ''}
-        `;
-        
-        btn.draggable = true;
-        btn.ondragstart = (e) => { draggedWsId = ws.id; e.dataTransfer.effectAllowed = 'move'; setTimeout(() => btn.classList.add('dragging'), 0); };
-        btn.ondragend = () => { draggedWsId = null; btn.classList.remove('dragging'); };
-        btn.ondragover = (e) => { e.preventDefault(); btn.classList.add('drag-over-ws'); };
-        btn.ondragleave = () => { btn.classList.remove('drag-over-ws'); };
-        btn.ondrop = (e) => {
-            e.preventDefault(); btn.classList.remove('drag-over-ws');
-            if (draggedWsId && draggedWsId !== ws.id) {
-                const fromIdx = appState.workspaces.findIndex(w => w.id === draggedWsId);
-                const toIdx = appState.workspaces.findIndex(w => w.id === ws.id);
-                if(fromIdx >= 0 && toIdx >= 0) {
-                    const moved = appState.workspaces.splice(fromIdx, 1)[0];
-                    appState.workspaces.splice(toIdx, 0, moved);
-                    renderWorkspaces(); saveState();
-                }
-            }
-        };
-
-        btn.addEventListener("click", (e) => {
-            const del = e.target.closest("[data-del-ws]");
-            if (del) {
-                e.stopPropagation();
-                if(confirm(`Are you sure you want to delete the project "${ws.title}"?`)) {
-                    appState.workspaces = appState.workspaces.filter(x => x.id !== ws.id);
-                    if(appState.activeWorkspaceId === ws.id) {
-                        appState.activeWorkspaceId = appState.workspaces[0].id;
-                        state = appState.workspaces[0];
-                        workspaceTitleInput.value = state.title;
-                        render();
-                    }
-                    renderWorkspaces(); saveState();
-                }
-                return;
-            }
-            
-            appState.activeWorkspaceId = ws.id;
-            state = appState.workspaces.find(w => w.id === ws.id);
-            workspaceTitleInput.value = state.title;
-            if(window.innerWidth < 1100) {
-               sidebarBackdrop.style.opacity = "0";
-               setTimeout(() => document.body.classList.remove("sidebar-show"), 300);
-            }
-            render(); renderWorkspaces(); saveState();
-        });
-        list.appendChild(btn);
-    });
-}
-
-document.getElementById("addWorkspaceBtn")?.addEventListener("click", () => {
-    const newId = uid(); const newTabId = uid();
-    const newWs = {
-        id: newId, title: "New Project", activeTabId: newTabId,
-        tabs: [{ id: newTabId, name: "Tab 1", scenarios: [{ id: uid(), name:"Item 1", fields: [], evidenceHtml:"", isOpen: true }] }]
-    };
-    appState.workspaces.push(newWs);
-    appState.activeWorkspaceId = newId;
-    state = newWs;
-    workspaceTitleInput.value = state.title;
-    
-    if(window.innerWidth < 1100) {
-       sidebarBackdrop.style.opacity = "0";
-       setTimeout(() => document.body.classList.remove("sidebar-show"), 300);
-    }
-    renderWorkspaces(); render(); saveState();
 });
 
 const resetBtn = document.getElementById("resetBtn");
@@ -630,7 +493,7 @@ searchDropdown?.addEventListener("click", (e) => {
         workspaceTitleInput.value = state.title;
         state.activeTabId = res.dataset.tab;
         
-        renderWorkspaces();
+        globalEvents.publish('workspaces:changed');
         render();
         closeCommandPalette();
         
@@ -1278,7 +1141,7 @@ importConfirmBtn?.addEventListener("click", () => {
     appState.activeWorkspaceId = newWsId;
     state = newWs;
     workspaceTitleInput.value = state.title;
-    renderWorkspaces();
+    globalEvents.publish('workspaces:changed');
   }
   else if (mode === "replace") {
     state.tabs = pendingImportData.tabs;
