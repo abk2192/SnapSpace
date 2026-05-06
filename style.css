@@ -167,26 +167,22 @@
   .tabs{ display:flex; gap: 8px; align-items:center; overflow-x:auto; padding-bottom: 6px; scrollbar-width: none; flex: 1; min-width: 0; }
   .tabs::-webkit-scrollbar { display: none; }
   .tab-tools { display: flex; align-items: center; gap: 6px; padding-bottom: 6px; }
-  .tab{ display:flex; align-items:center; gap:4px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--outline); background: var(--surface); color: var(--text); cursor:pointer; user-select:none; white-space:nowrap; transition: all .15s ease; font-weight: 500; font-size: 13px; }
-  .tab-name-wrapper { position: relative; display: inline-block; }
-  .tab-label { max-width: 140px; overflow: hidden; text-overflow: ellipsis; display: inline-block; vertical-align: middle; }
+  .tab{ position: relative; display:flex; align-items:center; gap:4px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--outline); background: var(--surface); color: var(--text); cursor:pointer; user-select:none; white-space:nowrap; transition: all .15s ease; font-weight: 500; font-size: 13px; }
+.tab-name-wrapper { display: flex; align-items: center; gap: 6px; }
+.tab-label { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .tab:hover{ background: var(--surface-2); }
   .tab:active{ transform: translateY(1px); }
   .tab.active{ border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
   .tab .x{ width: 18px; height:18px; display:grid; place-items:center; border-radius: 999px; border: 1px solid transparent; color: var(--muted); font-weight: 900; font-size: 14px; margin-left: 2px; }
   .tab-count {
-    position: absolute;
-    top: -6px;
-    right: -8px;
+    position: absolute; top: -6px; right: -4px;
     display: inline-flex; align-items: center; justify-content: center;
     min-width: 16px; height: 16px; padding: 0 4px;
     font-size: 10px; font-weight: 700; line-height: 1;
-    background: var(--surface-2); color: var(--muted);
-    border-radius: 8px; border: none; box-shadow: 0 2px 5px rgba(0,0,0,0.15);
-    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
-    transition: all 0.2s ease; z-index: 1;
+    background: var(--surface-2); color: var(--muted); box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+    border-radius: 8px; transition: all 0.2s ease; z-index: 1;
   }
-  .tab.active .tab-count { background: var(--primary); color: #fff; box-shadow: 0 2px 6px var(--primary-light); }
+.tab.active .tab-count { background: var(--primary); color: #fff; box-shadow: 0 2px 6px var(--primary-light); }
   .tab .x:hover{ background: var(--danger-hover); color: var(--danger); }
   .tab.plus{ border-style:dashed; color: var(--muted); background: transparent; }
 
