@@ -33,10 +33,26 @@ export class EditorView {
                     val = prompt("Enter the URL:"); if (!val) return;
                     if (!/^https?:\/\//i.test(val)) val = 'https://' + val; 
                 } else if (cmd === 'insertTable') {
-                    const dims = prompt("Enter dimensions (rows,cols) e.g., 3,3:", "3,3");
-                    if(dims) {
-                        const [r, c] = dims.split(',').map(n => parseInt(n.trim(), 10));
-                        if (r > 0 && c > 0) document.execCommand("insertHTML", false, this.vm.generateTableHtml(r, c));
+                    document.execCommand("insertHTML", false, this.vm.generateTableHtml());
+                    return;
+                } else if (cmd.startsWith('table')) {
+                    const sel = window.getSelection(); let node = sel.anchorNode; if (node?.nodeType === 3) node = node.parentNode;
+                    const cell = node?.closest('td, th'); const row = cell?.closest('tr'); const table = row?.closest('table.evidence-table');
+                    if (table && cell && row) {
+                        const cellIndex = Array.from(row.children).indexOf(cell);
+                        if (cmd === 'tableAddRow') {
+                            const newRow = document.createElement('tr');
+                            Array.from(row.children).forEach(() => { const td = document.createElement('td'); td.innerHTML = '<br>'; newRow.appendChild(td); });
+                            row.after(newRow);
+                        } else if (cmd === 'tableAddCol') {
+                            Array.from(table.rows).forEach(r => { const isHeader = r.parentElement.tagName.toLowerCase() === 'thead'; const newCell = document.createElement(isHeader ? 'th' : 'td'); newCell.innerHTML = '<br>'; if(r.children[cellIndex]) r.children[cellIndex].after(newCell); else r.appendChild(newCell); });
+                        } else if (cmd === 'tableDelRow') {
+                            row.remove(); if(table.rows.length === 0) table.remove();
+                        } else if (cmd === 'tableDelCol') {
+                            Array.from(table.rows).forEach(r => { if(r.children[cellIndex]) r.children[cellIndex].remove(); });
+                            if(table.rows.length === 0 || table.rows[0].children.length === 0) table.remove();
+                        }
+                        const ev = cmdBtn.closest('.evidence-wrap').querySelector('.evidence'); if (ev) ev.dispatchEvent(new Event('input', { bubbles: true }));
                     }
                     return;
                 }
@@ -115,6 +131,8 @@ export class EditorView {
             const toolbar = ev.previousElementSibling;
             if (toolbar && toolbar.classList.contains('wysiwyg-toolbar')) {
                 ['bold', 'italic', 'insertUnorderedList', 'strikeThrough'].forEach(cmd => { if (document.queryCommandState(cmd)) { const btn = toolbar.querySelector(`[data-cmd="${cmd}"]`); if (btn) btn.classList.add('active-format'); } });
+                const tableControls = toolbar.querySelector('.table-controls');
+                if (tableControls) tableControls.style.display = node.closest('table.evidence-table') ? 'flex' : 'none';
             }
         }
     }

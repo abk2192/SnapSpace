@@ -263,6 +263,7 @@
   /* Table inside WYSIWYG */
   .evidence-table { width: 100%; border-collapse: collapse; margin: 8px 0; border: 1px solid var(--outline-2); font-size: 13px; }
   .evidence-table td, .evidence-table th { border: 1px solid var(--outline-2); padding: 8px; min-width: 50px; }
+  .evidence-table th { background: var(--surface-2); font-weight: 700; text-align: left; }
   .evidence-table td:focus { outline: 2px solid var(--primary-light); background: var(--surface-2); }
 
   .evidence-wrap{ margin-top: 16px; }
