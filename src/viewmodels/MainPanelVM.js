@@ -20,7 +20,8 @@ export class MainPanelVM {
         const name = `Tab ${this.tabs.length + 1}`; 
         const id = uid(); 
         const newScenId = uid();
-        this.activeWorkspace.tabs.push({ id, name, scenarios: [{ id: newScenId, name:"Item 1", fields: [], evidenceHtml:"", isOpen: true }] }); 
+        const now = Date.now();
+        this.activeWorkspace.tabs.push({ id, name, scenarios: [{ id: newScenId, name:"Item 1", fields: [], evidenceHtml:"", isOpen: true, createdAt: now, modifiedAt: now }] }); 
         this.activeWorkspace.activeTabId = id; 
         globalEvents.publish('tabs:changed');
         globalEvents.publish('scenarios:changed');
@@ -63,7 +64,8 @@ export class MainPanelVM {
         const tab = this.activeTab; if(!tab) return null;
         const newId = uid();
         const defaultName = `Item ${tab.scenarios.length + 1}`;
-        tab.scenarios.push({ id: newId, name: defaultName, fields: [], evidenceHtml:"", isOpen: true });
+        const now = Date.now();
+        tab.scenarios.unshift({ id: newId, name: defaultName, fields: [], evidenceHtml:"", isOpen: true, createdAt: now, modifiedAt: now });
         globalEvents.publish('scenarios:changed');
         return newId;
     }

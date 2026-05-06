@@ -224,7 +224,8 @@ workspaceTitleInput.addEventListener("input", (e) => {
 const resetBtn = document.getElementById("resetBtn");
 resetBtn?.addEventListener("click", () => {
     if(confirm("Are you sure you want to reset the CURRENT project? This will delete all tabs and items inside it.")) {
-        state.tabs = [{ id: uid(), name: "Tab 1", scenarios: [{ id: uid(), name:"Item 1", fields: [], evidenceHtml:"", isOpen: true }] }];
+        const now = Date.now();
+        state.tabs = [{ id: uid(), name: "Tab 1", scenarios: [{ id: uid(), name:"Item 1", fields: [], evidenceHtml:"", isOpen: true, createdAt: now, modifiedAt: now }] }];
         state.activeTabId = state.tabs[0].id;
         render();
     }
@@ -417,11 +418,11 @@ document.addEventListener("focusout", (e) => {
 
 document.addEventListener("input", (e) => {
   const nameInp = e.target.closest("input[data-field='name']");
-  if (nameInp) { const sc = findScenario(nameInp.dataset.sid); if (sc) { sc.name = nameInp.value; } return; }
+  if (nameInp) { const sc = findScenario(nameInp.dataset.sid); if (sc) { sc.name = nameInp.value; sc.modifiedAt = Date.now(); } return; }
   const keyInp = e.target.closest("input[data-fkey]");
-  if (keyInp) { const sc = findScenario(keyInp.dataset.sid); const field = sc.fields.find(f => f.id === keyInp.dataset.fkey); if (field) { field.key = keyInp.value; globalEvents.publish('tags:updated'); } return; }
+  if (keyInp) { const sc = findScenario(keyInp.dataset.sid); const field = sc.fields.find(f => f.id === keyInp.dataset.fkey); if (field) { field.key = keyInp.value; sc.modifiedAt = Date.now(); globalEvents.publish('tags:updated'); } return; }
   const valInp = e.target.closest("input[data-fval]");
-  if (valInp) { const sc = findScenario(valInp.dataset.sid); const field = sc.fields.find(f => f.id === valInp.dataset.fval); if (field) { field.val = valInp.value; globalEvents.publish('tags:updated'); } return; }
+  if (valInp) { const sc = findScenario(valInp.dataset.sid); const field = sc.fields.find(f => f.id === valInp.dataset.fval); if (field) { field.val = valInp.value; sc.modifiedAt = Date.now(); globalEvents.publish('tags:updated'); } return; }
 });
 
 document.addEventListener("input", (e) => {
@@ -429,7 +430,7 @@ document.addEventListener("input", (e) => {
   if (!ev) return;
   const sc = findScenario(ev.getAttribute("data-evidence"));
   if (!sc) return;
-  sc.evidenceHtml = ev.innerHTML; saveState();
+  sc.evidenceHtml = ev.innerHTML; sc.modifiedAt = Date.now(); saveState();
 });
 
 document.addEventListener("click", (e) => {
@@ -447,6 +448,7 @@ document.addEventListener("click", (e) => {
           const clone = JSON.parse(JSON.stringify(sc));
           clone.id = uid(); clone.name = (clone.name || "Untitled") + " (Copy)";
           clone.fields.forEach(f => f.id = uid());
+          const now = Date.now(); clone.createdAt = now; clone.modifiedAt = now;
           const tab = activeTab();
           const idx = tab.scenarios.findIndex(s => s.id === sc.id);
           tab.scenarios.splice(idx + 1, 0, clone);
@@ -689,7 +691,7 @@ function insertImageFileIntoEvidence(file, ev, altText){
   }; r.readAsDataURL(file);
 }
 
-function persistEvidence(ev){ const sid = ev.getAttribute("data-evidence"); const sc = findScenario(sid); if (!sc) return; sc.evidenceHtml = ev.innerHTML; saveState(); }
+function persistEvidence(ev){ const sid = ev.getAttribute("data-evidence"); const sc = findScenario(sid); if (!sc) return; sc.evidenceHtml = ev.innerHTML; sc.modifiedAt = Date.now(); saveState(); }
 
 
 /* ========= Dialog utility ========= */

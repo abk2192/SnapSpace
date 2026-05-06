@@ -39,10 +39,11 @@ export class TemplatesVM {
         if (!tpl) return;
         const clone = JSON.parse(JSON.stringify(tpl.data));
         clone.id = uid(); clone.name = clone.name || tpl.name; clone.fields.forEach(f => f.id = uid());
+        const now = Date.now(); clone.createdAt = now; clone.modifiedAt = now;
         
         const activeWs = store.state.workspaces.find(w => w.id === store.state.activeWorkspaceId);
         const activeTab = activeWs ? activeWs.tabs.find(t => t.id === activeWs.activeTabId) : null;
         
-        if (activeTab) { activeTab.scenarios.push(clone); globalEvents.publish('scenarios:changed'); }
+        if (activeTab) { activeTab.scenarios.unshift(clone); globalEvents.publish('scenarios:changed'); }
     }
 }
