@@ -284,7 +284,7 @@ async function bootApp() {
     
     // Ensure all buttons in header/panel actions have icons and titles for mobile icon-only mode
     const actionIcons = {
-        'exportHtmlBtn': 'download',
+        'exportHtmlBtn': 'ios_share',
         'importBtn': 'upload_file',
         'compareBtn': 'compare_arrows',
         'themeBtn': 'palette',
@@ -474,35 +474,53 @@ if (!searchBackdrop && searchDropdown) {
     document.body.appendChild(searchBackdrop);
 }
 
-// Ensure search dropdown is inside the search wrap for correct positioning
-if (searchDropdown && searchWrap && searchDropdown.parentElement !== searchWrap) {
-    searchWrap.appendChild(searchDropdown);
-}
-
-// Focus handling for expanding the bar
-searchInput?.addEventListener("focus", () => {
+function openCommandPalette() {
     if(searchWrap) searchWrap.classList.add("active-search");
-    const appbar = document.querySelector('.appbar');
-    if(appbar) appbar.classList.add("search-active");
-    const q = searchInput.value.trim();
+    if(searchBackdrop) searchBackdrop.style.display = "block";
+    setTimeout(() => searchInput?.focus(), 50);
+    const q = searchInput?.value.trim() || "";
     if(q.length >= 3) {
         if(searchDropdown) searchDropdown.style.display = "flex";
-        if(searchBackdrop) searchBackdrop.style.display = "block";
         performSearch(q);
-    } else {
-        if(searchDropdown) searchDropdown.style.display = "none";
-        if(searchBackdrop) searchBackdrop.style.display = "none";
     }
-});
+}
+
+function closeCommandPalette() {
+    if(searchWrap) searchWrap.classList.remove("active-search");
+    if(searchBackdrop) searchBackdrop.style.display = "none";
+    if(searchDropdown) searchDropdown.style.display = "none";
+    if(searchInput) searchInput.value = "";
+    const appbar = document.querySelector('.appbar');
+    if(appbar) appbar.classList.remove("search-active");
+}
+
+if (searchWrap && searchWrap.parentElement !== document.body) {
+    if (searchDropdown && searchDropdown.parentElement !== searchWrap) {
+        searchWrap.appendChild(searchDropdown);
+    }
+    document.body.appendChild(searchWrap);
+    searchWrap.classList.add("command-palette");
+}
+
+let searchTriggerBtn = document.getElementById("searchTriggerBtn");
+if (!searchTriggerBtn && searchWrap) {
+    searchTriggerBtn = document.createElement("button");
+    searchTriggerBtn.id = "searchTriggerBtn";
+    searchTriggerBtn.className = "search-trigger-btn";
+    searchTriggerBtn.innerHTML = '<span class="material-symbols-outlined">search</span><span class="st-text">Search...</span><kbd>Ctrl+K</kbd>';
+    const appbarInner = document.querySelector('.appbar-inner');
+    const actions = document.querySelector('.appbar .actions');
+    if (appbarInner && actions) {
+        appbarInner.insertBefore(searchTriggerBtn, actions);
+    }
+    searchTriggerBtn.addEventListener("click", openCommandPalette);
+}
 
 // Click outside to close dropdown and shrink bar
 document.addEventListener("click", (e) => {
-    if(searchWrap && !searchWrap.contains(e.target) && (!searchDropdown || !searchDropdown.contains(e.target))) {
-        searchWrap.classList.remove("active-search");
-        const appbar = document.querySelector('.appbar');
-        if(appbar) appbar.classList.remove("search-active");
-        if(searchDropdown) searchDropdown.style.display = "none";
-        if(searchBackdrop) searchBackdrop.style.display = "none";
+    if (searchTriggerBtn && searchTriggerBtn.contains(e.target)) return;
+    if(searchWrap && !searchWrap.contains(e.target) && searchWrap.classList.contains("active-search")) {
+        closeCommandPalette();
     }
 });
 
@@ -609,12 +627,7 @@ searchDropdown?.addEventListener("click", (e) => {
         
         renderWorkspaces();
         render();
-        if(searchWrap) searchWrap.classList.remove("active-search");
-        const appbar = document.querySelector('.appbar');
-        if(appbar) appbar.classList.remove("search-active");
-        if(searchDropdown) searchDropdown.style.display = "none";
-        if(searchBackdrop) searchBackdrop.style.display = "none";
-        if(searchInput) searchInput.value = ""; // Clear after selection
+        closeCommandPalette();
         
         setTimeout(() => {
             const scCard = document.querySelector(`details[data-sid="${res.dataset.sc}"]`);
@@ -646,6 +659,7 @@ function renderTabs(){
     btn.type = "button";
     
     let finalHtml = `<span>${escapeHtml(tab.name)}</span>`;
+    finalHtml += `<span class="tab-count">${tab.scenarios.length}</span>`;
     if (tab.id === state.activeTabId) {
         finalHtml += `<span class="material-symbols-outlined rename-tab-icon" data-rename-tab="${tab.id}" title="Rename Tab">edit</span>`;
     }
@@ -702,7 +716,7 @@ function renderPanel(){
   });
   const active = activeTab();
   const pMeta = document.getElementById("panelMeta");
-  if (active && pMeta) pMeta.innerHTML = `<span class="material-symbols-outlined" style="font-size: 16px;">lightbulb</span> Active: ${active.name} • Items: ${active.scenarios.length} • Shortcut: Ctrl+Shift+F to search all projects.`;
+  if (pMeta) pMeta.style.display = "none";
 }
 
 function renderScenarioCard(sc, idx){
@@ -1385,12 +1399,6 @@ document.addEventListener("input", (e) => {
 });
 
 document.addEventListener("click", (e) => {
-  const pMeta = e.target.closest(".panel-meta");
-  if (pMeta) {
-      pMeta.classList.toggle("expanded-tip");
-      return;
-  }
-
   const actionBtn = e.target.closest('.action-btn');
   if(actionBtn && e.target.closest('summary')) { e.preventDefault(); }
 
@@ -1608,11 +1616,7 @@ document.addEventListener("keydown", (e) => {
          const restoreCancel = document.getElementById("restoreCancelBtn");
          if (restoreCancel) restoreCancel.click();
          if (document.getElementById("searchBackdrop")) {
-             document.getElementById("searchBackdrop").style.display = "none";
-             if(document.getElementById("searchDropdown")) document.getElementById("searchDropdown").style.display = "none";
-             if(document.getElementById("searchWrap")) document.getElementById("searchWrap").classList.remove("active-search");
-             const appbar = document.querySelector('.appbar');
-             if(appbar) appbar.classList.remove("search-active");
+             closeCommandPalette();
          }
       }
       return; 
@@ -1622,9 +1626,9 @@ document.addEventListener("keydown", (e) => {
   const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
 
   // New Global Search Shortcut
-  if (cmdOrCtrl && e.shiftKey && e.key.toLowerCase() === 'f') {
+  if (cmdOrCtrl && (e.key.toLowerCase() === 'k' || (e.shiftKey && e.key.toLowerCase() === 'f'))) {
       e.preventDefault();
-      document.getElementById("searchInput")?.focus();
+      if (typeof openCommandPalette === 'function') openCommandPalette();
   }
   else if (cmdOrCtrl && e.key.toLowerCase() === 's') { e.preventDefault(); document.getElementById("exportHtmlBtn")?.click(); }
   else if (cmdOrCtrl && e.key.toLowerCase() === 'o') { e.preventDefault(); document.getElementById("importBtn")?.click(); }
