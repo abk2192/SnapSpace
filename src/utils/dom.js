@@ -3,7 +3,7 @@
  */
 
 export function escapeHtml(str) { 
-    return String(str).replace(/[&<>"']/g, s => ({"&":"&","<":"<",">":">",'"':"&quot;","'":"&#39;"}[s])); 
+    return String(str).replace(/[&<>"']/g, s => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[s])); 
 }
 
 export function escapeAttr(str) { 

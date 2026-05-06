@@ -135,13 +135,13 @@ export class TransferView {
         exportCancelBtn?.addEventListener("click", () => { if(exportBackdrop) exportBackdrop.style.display = "none"; });
         if(exportBackdrop) exportBackdrop.addEventListener("click", (e) => { if(e.target === exportBackdrop) exportCancelBtn?.click(); });
 
-        exportConfirmBtn?.addEventListener("click", () => {
+        exportConfirmBtn?.addEventListener("click", async () => {
             const project = this.vm.activeProject; if(!project) return;
             const filteredState = { activeTabId: null, title: project.title, tabs: [] };
             
             document.querySelectorAll('.export-tab-group').forEach(group => {
                 const tCheck = group.querySelector('.export-tab-label input');
-                if (tCheck.checked || tCheck.indeterminate) {
+                if (tCheck && (tCheck.checked || tCheck.indeterminate)) {
                     const originalTab = project.tabs.find(t => t.id === tCheck.dataset.tabId);
                     if (originalTab) {
                         const newTab = { ...originalTab, scenarios: [] };
@@ -161,12 +161,25 @@ export class TransferView {
             let customFilename = (expInput ? expInput.value.trim() : "") || "SnapSpace_Export.html";
             if (!customFilename.endsWith(".html")) customFilename += ".html";
             
-            this.exportHTML(filteredState, customFilename); 
+            const prevText = exportConfirmBtn.innerHTML;
+            exportConfirmBtn.innerHTML = "Exporting...";
+            exportConfirmBtn.disabled = true;
+            
+            await this.exportHTML(filteredState, customFilename); 
+            
+            exportConfirmBtn.innerHTML = prevText;
+            exportConfirmBtn.disabled = false;
         });
     }
 
-    exportHTML(exportData, filename) {
-        const styles = document.querySelector('style')?.innerHTML || "";
+    async exportHTML(exportData, filename) {
+        let styles = "";
+        try {
+            const res = await fetch('style.css');
+            if (res.ok) styles = await res.text();
+        } catch (err) {
+            console.warn("Could not fetch style.css for export", err);
+        }
         const payloadStr = JSON.stringify(exportData).replace(/</g, '\\u003c');
 
         const exportTemplate = `<!DOCTYPE html>
@@ -186,7 +199,7 @@ export class TransferView {
   <script>
     const state = JSON.parse(document.getElementById('data-payload').textContent);
     let activeTabId = state.activeTabId;
-    function escapeHtml(str){ return String(str).replace(/[&<>"']/g, s => ({"&":"&","<":"<",">":">",'"':"&quot;","'":"&#39;"}[s])); }
+    function escapeHtml(str){ return String(str).replace(/[&<>"']/g, s => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[s])); }
     function escapeAttr(str){ return escapeHtml(str).replace(/"/g, "&quot;"); }
     function renderView() {
       const tabsEl = document.getElementById("tabs");
