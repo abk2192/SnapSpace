@@ -11,6 +11,30 @@
 </head>
 
 <body>
+  <nav class="sidebar" id="sidebarMenu">
+    <div class="sidebar-resizer" id="sidebarResizer"></div>
+    <div class="mobile-close-nav">
+       <span style="font-weight: 750;">Menu</span>
+       <button class="btn secondary icon-only" id="mobileSidebarClose"><span class="material-symbols-outlined">close</span></button>
+    </div>
+    <div class="sidebar-inner" style="border-bottom: 1px solid var(--outline-2); padding-bottom: 16px; margin-bottom: 4px;">
+      <button class="menu-item" id="compareBtn"><span class="material-symbols-outlined">compare_arrows</span> Compare Mode</button>
+      <button class="menu-item" id="tplOpenBtn"><span class="material-symbols-outlined">bookmarks</span> Templates</button>
+      <button class="menu-item" id="themeBtn"><span class="material-symbols-outlined">palette</span> Theme Settings</button>
+      <button class="menu-item" id="docsBtn"><span class="material-symbols-outlined">menu_book</span> Documentation</button>
+    </div>
+    
+    <div class="sidebar-inner" style="flex: 1; overflow-y: auto;">
+       <div class="label" style="padding: 0 4px; margin-bottom: 8px;">Your Projects</div>
+       <div id="workspaceListItems" style="display: flex; flex-direction: column; gap: 4px;"></div>
+    </div>
+    <div class="sidebar-inner" style="border-top: 1px solid var(--outline-2); padding-top: 16px;">
+       <button class="menu-item" id="addWorkspaceBtn" style="color: var(--primary);"><span class="material-symbols-outlined">add_circle</span> New Project</button>
+    </div>
+  </nav>
+  <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+  <div class="app-content">
   <header class="appbar">
     <div class="appbar-inner">
       <button class="btn secondary icon-only" id="mainMenuBtn" title="Menu" style="margin-right: 8px;"><span class="material-symbols-outlined">menu</span></button>
@@ -32,7 +56,7 @@
             <span class="material-symbols-outlined" style="position: absolute; left: 10px; top: 10px; font-size: 16px; color: var(--muted); pointer-events: none;">search</span>
             <div id="searchDropdown" class="search-dropdown"></div>
         </div>
-        <span id="saveIndicator" style="font-size: 12px; color: var(--primary); font-weight: 700; margin-right: 8px; opacity: 0; transition: opacity 0.3s; display: flex; align-items: center; gap: 4px; pointer-events: none;"><span class="material-symbols-outlined" style="font-size: 16px;">cloud_done</span> Saved</span>
+        <span id="saveIndicator" style="font-size: 12px; color: var(--primary); font-weight: 700; margin-right: 8px; opacity: 0; transition: opacity 0.3s; display: flex; align-items: center; gap: 4px; pointer-events: none; flex-shrink: 0;"><span class="material-symbols-outlined" style="font-size: 16px;">cloud_done</span> Saved</span>
         <button class="btn secondary" id="renameTabBtn"><span class="material-symbols-outlined">edit</span> Rename Tab</button>
         <button class="btn secondary" id="importBtn"><span class="material-symbols-outlined">upload</span> Import</button>
         <input type="file" id="importInput" accept=".html" hidden />
@@ -43,13 +67,265 @@
     </div>
   </header>
 
+  <div class="tabsbar"><div class="tabs" id="tabs"></div></div>
+  <main>
+    <div class="panel-head">
+      <div style="flex: 1; min-width: 0;">
+        <div class="panel-meta" id="panelMeta"><span class="material-symbols-outlined" style="font-size: 16px;">lightbulb</span> Tip: Press Ctrl+Shift+F to search all projects. Paste screenshots directly into Notes.</div>
+      </div>
+      <div style="display: flex; gap: 8px; flex-shrink: 0;">
+        <button class="btn secondary" id="expandAllBtn" style="padding: 6px 10px; font-size: 12px;"><span class="material-symbols-outlined" style="font-size: 16px;">unfold_more</span> Expand All</button>
+        <button class="btn secondary" id="collapseAllBtn" style="padding: 6px 10px; font-size: 12px;"><span class="material-symbols-outlined" style="font-size: 16px;">unfold_less</span> Collapse All</button>
+      </div>
+    </div>
+    <div id="panel"></div>
+  </main>
+  </div>
+
+  <div class="dlg-backdrop" id="dlgBackdrop" role="dialog" aria-modal="true">
+    <div class="dlg">
+      <div class="dlg-head" id="dlgTitle">Dialog</div>
+      <div class="dlg-body">
+        <div class="label" style="margin-bottom:6px;">Name</div>
+        <input class="input" id="dlgInput" placeholder="Enter name..." />
+        <div class="hint" id="dlgHint" style="margin-top:8px;"></div>
+      </div>
+      <div class="dlg-actions">
+        <button class="btn secondary" id="dlgCancel">Cancel</button>
+        <button class="btn" id="dlgOk">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="dlg-backdrop" id="tplBackdrop" role="dialog" aria-modal="true">
+    <div class="dlg" style="max-width: 650px;">
+      <div class="dlg-head">
+        <span style="display:flex; align-items:center; gap:8px;"><span class="material-symbols-outlined">bookmarks</span> Item Templates</span>
+        <div style="display:flex; gap:8px;">
+          <button class="btn secondary" id="tplImportTrigger" style="padding: 6px 10px; font-size:12px;"><span class="material-symbols-outlined">upload</span> Import JSON</button>
+          <input type="file" id="tplImportFile" accept=".json" hidden />
+          <button class="btn secondary" id="tplExportTrigger" style="padding: 6px 10px; font-size:12px;"><span class="material-symbols-outlined">download</span> Export JSON</button>
+        </div>
+      </div>
+      <div class="dlg-body">
+        <div class="label" style="margin-bottom: 12px;">Saved Templates</div>
+        <div id="tplList" style="display: flex; flex-direction: column; gap: 8px;"></div>
+      </div>
+      <div class="dlg-actions">
+        <button class="btn" id="tplCloseBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="dlg-backdrop" id="moveBackdrop" role="dialog" aria-modal="true">
+    <div class="dlg" style="max-width: 400px;">
+      <div class="dlg-head">
+        <span style="display:flex; align-items:center; gap:8px;"><span class="material-symbols-outlined">move_item</span> Move Item</span>
+      </div>
+      <div class="dlg-body">
+        <div class="label" style="margin-bottom:6px;">Destination Project & Tab</div>
+        <select class="input" id="moveSelect"></select>
+      </div>
+      <div class="dlg-actions">
+        <button class="btn secondary" id="moveCancelBtn">Cancel</button>
+        <button class="btn" id="moveConfirmBtn">Move Item</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="dlg-backdrop" id="compareBackdrop" role="dialog" style="z-index: 90;">
+    <div class="dlg" style="width: 95vw; max-width: 1600px; height: 95vh; display: flex; flex-direction: column;">
+      <div class="dlg-head" style="display:flex; justify-content:space-between; align-items:center;">
+        <span style="display:flex; align-items:center; gap:8px;"><span class="material-symbols-outlined">compare_arrows</span> Compare Items</span>
+        <div style="display:flex; align-items:center; gap: 16px;">
+          <label style="font-size: 13px; font-weight: 600; cursor: pointer; display:flex; align-items:center; gap:6px; color: var(--text);">
+            <input type="checkbox" id="compSync" checked> Sync Scroll
+          </label>
+          <button class="btn secondary" id="compCloseBtn" style="padding: 6px 12px;">Close</button>
+        </div>
+      </div>
+      <div class="dlg-body" style="flex:1; padding: 12px; background: var(--surface-2); display: grid; grid-template-columns: 1fr 1fr; gap: 12px; overflow: hidden;">
+        
+        <div style="display:flex; flex-direction:column; background: var(--surface); border: 1px solid var(--outline); border-radius: 8px; min-height: 0;">
+          <div style="padding: 8px; border-bottom: 1px solid var(--outline); display:flex; gap:8px;">
+            <select class="input" id="compLeftTab" style="padding:6px; height:auto; flex: 1; min-width: 0;"></select>
+            <select class="input" id="compLeftScen" style="padding:6px; height:auto; flex: 2; min-width: 0;"></select>
+          </div>
+          <div class="evidence readonly" id="compLeftEv" style="flex:1; overflow-y:auto; overflow-x:hidden; padding:16px; border:none; margin:0; border-radius:0;"></div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; background: var(--surface); border: 1px solid var(--outline); border-radius: 8px; min-height: 0;">
+          <div style="padding: 8px; border-bottom: 1px solid var(--outline); display:flex; gap:8px;">
+            <select class="input" id="compRightTab" style="padding:6px; height:auto; flex: 1; min-width: 0;"></select>
+            <select class="input" id="compRightScen" style="padding:6px; height:auto; flex: 2; min-width: 0;"></select>
+          </div>
+          <div class="evidence readonly" id="compRightEv" style="flex:1; overflow-y:auto; overflow-x:hidden; padding:16px; border:none; margin:0; border-radius:0;"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="dlg-backdrop" id="exportBackdrop" role="dialog" aria-modal="true">
+    <div class="dlg" style="max-width: 500px;">
+      <div class="dlg-head"><span style="display:flex; align-items:center; gap:8px;"><span class="material-symbols-outlined">package</span> Export Options</span></div>
+      <div class="dlg-body">
+        <div class="label" style="margin-bottom: 6px;">Export Filename</div>
+        <input class="input" id="exportFilenameInput" value="SnapSpace_Export.html" style="margin-bottom: 16px;" />
+        
+        <div class="label" style="margin-bottom: 8px;">Select specific items to export:</div>
+        <div id="exportChecklist" style="background: var(--surface-2); padding: 16px; border-radius: 8px; border: 1px solid var(--outline-2); max-height: 40vh; overflow-y: auto;"></div>
+      </div>
+      <div class="dlg-actions">
+        <button class="btn secondary" id="exportCancelBtn">Cancel</button>
+        <button class="btn" id="exportConfirmBtn"><span class="material-symbols-outlined">download</span> Download Export</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="dlg-backdrop" id="importBackdrop" role="dialog" aria-modal="true">
+    <div class="dlg" style="max-width: 500px;">
+      <div class="dlg-head"><span style="display:flex; align-items:center; gap:8px;"><span class="material-symbols-outlined">upload</span> Import Options</span></div>
+      <div class="dlg-body">
+        <div class="label" style="margin-bottom: 12px; font-size: 14px;" id="importDetails">Found X tabs and Y items. How would you like to load them?</div>
+        
+        <label class="export-tab-label" style="border: 1px solid var(--outline-2); padding: 12px; border-radius: 8px; transition: border-color 0.2s ease; margin-bottom: 8px; display: block; cursor: pointer;">
+          <input type="radio" name="importMode" value="new_project" checked style="float: left; margin-right: 12px;">
+          <div>
+            <div style="font-weight:700;">Import as New Project</div>
+            <div style="font-size:12px; color:var(--muted); font-weight:400;">Creates a brand new project and loads the imported items there.</div>
+          </div>
+        </label>
+
+        <label class="export-tab-label" style="border: 1px solid var(--outline-2); padding: 12px; border-radius: 8px; transition: border-color 0.2s ease; margin-bottom: 8px; display: block; cursor: pointer;">
+          <input type="radio" name="importMode" value="append" style="float: left; margin-right: 12px;">
+          <div>
+            <div style="font-weight:700;">Append to Current Project</div>
+            <div style="font-size:12px; color:var(--muted); font-weight:400;">Adds the imported tabs safely alongside your current tabs.</div>
+          </div>
+        </label>
+
+        <label class="export-tab-label" style="border: 1px solid var(--outline-2); padding: 12px; border-radius: 8px; transition: border-color 0.2s ease; margin-bottom: 8px; display: block; cursor: pointer;">
+          <input type="radio" name="importMode" value="merge" style="float: left; margin-right: 12px;">
+          <div>
+            <div style="font-weight:700;">Merge into Active Tab</div>
+            <div style="font-size:12px; color:var(--muted); font-weight:400;">Pours all imported items directly into your currently open tab.</div>
+          </div>
+        </label>
+
+        <label class="export-tab-label" style="border: 1px solid var(--danger-border); padding: 12px; border-radius: 8px; transition: border-color 0.2s ease; background: var(--danger-hover); display: block; cursor: pointer;">
+          <input type="radio" name="importMode" value="replace" style="float: left; margin-right: 12px;">
+          <div>
+            <div style="font-weight:700; color:var(--danger);">Replace Current Project</div>
+            <div style="font-size:12px; color:var(--muted); font-weight:400;">Wipes your current project entirely and loads the imported file exactly as it is.</div>
+          </div>
+        </label>
+      </div>
+      <div class="dlg-actions">
+        <button class="btn secondary" id="importCancelBtn">Cancel</button>
+        <button class="btn" id="importConfirmBtn">Import Data</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="dlg-backdrop" id="cfBackdrop" role="dialog" aria-modal="true">
+    <div class="dlg" style="max-width: 600px;">
+      <div class="dlg-head"><span style="display:flex; align-items:center; gap:8px;"><span class="material-symbols-outlined">note_add</span> Create & Attach File</span></div>
+      <div class="dlg-body">
+        <div class="label" style="margin-bottom:6px;">File Name</div>
+        <input class="input" id="cfName" placeholder="e.g., payload.xml, logs.txt, query.sql" style="margin-bottom: 12px;" />
+        <div class="label" style="margin-bottom:6px;">File Content</div>
+        <textarea class="input" id="cfContent" rows="8" placeholder="Paste your raw text, XML, JSON, or logs here..." style="resize: vertical; font-family: monospace;"></textarea>
+      </div>
+      <div class="dlg-actions">
+        <button class="btn secondary" id="cfCancel">Cancel</button>
+        <button class="btn" id="cfOk">Attach File</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="dlg-backdrop" id="filePreviewBackdrop" role="dialog" aria-modal="true" style="z-index: 1000;">
+    <div class="dlg" style="max-width: 800px; max-height: 90vh;">
+      <div class="dlg-head" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px;">
+        <span id="fpTitle" style="word-break: break-all;">File Preview</span>
+        <div>
+          <button class="btn secondary" id="fpCopyBtn" style="padding: 6px 12px; margin-right: 8px;"><span class="material-symbols-outlined">content_copy</span> Copy Text</button>
+          <button class="btn" id="fpDownloadBtn" style="padding: 6px 12px; margin-right: 8px;"><span class="material-symbols-outlined">download</span> Download</button>
+          <button class="btn secondary" id="fpCloseBtn" style="padding: 6px 12px;">Close</button>
+        </div>
+      </div>
+      <div class="dlg-body" style="padding: 0; background: var(--input-bg);">
+        <pre id="fpContent" style="margin: 0; padding: 16px; font-family: monospace; font-size: 13px; white-space: pre-wrap; word-wrap: break-word; color: var(--text);"></pre>
+      </div>
+    </div>
+  </div>
+
+  <div class="dlg-backdrop" id="imgPreviewBackdrop" role="dialog" aria-modal="true" style="z-index: 1000; cursor: zoom-out;">
+    <img id="imgPreviewEl" src="" style="max-width: 90vw; max-height: 90vh; border-radius: 8px; box-shadow: var(--shadow-2); background: var(--surface);" />
+  </div>
+  
+  <div class="dlg-backdrop" id="docsBackdrop" role="dialog" aria-modal="true">
+    <div class="dlg" style="max-width: 600px;">
+      <div class="dlg-head"><span style="display:flex; align-items:center; gap:8px;"><span class="material-symbols-outlined">menu_book</span> Documentation & Shortcuts</span></div>
+      <div class="dlg-body" style="line-height: 1.6; font-size: 14px;">
+        <div class="label">Keyboard Shortcuts</div>
+        <ul style="margin-top: 4px; padding-left: 20px; margin-bottom: 16px;">
+          <li><code>Ctrl + Shift + F</code> : Search all projects</li>
+          <li><code>Ctrl + S</code> : Export project</li>
+          <li><code>Ctrl + O</code> : Import project</li>
+          <li><code>Alt + N</code> : Add new item</li>
+          <li><code>Alt + T</code> : Add new tab</li>
+          <li><code>Alt + R</code> : Rename tab</li>
+          <li><code>Alt + F</code> : Add new field to current item</li>
+        </ul>
+        <div class="label">Tips</div>
+        <ul style="margin-top: 4px; padding-left: 20px;">
+          <li><b>Expand/Collapse:</b> Use the Expand All / Collapse All buttons in the header. Safely double-click or drag-highlight tags without opening the item.</li>
+          <li><b>Drag & Drop:</b> Reorder projects, tabs, and items by dragging them.</li>
+          <li><b>Images:</b> Paste screenshots directly into the Notes area (Ctrl+V). Double-click to zoom.</li>
+          <li><b>Cross-Project Move:</b> Click the Move icon on any item to send it to another project.</li>
+        </ul>
+      </div>
+      <div class="dlg-actions">
+        <button class="btn" id="docsCloseBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="dlg-backdrop" id="themeBackdrop" role="dialog" aria-modal="true">
+    <div class="dlg" style="max-width: 400px;">
+      <div class="dlg-head"><span style="display:flex; align-items:center; gap:8px;"><span class="material-symbols-outlined">palette</span> Appearance Settings</span></div>
+      <div class="dlg-body">
+        <div class="label" style="margin-bottom: 10px;">Mode</div>
+        <div class="theme-grid">
+          <div class="theme-card" data-set-theme="light"><span class="material-symbols-outlined">light_mode</span> Light</div>
+          <div class="theme-card" data-set-theme="dark"><span class="material-symbols-outlined">dark_mode</span> Dark</div>
+        </div>
+        <div class="label" style="margin-bottom: 10px;">Accent Color</div>
+        <div class="color-grid" style="flex-wrap: wrap;">
+          <div class="color-swatch" data-set-color="blue" style="background: #2563eb;"></div>
+          <div class="color-swatch" data-set-color="green" style="background: #16a34a;"></div>
+          <div class="color-swatch" data-set-color="purple" style="background: #9333ea;"></div>
+          <div class="color-swatch" data-set-color="rose" style="background: #e11d48;"></div>
+          <div class="color-swatch" data-set-color="orange" style="background: #ea580c;"></div>
+          <div class="color-swatch" data-set-color="teal" style="background: #0d9488;"></div>
+          <div class="color-swatch" data-set-color="indigo" style="background: #4f46e5;"></div>
+          <div class="color-swatch" data-set-color="pink" style="background: #db2777;"></div>
+          <div class="color-swatch" data-set-color="cyan" style="background: #0891b2;"></div>
+        </div>
+      </div>
+      <div class="dlg-actions">
+        <button class="btn" id="themeClose">Done</button>
+      </div>
+    </div>
+  </div>
+
   <script src="app.js"></script>
   <script>
     // Service Worker Registration
     if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    // Adding the scope ensures it controls only your repository's files
-    navigator.serviceWorker.register('/SnapSpace/sw.js', { scope: '/SnapSpace/' })
+        navigator.serviceWorker.register('./sw.js', { scope: './' })
       .then(reg => console.log('Service Worker registered.', reg))
       .catch(err => console.error('Service Worker failed.', err));
   });

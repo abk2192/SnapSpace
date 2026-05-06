@@ -1,5 +1,3 @@
- alert("JS is working!");
-
 
 /* ========= PWA Service Worker Registration ========= */
 if ('serviceWorker' in navigator) {
@@ -16,12 +14,12 @@ const docsBtn = document.getElementById("docsBtn");
 const docsBackdrop = document.getElementById("docsBackdrop");
 const docsCloseBtn = document.getElementById("docsCloseBtn");
 
-docsBtn.addEventListener("click", () => { 
+docsBtn?.addEventListener("click", () => { 
     document.body.classList.remove("sidebar-show"); 
-    docsBackdrop.style.display = "flex"; 
+    if(docsBackdrop) docsBackdrop.style.display = "flex"; 
 });
-docsCloseBtn.addEventListener("click", () => { docsBackdrop.style.display = "none"; });
-docsBackdrop.addEventListener("click", (e) => { if(e.target === docsBackdrop) docsBackdrop.style.display = "none"; });
+docsCloseBtn?.addEventListener("click", () => { if(docsBackdrop) docsBackdrop.style.display = "none"; });
+docsBackdrop?.addEventListener("click", (e) => { if(e.target === docsBackdrop) docsBackdrop.style.display = "none"; });
 
 /* ========= Theme Engine ========= */
 const rootParams = document.documentElement;
@@ -42,9 +40,9 @@ applyTheme();
 const themeBtn = document.getElementById("themeBtn");
 const themeBackdrop = document.getElementById("themeBackdrop");
 const themeClose = document.getElementById("themeClose");
-themeBtn.addEventListener("click", () => { document.body.classList.remove("sidebar-show"); themeBackdrop.style.display = "flex"; });
-themeClose.addEventListener("click", () => { themeBackdrop.style.display = "none"; });
-themeBackdrop.addEventListener("click", (e) => { if(e.target === themeBackdrop) themeBackdrop.style.display = "none"; });
+themeBtn?.addEventListener("click", () => { document.body.classList.remove("sidebar-show"); if(themeBackdrop) themeBackdrop.style.display = "flex"; });
+themeClose?.addEventListener("click", () => { if(themeBackdrop) themeBackdrop.style.display = "none"; });
+themeBackdrop?.addEventListener("click", (e) => { if(e.target === themeBackdrop) themeBackdrop.style.display = "none"; });
 document.querySelectorAll('[data-set-theme]').forEach(el => { el.addEventListener('click', (e) => { currentTheme = e.target.dataset.setTheme; applyTheme(); }); });
 document.querySelectorAll('[data-set-color]').forEach(el => { el.addEventListener('click', (e) => { currentColor = e.target.dataset.setColor; applyTheme(); }); });
 
@@ -56,7 +54,7 @@ let isResizingSidebar = false;
 const savedSidebarWidth = localStorage.getItem('snapspace_sidebar_width');
 if (savedSidebarWidth) { document.documentElement.style.setProperty('--sidebar-width', savedSidebarWidth); }
 
-sidebarResizer.addEventListener("mousedown", (e) => {
+sidebarResizer?.addEventListener("mousedown", (e) => {
     isResizingSidebar = true;
     sidebarResizer.classList.add('active');
     document.body.style.cursor = 'ew-resize';
@@ -84,17 +82,18 @@ const mainMenuBtn = document.getElementById("mainMenuBtn");
 const sidebarBackdrop = document.getElementById("sidebarBackdrop");
 const mobileSidebarClose = document.getElementById("mobileSidebarClose");
 
-mainMenuBtn.addEventListener("click", (e) => {
+mainMenuBtn?.addEventListener("click", (e) => {
     e.stopPropagation();
     if (window.innerWidth >= 1100) {
         document.body.classList.toggle("sidebar-hide");
     } else {
         document.body.classList.toggle("sidebar-show");
-        setTimeout(() => sidebarBackdrop.style.opacity = "1", 10);
+        if(sidebarBackdrop) setTimeout(() => sidebarBackdrop.style.opacity = "1", 10);
     }
 });
 
-mobileSidebarClose.addEventListener("click", () => {
+mobileSidebarClose?.addEventListener("click", () => {
+   if(!sidebarBackdrop) return;
    sidebarBackdrop.style.opacity = "0";
    setTimeout(() => document.body.classList.remove("sidebar-show"), 300);
 });
@@ -296,7 +295,7 @@ function renderWorkspaces() {
     });
 }
 
-document.getElementById("addWorkspaceBtn").addEventListener("click", () => {
+document.getElementById("addWorkspaceBtn")?.addEventListener("click", () => {
     const newId = uid(); const newTabId = uid();
     const newWs = {
         id: newId, title: "New Project", activeTabId: newTabId,
@@ -315,7 +314,7 @@ document.getElementById("addWorkspaceBtn").addEventListener("click", () => {
 });
 
 const resetBtn = document.getElementById("resetBtn");
-resetBtn.addEventListener("click", () => {
+resetBtn?.addEventListener("click", () => {
     if(confirm("Are you sure you want to reset the CURRENT project? This will delete all tabs and items inside it.")) {
         state.tabs = [{ id: uid(), name: "Tab 1", scenarios: [{ id: uid(), name:"", fields: [], evidenceHtml:"", isOpen: true }] }];
         state.activeTabId = state.tabs[0].id;
@@ -329,22 +328,22 @@ const searchInput = document.getElementById("searchInput");
 const searchDropdown = document.getElementById("searchDropdown");
 
 // Focus handling for expanding the bar
-searchInput.addEventListener("focus", () => {
-    searchWrap.classList.add("active-search");
+searchInput?.addEventListener("focus", () => {
+    if(searchWrap) searchWrap.classList.add("active-search");
     const q = searchInput.value.trim();
     if(q.length >= 3) {
-        searchDropdown.style.display = "flex";
+        if(searchDropdown) searchDropdown.style.display = "flex";
         performSearch(q);
     } else {
-        searchDropdown.style.display = "none";
+        if(searchDropdown) searchDropdown.style.display = "none";
     }
 });
 
 // Click outside to close dropdown and shrink bar
 document.addEventListener("click", (e) => {
-    if(!searchWrap.contains(e.target)) {
+    if(searchWrap && !searchWrap.contains(e.target)) {
         searchWrap.classList.remove("active-search");
-        searchDropdown.style.display = "none";
+        if(searchDropdown) searchDropdown.style.display = "none";
     }
 });
 
@@ -356,15 +355,14 @@ function highlightText(text, query) {
 
 // Live search on input
 let searchTimeout;
-searchInput.addEventListener("input", (e) => {
+searchInput?.addEventListener("input", (e) => {
     clearTimeout(searchTimeout);
     const q = e.target.value.trim();
     if (q.length < 3) { 
-        searchDropdown.style.display = "none"; 
-        searchDropdown.innerHTML = ""; 
+        if(searchDropdown) { searchDropdown.style.display = "none"; searchDropdown.innerHTML = ""; }
         return; 
     }
-    searchDropdown.style.display = "flex";
+    if(searchDropdown) searchDropdown.style.display = "flex";
     searchTimeout = setTimeout(() => { performSearch(q); }, 200);
 });
 
@@ -425,7 +423,7 @@ function performSearch(query) {
     }
 }
 
-searchDropdown.addEventListener("click", (e) => {
+searchDropdown?.addEventListener("click", (e) => {
     const res = e.target.closest('.search-result');
     if (res) {
         // Switch context to correct project and tab
@@ -436,9 +434,9 @@ searchDropdown.addEventListener("click", (e) => {
         
         renderWorkspaces();
         render();
-        searchWrap.classList.remove("active-search");
-        searchDropdown.style.display = "none";
-        searchInput.value = ""; // Clear after selection
+        if(searchWrap) searchWrap.classList.remove("active-search");
+        if(searchDropdown) searchDropdown.style.display = "none";
+        if(searchInput) searchInput.value = ""; // Clear after selection
         
         setTimeout(() => {
             const scCard = document.querySelector(`details[data-sid="${res.dataset.sc}"]`);
@@ -498,6 +496,8 @@ function renderTabs(){
 }
 
 function renderPanel(){
+  if(!tabsEl) return;
+  if(!panelEl) return;
   panelEl.innerHTML = "";
   state.tabs.forEach(tab => {
     const wrap = document.createElement("div");
@@ -507,7 +507,8 @@ function renderPanel(){
     panelEl.appendChild(wrap);
   });
   const active = activeTab();
-  if (active) document.getElementById("panelMeta").innerHTML = `<span class="material-symbols-outlined" style="font-size: 16px;">lightbulb</span> Active: ${active.name} • Items: ${active.scenarios.length} • Shortcut: Ctrl+Shift+F to search all projects.`;
+  const pMeta = document.getElementById("panelMeta");
+  if (active && pMeta) pMeta.innerHTML = `<span class="material-symbols-outlined" style="font-size: 16px;">lightbulb</span> Active: ${active.name} • Items: ${active.scenarios.length} • Shortcut: Ctrl+Shift+F to search all projects.`;
 }
 
 function renderScenarioCard(sc, idx){
@@ -635,7 +636,8 @@ document.getElementById("expandAllBtn").addEventListener("click", () => {
   }
 });
 
-document.getElementById("collapseAllBtn").addEventListener("click", () => {
+document.getElementById("expandAllBtn")?.addEventListener("click", () => {
+document.getElementById("collapseAllBtn")?.addEventListener("click", () => {
   const tab = activeTab();
   if (tab && tab.scenarios) {
     tab.scenarios.forEach(sc => sc.isOpen = false);
@@ -688,10 +690,10 @@ document.addEventListener("focusin", (e) => { const scWrapper = e.target.closest
 const fpBackdrop = document.getElementById("filePreviewBackdrop");
 const fpCloseBtn = document.getElementById("fpCloseBtn");
 const fpCopyBtn = document.getElementById("fpCopyBtn");
-fpCloseBtn.addEventListener("click", () => { fpBackdrop.style.display = "none"; });
-fpBackdrop.addEventListener("click", (e) => { if(e.target === fpBackdrop) fpBackdrop.style.display = "none"; });
+fpCloseBtn?.addEventListener("click", () => { if(fpBackdrop) fpBackdrop.style.display = "none"; });
+if(fpBackdrop) fpBackdrop.addEventListener("click", (e) => { if(e.target === fpBackdrop) fpBackdrop.style.display = "none"; });
 
-fpCopyBtn.addEventListener("click", async () => {
+fpCopyBtn?.addEventListener("click", async () => {
   const textToCopy = document.getElementById("fpContent").textContent;
   try {
     if (navigator.clipboard && window.isSecureContext) {
@@ -712,7 +714,7 @@ fpCopyBtn.addEventListener("click", async () => {
 });
 
 const imgBackdrop = document.getElementById("imgPreviewBackdrop");
-imgBackdrop.addEventListener("click", () => { imgBackdrop.style.display = "none"; });
+if(imgBackdrop) imgBackdrop.addEventListener("click", () => { imgBackdrop.style.display = "none"; });
 
 let imgClickTimer = null;
 document.addEventListener("click", (e) => {
@@ -731,8 +733,8 @@ document.addEventListener("dblclick", (e) => {
   const img = e.target.closest(".evidence img");
   if (img) { 
     clearTimeout(imgClickTimer);
-    document.getElementById("imgPreviewEl").src = img.src; 
-    imgBackdrop.style.display = "flex"; 
+    const el = document.getElementById("imgPreviewEl"); if(el) el.src = img.src; 
+    if(imgBackdrop) imgBackdrop.style.display = "flex"; 
     window.getSelection().removeAllRanges(); 
   }
 });
@@ -768,11 +770,11 @@ function renderTemplates() {
     });
 }
 
-tplOpenBtn.addEventListener("click", () => { document.body.classList.remove("sidebar-show"); renderTemplates(); tplBackdrop.style.display = "flex"; });
-tplCloseBtn.addEventListener("click", () => { tplBackdrop.style.display = "none"; });
-tplBackdrop.addEventListener("click", (e) => { if(e.target === tplBackdrop) tplBackdrop.style.display = "none"; });
+tplOpenBtn?.addEventListener("click", () => { document.body.classList.remove("sidebar-show"); renderTemplates(); if(tplBackdrop) tplBackdrop.style.display = "flex"; });
+tplCloseBtn?.addEventListener("click", () => { if(tplBackdrop) tplBackdrop.style.display = "none"; });
+if(tplBackdrop) tplBackdrop.addEventListener("click", (e) => { if(e.target === tplBackdrop) tplBackdrop.style.display = "none"; });
 
-tplListEl.addEventListener("click", (e) => {
+tplListEl?.addEventListener("click", (e) => {
     const useBtn = e.target.closest("[data-use-tpl]");
     if (useBtn) {
         const tpl = templates.find(x => x.id === useBtn.dataset.useTpl);
@@ -793,15 +795,15 @@ tplListEl.addEventListener("click", (e) => {
     }
 });
 
-tplExportTrigger.addEventListener("click", () => {
+tplExportTrigger?.addEventListener("click", () => {
     const blob = new Blob([JSON.stringify(templates)], {type:"application/json"});
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a"); a.href = url; a.download = "item_templates.json";
     document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
 });
 
-tplImportTrigger.addEventListener("click", () => tplImportFile.click());
-tplImportFile.addEventListener("change", (e) => {
+tplImportTrigger?.addEventListener("click", () => tplImportFile?.click());
+tplImportFile?.addEventListener("change", (e) => {
     const file = e.target.files[0]; if(!file) return;
     const r = new FileReader();
     r.onload = (event) => {
@@ -844,11 +846,11 @@ function openMoveDialog(sid) {
     }
     
     scenarioToMoveId = sid;
-    moveBackdrop.style.display = 'flex';
+    if(moveBackdrop) moveBackdrop.style.display = 'flex';
 }
-moveCancelBtn.addEventListener("click", () => { moveBackdrop.style.display = 'none'; scenarioToMoveId = null; });
-moveBackdrop.addEventListener("click", (e) => { if(e.target === moveBackdrop) moveCancelBtn.click(); });
-moveConfirmBtn.addEventListener("click", () => {
+moveCancelBtn?.addEventListener("click", () => { if(moveBackdrop) moveBackdrop.style.display = 'none'; scenarioToMoveId = null; });
+if(moveBackdrop) moveBackdrop.addEventListener("click", (e) => { if(e.target === moveBackdrop) moveCancelBtn?.click(); });
+moveConfirmBtn?.addEventListener("click", () => {
     const val = moveSelect.value;
     if(!scenarioToMoveId || !val) return;
     
@@ -865,7 +867,7 @@ moveConfirmBtn.addEventListener("click", () => {
             render();
         }
     }
-    moveBackdrop.style.display = 'none'; scenarioToMoveId = null;
+    if(moveBackdrop) moveBackdrop.style.display = 'none'; scenarioToMoveId = null;
 });
 
 // ========= COMPARE MODE LOGIC =========
@@ -927,39 +929,39 @@ function renderCompEv(scenSelect, evDiv) {
    evDiv.innerHTML = found ? found.evidenceHtml : '<div style="color:var(--muted); font-style:italic;">No content found.</div>';
 }
 
-compLeftTab.addEventListener('change', () => { updateCompScenarios(compLeftTab, compLeftScen); renderCompEv(compLeftScen, compLeftEv); });
-compLeftScen.addEventListener('change', () => { renderCompEv(compLeftScen, compLeftEv); });
+compLeftTab?.addEventListener('change', () => { updateCompScenarios(compLeftTab, compLeftScen); renderCompEv(compLeftScen, compLeftEv); });
+compLeftScen?.addEventListener('change', () => { renderCompEv(compLeftScen, compLeftEv); });
 
-compRightTab.addEventListener('change', () => { updateCompScenarios(compRightTab, compRightScen); renderCompEv(compRightScen, compRightEv); });
-compRightScen.addEventListener('change', () => { renderCompEv(compRightScen, compRightEv); });
+compRightTab?.addEventListener('change', () => { updateCompScenarios(compRightTab, compRightScen); renderCompEv(compRightScen, compRightEv); });
+compRightScen?.addEventListener('change', () => { renderCompEv(compRightScen, compRightEv); });
 
-compareBtn.addEventListener('click', () => {
+compareBtn?.addEventListener('click', () => {
   document.body.classList.remove("sidebar-show");
   populateCompareSelects();
   if(state.tabs.length > 0) {
     renderCompEv(compLeftScen, compLeftEv);
     renderCompEv(compRightScen, compRightEv);
   }
-  compBackdrop.style.display = 'flex';
+  if(compBackdrop) compBackdrop.style.display = 'flex';
 });
 
-compCloseBtn.addEventListener('click', () => { compBackdrop.style.display = 'none'; });
+compCloseBtn?.addEventListener('click', () => { if(compBackdrop) compBackdrop.style.display = 'none'; });
 
 const compSync = document.getElementById('compSync');
 let isSyncingLeft = false, isSyncingRight = false;
 
-compLeftEv.addEventListener('scroll', () => {
-   if(!compSync.checked || isSyncingLeft) { isSyncingLeft = false; return; }
+compLeftEv?.addEventListener('scroll', () => {
+   if(!compSync?.checked || isSyncingLeft) { isSyncingLeft = false; return; }
    isSyncingRight = true;
    const percentage = compLeftEv.scrollTop / (compLeftEv.scrollHeight - compLeftEv.clientHeight || 1);
-   compRightEv.scrollTop = percentage * (compRightEv.scrollHeight - compRightEv.clientHeight);
+   if(compRightEv) compRightEv.scrollTop = percentage * (compRightEv.scrollHeight - compRightEv.clientHeight);
 });
 
-compRightEv.addEventListener('scroll', () => {
-   if(!compSync.checked || isSyncingRight) { isSyncingRight = false; return; }
+compRightEv?.addEventListener('scroll', () => {
+   if(!compSync?.checked || isSyncingRight) { isSyncingRight = false; return; }
    isSyncingLeft = true;
    const percentage = compRightEv.scrollTop / (compRightEv.scrollHeight - compRightEv.clientHeight || 1);
-   compLeftEv.scrollTop = percentage * (compLeftEv.scrollHeight - compLeftEv.clientHeight);
+   if(compLeftEv) compLeftEv.scrollTop = percentage * (compLeftEv.scrollHeight - compLeftEv.clientHeight);
 });
 
 // Create File Dialog
@@ -970,13 +972,13 @@ const cfCancel = document.getElementById('cfCancel');
 const cfOk = document.getElementById('cfOk');
 
 function openCreateFileDialog(sid) {
-  targetScenarioForFile = sid; cfName.value = ''; cfContent.value = '';
-  cfBackdrop.style.display = 'flex'; setTimeout(() => cfName.focus(), 50);
+  targetScenarioForFile = sid; if(cfName) cfName.value = ''; if(cfContent) cfContent.value = '';
+  if(cfBackdrop) cfBackdrop.style.display = 'flex'; setTimeout(() => cfName?.focus(), 50);
 }
-cfCancel.addEventListener('click', () => { cfBackdrop.style.display = 'none'; targetScenarioForFile = null; });
-cfBackdrop.addEventListener('click', (e) => { if (e.target === cfBackdrop) cfCancel.click(); });
-cfOk.addEventListener('click', () => {
-  const name = cfName.value.trim() || 'document.txt'; const content = cfContent.value;
+cfCancel?.addEventListener('click', () => { if(cfBackdrop) cfBackdrop.style.display = 'none'; targetScenarioForFile = null; });
+if(cfBackdrop) cfBackdrop.addEventListener('click', (e) => { if (e.target === cfBackdrop) cfCancel?.click(); });
+cfOk?.addEventListener('click', () => {
+  const name = cfName?.value.trim() || 'document.txt'; const content = cfContent?.value;
   if(!content) { alert("File content cannot be empty."); return; }
   const ev = document.querySelector(`.evidence[data-evidence="${targetScenarioForFile}"]`);
   if(ev) {
@@ -987,7 +989,7 @@ cfOk.addEventListener('click', () => {
       restoreSelectionAndInsert(ev, html);
     }; reader.readAsDataURL(blob);
   }
-  cfBackdrop.style.display = 'none'; targetScenarioForFile = null;
+  if(cfBackdrop) cfBackdrop.style.display = 'none'; targetScenarioForFile = null;
 });
 
 // ========= IMPORT LOGIC (Smart Merge + Import as New Project) =========
@@ -997,8 +999,8 @@ const importBackdrop = document.getElementById("importBackdrop");
 const importCancelBtn = document.getElementById("importCancelBtn");
 const importConfirmBtn = document.getElementById("importConfirmBtn");
 
-importBtn.addEventListener("click", () => { importInput.click(); });
-importInput.addEventListener("change", (e) => {
+importBtn?.addEventListener("click", () => { importInput?.click(); });
+importInput?.addEventListener("change", (e) => {
   const file = e.target.files[0]; if (!file) return;
   const reader = new FileReader();
   reader.onload = (event) => {
@@ -1010,8 +1012,8 @@ importInput.addEventListener("change", (e) => {
         if (pendingImportData && pendingImportData.tabs) {
           const tCount = pendingImportData.tabs.length;
           const sCount = pendingImportData.tabs.reduce((sum, t) => sum + t.scenarios.length, 0);
-          document.getElementById("importDetails").textContent = `Found ${tCount} tab(s) and ${sCount} item(s). How would you like to load them?`;
-          importBackdrop.style.display = "flex";
+          const detailsEl = document.getElementById("importDetails"); if(detailsEl) detailsEl.textContent = `Found ${tCount} tab(s) and ${sCount} item(s). How would you like to load them?`;
+          if(importBackdrop) importBackdrop.style.display = "flex";
         } else { alert("Invalid export format."); }
       } else { alert("No data found in this HTML file."); }
     } catch (err) { alert("Error reading file."); }
@@ -1020,12 +1022,13 @@ importInput.addEventListener("change", (e) => {
   reader.readAsText(file);
 });
 
-importCancelBtn.addEventListener("click", () => { importBackdrop.style.display = "none"; pendingImportData = null; });
-importBackdrop.addEventListener("click", (e) => { if(e.target === importBackdrop) importCancelBtn.click(); });
+importCancelBtn?.addEventListener("click", () => { if(importBackdrop) importBackdrop.style.display = "none"; pendingImportData = null; });
+if(importBackdrop) importBackdrop.addEventListener("click", (e) => { if(e.target === importBackdrop) importCancelBtn?.click(); });
 
-importConfirmBtn.addEventListener("click", () => {
+importConfirmBtn?.addEventListener("click", () => {
   if(!pendingImportData) return;
-  const mode = document.querySelector('input[name="importMode"]:checked').value;
+  const modeRadio = document.querySelector('input[name="importMode"]:checked');
+  const mode = modeRadio ? modeRadio.value : "append";
   
   if (mode === "new_project") {
     const newWsId = uid();
@@ -1074,17 +1077,17 @@ importConfirmBtn.addEventListener("click", () => {
     });
   }
   
-  render(); importBackdrop.style.display = "none"; pendingImportData = null;
+  render(); if(importBackdrop) importBackdrop.style.display = "none"; pendingImportData = null;
 });
 
-document.getElementById("addScenarioBtn").addEventListener("click", () => {
+document.getElementById("addScenarioBtn")?.addEventListener("click", () => {
   const tab = activeTab(); const newId = uid();
   tab.scenarios.push({ id: newId, name:"", fields: [], evidenceHtml:"", isOpen: true });
   render();
   setTimeout(() => { const inp = document.querySelector(`input[data-sid="${newId}"][data-field="name"]`); if (inp) inp.focus(); }, 50);
 });
 
-document.getElementById("renameTabBtn").addEventListener("click", () => {
+document.getElementById("renameTabBtn")?.addEventListener("click", () => {
   const tab = activeTab();
   promptDialog("Rename tab", tab.name, "Give this tab a short name.", (val) => { tab.name = (val || "Untitled").trim(); render(); });
 });
@@ -1095,13 +1098,14 @@ const exportBackdrop = document.getElementById("exportBackdrop");
 const exportCancelBtn = document.getElementById("exportCancelBtn");
 const exportConfirmBtn = document.getElementById("exportConfirmBtn");
 
-exportHtmlBtn.addEventListener("click", () => {
+exportHtmlBtn?.addEventListener("click", () => {
   const now = new Date(); 
   
   const safeTitle = (state.title || "Project").replace(/[^a-z0-9]/gi, '_').replace(/_+/g, '_');
-  document.getElementById("exportFilenameInput").value = `${safeTitle}_Export_${now.toISOString().slice(0,10)}.html`;
+  const expInput = document.getElementById("exportFilenameInput"); if(expInput) expInput.value = `${safeTitle}_Export_${now.toISOString().slice(0,10)}.html`;
     
   const list = document.getElementById("exportChecklist"); list.innerHTML = "";
+  if(!list) return;
   state.tabs.forEach((tab, tIdx) => {
     const group = document.createElement("div"); group.className = "export-tab-group";
     const tLabel = document.createElement("label"); tLabel.className = "export-tab-label";
@@ -1125,13 +1129,13 @@ exportHtmlBtn.addEventListener("click", () => {
     });
     group.appendChild(sList); list.appendChild(group);
   });
-  exportBackdrop.style.display = "flex";
+  if(exportBackdrop) exportBackdrop.style.display = "flex";
 });
 
-exportCancelBtn.addEventListener("click", () => { exportBackdrop.style.display = "none"; });
-exportBackdrop.addEventListener("click", (e) => { if(e.target === exportBackdrop) exportCancelBtn.click(); });
+exportCancelBtn?.addEventListener("click", () => { if(exportBackdrop) exportBackdrop.style.display = "none"; });
+if(exportBackdrop) exportBackdrop.addEventListener("click", (e) => { if(e.target === exportBackdrop) exportCancelBtn?.click(); });
 
-exportConfirmBtn.addEventListener("click", () => {
+exportConfirmBtn?.addEventListener("click", () => {
   const filteredState = { activeTabId: null, title: state.title, tabs: [] };
   const tabGroups = document.querySelectorAll('.export-tab-group');
   tabGroups.forEach(group => {
@@ -1151,9 +1155,10 @@ exportConfirmBtn.addEventListener("click", () => {
 
   if (filteredState.tabs.length === 0) { alert("Please select at least one item to export."); return; }
   filteredState.activeTabId = filteredState.tabs[0].id;
-  exportBackdrop.style.display = "none";
+  if(exportBackdrop) exportBackdrop.style.display = "none";
   
-  let customFilename = document.getElementById("exportFilenameInput").value.trim() || "SnapSpace_Export.html";
+  const expInput = document.getElementById("exportFilenameInput");
+  let customFilename = (expInput ? expInput.value.trim() : "") || "SnapSpace_Export.html";
   if (!customFilename.endsWith(".html")) customFilename += ".html";
   
   exportHTML(filteredState, customFilename); 
@@ -1343,10 +1348,10 @@ document.addEventListener("click", (e) => {
   if (isText) {
     const reader = new FileReader();
     reader.onload = (readEvent) => {
-      document.getElementById('fpTitle').textContent = name;
-      document.getElementById('fpContent').textContent = readEvent.target.result;
-      document.getElementById('filePreviewBackdrop').style.display = 'flex';
-      document.getElementById('fpDownloadBtn').onclick = () => {
+      const fpTitle = document.getElementById('fpTitle'); if(fpTitle) fpTitle.textContent = name;
+      const fpContent = document.getElementById('fpContent'); if(fpContent) fpContent.textContent = readEvent.target.result;
+      const filePreviewBackdrop = document.getElementById('filePreviewBackdrop'); if(filePreviewBackdrop) filePreviewBackdrop.style.display = 'flex';
+      const fpDownloadBtn = document.getElementById('fpDownloadBtn'); if(fpDownloadBtn) fpDownloadBtn.onclick = () => {
         const url = URL.createObjectURL(blob); const tmp = document.createElement("a");
         tmp.href = url; tmp.download = name; document.body.appendChild(tmp); tmp.click();
         setTimeout(() => { tmp.remove(); URL.revokeObjectURL(url); }, 500);
@@ -1408,17 +1413,17 @@ document.addEventListener("keydown", (e) => {
   // New Global Search Shortcut
   if (cmdOrCtrl && e.shiftKey && e.key.toLowerCase() === 'f') {
       e.preventDefault();
-      document.getElementById("searchInput").focus();
+      document.getElementById("searchInput")?.focus();
   }
-  else if (cmdOrCtrl && e.key.toLowerCase() === 's') { e.preventDefault(); document.getElementById("exportHtmlBtn").click(); }
-  else if (cmdOrCtrl && e.key.toLowerCase() === 'o') { e.preventDefault(); document.getElementById("importBtn").click(); }
+  else if (cmdOrCtrl && e.key.toLowerCase() === 's') { e.preventDefault(); document.getElementById("exportHtmlBtn")?.click(); }
+  else if (cmdOrCtrl && e.key.toLowerCase() === 'o') { e.preventDefault(); document.getElementById("importBtn")?.click(); }
   else if (e.altKey) {
     const key = e.key.toLowerCase();
-    if (key === 'n') { e.preventDefault(); document.getElementById("addScenarioBtn").click(); }
-    if (key === 'r') { e.preventDefault(); document.getElementById("renameTabBtn").click(); }
+    if (key === 'n') { e.preventDefault(); document.getElementById("addScenarioBtn")?.click(); }
+    if (key === 'r') { e.preventDefault(); document.getElementById("renameTabBtn")?.click(); }
     if (key === 't') { e.preventDefault(); promptNewTab(); }
-    if (key === 'c') { e.preventDefault(); document.getElementById("themeBtn").click(); }
-    if (key === 'v') { e.preventDefault(); document.getElementById("compareBtn").click(); }
+    if (key === 'c') { e.preventDefault(); document.getElementById("themeBtn")?.click(); }
+    if (key === 'v') { e.preventDefault(); document.getElementById("compareBtn")?.click(); }
     if (key === 'f') { 
       e.preventDefault(); let sc = null;
       if (lastFocusedScenarioId) sc = findScenario(lastFocusedScenarioId);
@@ -1715,14 +1720,14 @@ const dlgOk = document.getElementById("dlgOk");
 let dlgCallback = null;
 
 function promptDialog(title, initial, hint, onOk){
-  dlgTitle.textContent = title; dlgHint.textContent = hint || ""; dlgInput.value = initial || "";
-  dlgCallback = onOk; dlgBackdrop.style.display = "flex"; setTimeout(() => dlgInput.focus(), 0);
+  if(dlgTitle) dlgTitle.textContent = title; if(dlgHint) dlgHint.textContent = hint || ""; if(dlgInput) dlgInput.value = initial || "";
+  dlgCallback = onOk; if(dlgBackdrop) dlgBackdrop.style.display = "flex"; setTimeout(() => dlgInput?.focus(), 0);
 }
 
-dlgInput.addEventListener("keydown", (e) => { if(e.key === "Enter" && dlgBackdrop.style.display === "flex") { e.preventDefault(); dlgOk.click(); } });
-dlgCancel.addEventListener("click", () => { dlgBackdrop.style.display = "none"; dlgCallback = null; });
-dlgOk.addEventListener("click", () => { const val = dlgInput.value; dlgBackdrop.style.display = "none"; const cb = dlgCallback; dlgCallback = null; if (cb) cb(val); });
-dlgBackdrop.addEventListener("click", (e) => { if (e.target === dlgBackdrop) dlgCancel.click(); });
+dlgInput?.addEventListener("keydown", (e) => { if(e.key === "Enter" && dlgBackdrop?.style.display === "flex") { e.preventDefault(); dlgOk?.click(); } });
+dlgCancel?.addEventListener("click", () => { if(dlgBackdrop) dlgBackdrop.style.display = "none"; dlgCallback = null; });
+dlgOk?.addEventListener("click", () => { const val = dlgInput?.value; if(dlgBackdrop) dlgBackdrop.style.display = "none"; const cb = dlgCallback; dlgCallback = null; if (cb) cb(val); });
+if(dlgBackdrop) dlgBackdrop.addEventListener("click", (e) => { if (e.target === dlgBackdrop) dlgCancel?.click(); });
 
 /* ========= Utils ========= */
 function escapeHtml(str){ return String(str).replace(/[&<>"']/g, s => ({"&":"&","<":"<",">":">",'"':"&quot;","'":"&#39;"}[s])); }

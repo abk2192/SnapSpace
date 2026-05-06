@@ -3,11 +3,11 @@ const CACHE_NAME = "snapspace-v1";
 
 // Update these to include your repository name
 const ASSETS_TO_CACHE = [
-  "/SnapSpace/",
-  "/SnapSpace/index.html",
-  "/SnapSpace/style.css",
-  "/SnapSpace/app.js",
-  "/SnapSpace/manifest.json"
+  "./",
+  "./index.html",
+  "./style.css",
+  "./app.js",
+  "./manifest.json"
 ];
 
 // 1. Install Event: Caches static assets
