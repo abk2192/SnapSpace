@@ -196,7 +196,7 @@
   .tab-panel { display: none; }
 
   /* ===== Cards / scenarios ===== */
-  details.scenario{ background: var(--surface); border: 1px solid var(--outline-2); border-radius: var(--r12); box-shadow: var(--shadow); margin: 12px 0; transition: all 0.2s ease; position: relative; }
+  details.scenario{ background: var(--surface); border: 1px solid var(--outline-2); border-radius: var(--r12); box-shadow: var(--shadow); margin: 6px 0; transition: all 0.2s ease; position: relative; }
   
   /* STICKY SUMMARY */
   summary{ list-style:none; cursor:pointer; padding: 12px 16px; display:flex; align-items:flex-start; justify-content: space-between; gap: 12px; user-select:none; position: sticky; top: 110px; z-index: 46; background: var(--surface); border-radius: var(--r12) var(--r12) 0 0; transition: background 0.3s ease; }
@@ -342,12 +342,18 @@
     .wysiwyg-toolbar .btn { font-size: 0 !important; padding: 8px !important; border-radius: 8px !important; }
     .wysiwyg-toolbar .btn .material-symbols-outlined { margin-right: 0 !important; font-size: 20px !important; }
 
+    /* Compare Dialog Mobile Overrides */
+    .compare-dlg { width: 100vw !important; height: 100dvh !important; max-height: 100dvh !important; border-radius: 0 !important; }
+    .compare-grid { grid-template-columns: 1fr !important; overflow-y: auto !important; }
+    .compare-grid > div { min-height: 350px; flex: none; }
   }
 
 
   /* Dialogs */
   .dlg-backdrop{ position: fixed; inset:0; background: rgba(0,0,0,.5); backdrop-filter: blur(4px); display:none; align-items:center; justify-content:center; padding: 16px; z-index: 120; }
   .dlg{ width: min(520px, 100%); background: var(--surface); border-radius: 18px; border: 1px solid var(--outline-2); box-shadow: var(--shadow); overflow:hidden; display: flex; flex-direction: column; max-height: 90vh; }
+  .compare-dlg { width: 95vw; max-width: 1600px; height: 95vh; display: flex; flex-direction: column; }
+  .compare-grid { flex: 1; padding: 12px; background: var(--surface-2); display: grid; grid-template-columns: 1fr 1fr; gap: 12px; overflow: hidden; }
   .dlg-head{ padding: 14px 16px; border-bottom: 1px solid var(--outline-2); font-weight: 800; font-size: 16px; color: var(--text); flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;}
   .dlg-body{ padding: 14px 16px; color: var(--text); overflow-y: auto; }
   .dlg-actions{ padding: 12px 16px; border-top: 1px solid var(--outline-2); display:flex; justify-content:flex-end; gap: 8px; flex-shrink: 0;}
