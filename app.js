@@ -422,6 +422,11 @@ if (!searchBackdrop && searchDropdown) {
     document.body.appendChild(searchBackdrop);
 }
 
+// Fix stacking context issue: move the search dropdown to the body
+if (searchDropdown && searchDropdown.parentElement !== document.body) {
+    document.body.appendChild(searchDropdown);
+}
+
 // Focus handling for expanding the bar
 searchInput?.addEventListener("focus", () => {
     if(searchWrap) searchWrap.classList.add("active-search");
