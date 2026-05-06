@@ -12,6 +12,10 @@ import { SearchVM } from './src/viewmodels/SearchVM.js';
 import { SearchView } from './src/views/SearchView.js';
 import { CompareVM } from './src/viewmodels/CompareVM.js';
 import { CompareView } from './src/views/CompareView.js';
+import { TemplatesVM } from './src/viewmodels/TemplatesVM.js';
+import { TemplatesView } from './src/views/TemplatesView.js';
+import { MoveItemVM } from './src/viewmodels/MoveItemVM.js';
+import { MoveItemView } from './src/views/MoveItemView.js';
 
 /* ========= PWA Service Worker Registration ========= */
 registerServiceWorker();
@@ -69,9 +73,6 @@ let savedRange = null;
 
 let appState = null; 
 let state = null; // Pointer to the active project
-
-let templates = JSON.parse(localStorage.getItem('test_recorder_templates') || '[]');
-function saveTemplates(){ localStorage.setItem('test_recorder_templates', JSON.stringify(templates)); }
 
 // ========= Backup and Restore UI Injection & Logic =========
 function injectBackupRestoreButtons() {
@@ -312,6 +313,14 @@ async function bootApp() {
     const compareVM = new CompareVM();
     new CompareView(compareVM);
     
+    // Initialize Templates Subsystem
+    const templatesVM = new TemplatesVM();
+    new TemplatesView(templatesVM);
+    
+    // Initialize Move Item Subsystem
+    const moveItemVM = new MoveItemVM();
+    new MoveItemView(moveItemVM);
+    
     workspaceTitleInput.value = state.title || "Project";
     
     render(); 
@@ -472,137 +481,6 @@ document.addEventListener("dblclick", (e) => {
     if(imgBackdrop) imgBackdrop.style.display = "flex"; 
     window.getSelection().removeAllRanges(); 
   }
-});
-
-// ========= TEMPLATES ENGINE =========
-const tplOpenBtn = document.getElementById("tplOpenBtn");
-const tplBackdrop = document.getElementById("tplBackdrop");
-const tplCloseBtn = document.getElementById("tplCloseBtn");
-const tplListEl = document.getElementById("tplList");
-const tplExportTrigger = document.getElementById("tplExportTrigger");
-const tplImportTrigger = document.getElementById("tplImportTrigger");
-const tplImportFile = document.getElementById("tplImportFile");
-
-function renderTemplates() {
-    tplListEl.innerHTML = '';
-    if(templates.length === 0) {
-        tplListEl.innerHTML = '<div style="color:var(--muted); font-style:italic; padding: 10px;">No templates saved. Save one from an item card header!</div>';
-        return;
-    }
-    templates.forEach(t => {
-        const div = document.createElement("div"); div.className = "tpl-item";
-        div.innerHTML = `
-            <div>
-                <div class="tpl-name">${escapeHtml(t.name)}</div>
-                <div class="tpl-meta">${t.data.fields.length} Fields • ${t.data.evidenceHtml ? "Has Content" : "No Content"}</div>
-            </div>
-            <div style="display:flex; gap:6px;">
-                <button class="btn secondary" style="padding:6px 10px; font-size:12px;" data-use-tpl="${t.id}">Use Template</button>
-                <button class="btn danger icon-only" data-del-tpl="${t.id}"><span class="material-symbols-outlined">delete</span></button>
-            </div>
-        `;
-        tplListEl.appendChild(div);
-    });
-}
-
-tplOpenBtn?.addEventListener("click", () => { document.body.classList.remove("sidebar-show"); renderTemplates(); if(tplBackdrop) tplBackdrop.style.display = "flex"; });
-tplCloseBtn?.addEventListener("click", () => { if(tplBackdrop) tplBackdrop.style.display = "none"; });
-if(tplBackdrop) tplBackdrop.addEventListener("click", (e) => { if(e.target === tplBackdrop) tplBackdrop.style.display = "none"; });
-
-tplListEl?.addEventListener("click", (e) => {
-    const useBtn = e.target.closest("[data-use-tpl]");
-    if (useBtn) {
-        const tpl = templates.find(x => x.id === useBtn.dataset.useTpl);
-        if (tpl) {
-            const clone = JSON.parse(JSON.stringify(tpl.data));
-            clone.id = uid();
-            clone.name = clone.name || tpl.name;
-            clone.fields.forEach(f => f.id = uid());
-            activeTab().scenarios.push(clone);
-            render(); tplBackdrop.style.display = "none";
-        }
-        return;
-    }
-    const delBtn = e.target.closest("[data-del-tpl]");
-    if (delBtn) {
-        templates = templates.filter(x => x.id !== delBtn.dataset.delTpl);
-        saveTemplates(); renderTemplates();
-    }
-});
-
-tplExportTrigger?.addEventListener("click", () => {
-    const blob = new Blob([JSON.stringify(templates)], {type:"application/json"});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = "item_templates.json";
-    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-});
-
-tplImportTrigger?.addEventListener("click", () => tplImportFile?.click());
-tplImportFile?.addEventListener("change", (e) => {
-    const file = e.target.files[0]; if(!file) return;
-    const r = new FileReader();
-    r.onload = (event) => {
-        try {
-            const loaded = JSON.parse(event.target.result);
-            if(Array.isArray(loaded)) {
-                loaded.forEach(l => { l.id = uid(); templates.push(l); });
-                saveTemplates(); renderTemplates(); alert("Templates imported successfully!");
-            }
-        } catch(err) { alert("Invalid template JSON file."); }
-    };
-    r.readAsText(file); e.target.value = '';
-});
-
-// ========= MOVE SCENARIO MODAL (Cross-Project enabled) =========
-const moveBackdrop = document.getElementById("moveBackdrop");
-const moveSelect = document.getElementById("moveSelect");
-const moveCancelBtn = document.getElementById("moveCancelBtn");
-const moveConfirmBtn = document.getElementById("moveConfirmBtn");
-let scenarioToMoveId = null;
-
-let lastMoveStructureHash = null;
- 
-function openMoveDialog(sid) {
-    // 1. Generate a lightning-fast structural fingerprint
-    let currentHash = "";
-    for(let w of appState.workspaces) {
-       currentHash += w.id + w.title;
-       for(let t of w.tabs) currentHash += t.id + t.name;
-    }
-    
-    // 2. Only rebuild the DOM if the structure actually changed
-    if (lastMoveStructureHash !== currentHash) {
-        moveSelect.innerHTML = appState.workspaces.map(ws => {
-            return `<optgroup label="${escapeHtml(ws.title)}">` +
-                   ws.tabs.map(t => `<option value="${ws.id}|${t.id}">${escapeHtml(t.name)}</option>`).join('') +
-                   `</optgroup>`;
-        }).join('');
-        lastMoveStructureHash = currentHash;
-    }
-    
-    scenarioToMoveId = sid;
-    if(moveBackdrop) moveBackdrop.style.display = 'flex';
-}
-moveCancelBtn?.addEventListener("click", () => { if(moveBackdrop) moveBackdrop.style.display = 'none'; scenarioToMoveId = null; });
-if(moveBackdrop) moveBackdrop.addEventListener("click", (e) => { if(e.target === moveBackdrop) moveCancelBtn?.click(); });
-moveConfirmBtn?.addEventListener("click", () => {
-    const val = moveSelect.value;
-    if(!scenarioToMoveId || !val) return;
-    
-    const [destWsId, destTabId] = val.split('|');
-    const srcTab = activeTab(); 
-    const destWs = appState.workspaces.find(w => w.id === destWsId);
-    const destTab = destWs ? destWs.tabs.find(t => t.id === destTabId) : null;
-    
-    if(srcTab && destTab) {
-        const scIdx = srcTab.scenarios.findIndex(s => s.id === scenarioToMoveId);
-        if(scIdx >= 0) {
-            const sc = srcTab.scenarios.splice(scIdx, 1)[0];
-            destTab.scenarios.push(sc);
-            render();
-        }
-    }
-    if(moveBackdrop) moveBackdrop.style.display = 'none'; scenarioToMoveId = null;
 });
 
 // Create File Dialog
@@ -847,23 +725,6 @@ document.addEventListener("click", (e) => {
           const idx = tab.scenarios.findIndex(s => s.id === sc.id);
           tab.scenarios.splice(idx + 1, 0, clone);
           render();
-      }
-      return;
-  }
-
-  const mBtn = e.target.closest("[data-move]");
-  if (mBtn) { openMoveDialog(mBtn.dataset.move); return; }
-
-  const tplBtn = e.target.closest("[data-template]");
-  if (tplBtn) {
-      const sc = findScenario(tplBtn.dataset.template);
-      if(sc) {
-          promptDialog("Save Template", (sc.name || "Item") + " Template", "Name your template:", (name) => {
-              if(!name) return;
-              const tpl = JSON.parse(JSON.stringify(sc)); delete tpl.id; tpl.fields.forEach(f => delete f.id);
-              templates.push({ id: uid(), name: name, data: tpl });
-              saveTemplates();
-          });
       }
       return;
   }
