@@ -10,6 +10,8 @@ import { MainPanelVM } from './src/viewmodels/MainPanelVM.js';
 import { MainPanelView } from './src/views/MainPanelView.js';
 import { SearchVM } from './src/viewmodels/SearchVM.js';
 import { SearchView } from './src/views/SearchView.js';
+import { CompareVM } from './src/viewmodels/CompareVM.js';
+import { CompareView } from './src/views/CompareView.js';
 
 /* ========= PWA Service Worker Registration ========= */
 registerServiceWorker();
@@ -306,6 +308,10 @@ async function bootApp() {
     const searchVM = new SearchVM();
     new SearchView(searchVM);
     
+    // Initialize Compare Mode Subsystem
+    const compareVM = new CompareVM();
+    new CompareView(compareVM);
+    
     workspaceTitleInput.value = state.title || "Project";
     
     render(); 
@@ -597,100 +603,6 @@ moveConfirmBtn?.addEventListener("click", () => {
         }
     }
     if(moveBackdrop) moveBackdrop.style.display = 'none'; scenarioToMoveId = null;
-});
-
-// ========= COMPARE MODE LOGIC =========
-const compareBtn = document.getElementById("compareBtn");
-const compBackdrop = document.getElementById("compareBackdrop");
-const compCloseBtn = document.getElementById("compCloseBtn");
-
-const compLeftTab = document.getElementById("compLeftTab");
-const compLeftScen = document.getElementById("compLeftScen");
-const compLeftEv = document.getElementById("compLeftEv");
-
-const compRightTab = document.getElementById("compRightTab");
-const compRightScen = document.getElementById("compRightScen");
-const compRightEv = document.getElementById("compRightEv");
-
-let lastCompStructureHash = null;
- 
-function populateCompareSelects() {
-  // Generate a fingerprint of current tabs and item names
-  let currentHash = "";
-  for(let t of state.tabs) {
-     currentHash += t.id + t.name;
-     for(let s of t.scenarios) currentHash += s.id + s.name;
-  }
-  
-  if (lastCompStructureHash !== currentHash) {
-      let optionsHtml = '';
-      state.tabs.forEach((t, idx) => {
-        optionsHtml += `<option value="${t.id}">${escapeHtml(t.name || `Tab ${idx+1}`)}</option>`;
-      });
-      
-      compLeftTab.innerHTML = optionsHtml;
-      compRightTab.innerHTML = optionsHtml;
-      updateCompScenarios(compLeftTab, compLeftScen);
-      updateCompScenarios(compRightTab, compRightScen);
-      
-      lastCompStructureHash = currentHash;
-  }
-}
-
-function updateCompScenarios(tabSelect, scenSelect) {
-  const t = state.tabs.find(x => x.id === tabSelect.value);
-  scenSelect.innerHTML = '';
-  if(t) {
-    t.scenarios.forEach((sc, idx) => {
-      const name = (sc.name || "").trim();
-      const label = name || `Item ${idx+1}`;
-      scenSelect.innerHTML += `<option value="${sc.id}">${escapeHtml(label)}</option>`;
-    });
-  }
-}
-
-function renderCompEv(scenSelect, evDiv) {
-   let found = null;
-   for(let t of state.tabs) {
-     let sc = t.scenarios.find(x => x.id === scenSelect.value);
-     if(sc) { found = sc; break; }
-   }
-   evDiv.innerHTML = found ? found.evidenceHtml : '<div style="color:var(--muted); font-style:italic;">No content found.</div>';
-}
-
-compLeftTab?.addEventListener('change', () => { updateCompScenarios(compLeftTab, compLeftScen); renderCompEv(compLeftScen, compLeftEv); });
-compLeftScen?.addEventListener('change', () => { renderCompEv(compLeftScen, compLeftEv); });
-
-compRightTab?.addEventListener('change', () => { updateCompScenarios(compRightTab, compRightScen); renderCompEv(compRightScen, compRightEv); });
-compRightScen?.addEventListener('change', () => { renderCompEv(compRightScen, compRightEv); });
-
-compareBtn?.addEventListener('click', () => {
-  document.body.classList.remove("sidebar-show");
-  populateCompareSelects();
-  if(state.tabs.length > 0) {
-    renderCompEv(compLeftScen, compLeftEv);
-    renderCompEv(compRightScen, compRightEv);
-  }
-  if(compBackdrop) compBackdrop.style.display = 'flex';
-});
-
-compCloseBtn?.addEventListener('click', () => { if(compBackdrop) compBackdrop.style.display = 'none'; });
-
-const compSync = document.getElementById('compSync');
-let isSyncingLeft = false, isSyncingRight = false;
-
-compLeftEv?.addEventListener('scroll', () => {
-   if(!compSync?.checked || isSyncingLeft) { isSyncingLeft = false; return; }
-   isSyncingRight = true;
-   const percentage = compLeftEv.scrollTop / (compLeftEv.scrollHeight - compLeftEv.clientHeight || 1);
-   if(compRightEv) compRightEv.scrollTop = percentage * (compRightEv.scrollHeight - compRightEv.clientHeight);
-});
-
-compRightEv?.addEventListener('scroll', () => {
-   if(!compSync?.checked || isSyncingRight) { isSyncingRight = false; return; }
-   isSyncingLeft = true;
-   const percentage = compRightEv.scrollTop / (compRightEv.scrollHeight - compRightEv.clientHeight || 1);
-   if(compLeftEv) compLeftEv.scrollTop = percentage * (compLeftEv.scrollHeight - compLeftEv.clientHeight);
 });
 
 // Create File Dialog
