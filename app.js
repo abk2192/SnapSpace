@@ -463,29 +463,10 @@ if (!searchBackdrop && searchDropdown) {
     document.body.appendChild(searchBackdrop);
 }
 
-// Move search dropdown to the body to prevent any CSS stacking context issues
-if (searchDropdown && searchDropdown.parentElement !== document.body) {
-    document.body.appendChild(searchDropdown);
+// Ensure search dropdown is inside the search wrap for correct positioning
+if (searchDropdown && searchWrap && searchDropdown.parentElement !== searchWrap) {
+    searchWrap.appendChild(searchDropdown);
 }
-
-function updateSearchDropdownPosition() {
-    if (!searchWrap || !searchDropdown || searchDropdown.style.display === "none") return;
-    const rect = searchWrap.getBoundingClientRect();
-    searchDropdown.style.top = (rect.bottom + 8) + 'px';
-    
-    if (window.innerWidth <= 1100) {
-        searchDropdown.style.left = '16px';
-        searchDropdown.style.right = '16px';
-        searchDropdown.style.width = 'auto';
-    } else {
-        const w = Math.max(400, rect.width);
-        searchDropdown.style.width = w + 'px';
-        const rightEdge = window.innerWidth - rect.right;
-        searchDropdown.style.right = rightEdge + 'px';
-        searchDropdown.style.left = 'auto';
-    }
-}
-window.addEventListener('resize', updateSearchDropdownPosition);
 
 // Focus handling for expanding the bar
 searchInput?.addEventListener("focus", () => {
@@ -530,10 +511,7 @@ searchInput?.addEventListener("input", (e) => {
         if(searchBackdrop) searchBackdrop.style.display = "none";
         return; 
     }
-    if(searchDropdown) {
-        searchDropdown.style.display = "flex";
-        updateSearchDropdownPosition();
-    }
+    if(searchDropdown) searchDropdown.style.display = "flex";
     if(searchBackdrop) searchBackdrop.style.display = "block";
     searchTimeout = setTimeout(() => { performSearch(q); }, 200);
 });
