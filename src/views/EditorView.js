@@ -53,6 +53,7 @@ export class EditorView {
                             if(table.rows.length === 0 || table.rows[0].children.length === 0) table.remove();
                         }
                         const ev = cmdBtn.closest('.evidence-wrap').querySelector('.evidence'); if (ev) ev.dispatchEvent(new Event('input', { bubbles: true }));
+                        setTimeout(() => this.updateToolbarState(), 10);
                     }
                     return;
                 }
@@ -124,6 +125,8 @@ export class EditorView {
 
     updateToolbarState() {
         document.querySelectorAll('.wysiwyg-toolbar .btn').forEach(b => b.classList.remove('active-format'));
+        document.querySelectorAll('.tbl-btn').forEach(b => b.style.display = 'none');
+        
         const sel = window.getSelection(); if (!sel || !sel.rangeCount) return; 
         let node = sel.anchorNode; if (node?.nodeType === 3) node = node.parentNode || null; if (!node || typeof node.closest !== 'function') return;
         const ev = node.closest('.evidence');
@@ -131,8 +134,28 @@ export class EditorView {
             const toolbar = ev.previousElementSibling;
             if (toolbar && toolbar.classList.contains('wysiwyg-toolbar')) {
                 ['bold', 'italic', 'insertUnorderedList', 'strikeThrough'].forEach(cmd => { if (document.queryCommandState(cmd)) { const btn = toolbar.querySelector(`[data-cmd="${cmd}"]`); if (btn) btn.classList.add('active-format'); } });
-                const tableControls = toolbar.querySelector('.table-controls');
-                if (tableControls) tableControls.style.display = node.closest('table.evidence-table') ? 'flex' : 'none';
+            }
+            
+            const cell = node.closest('td, th');
+            const row = cell?.closest('tr');
+            const table = row?.closest('table.evidence-table');
+            const wrap = ev.closest('.evidence-wrap');
+            
+            if (table && cell && row && wrap) {
+                const wrapRect = wrap.getBoundingClientRect();
+                const cellRect = cell.getBoundingClientRect();
+                const top = cellRect.top - wrapRect.top;
+                const left = cellRect.left - wrapRect.left;
+                
+                const bAR = wrap.querySelector('.tbl-add-row');
+                const bAC = wrap.querySelector('.tbl-add-col');
+                const bDR = wrap.querySelector('.tbl-del-row');
+                const bDC = wrap.querySelector('.tbl-del-col');
+                
+                if (bAR) { bAR.style.display = 'grid'; bAR.style.top = `${top + cellRect.height - 11}px`; bAR.style.left = `${left + cellRect.width / 2 - 11}px`; }
+                if (bAC) { bAC.style.display = 'grid'; bAC.style.top = `${top + cellRect.height / 2 - 11}px`; bAC.style.left = `${left + cellRect.width - 11}px`; }
+                if (bDR) { bDR.style.display = 'grid'; bDR.style.top = `${top + cellRect.height / 2 - 11}px`; bDR.style.left = `${left - 11}px`; }
+                if (bDC) { bDC.style.display = 'grid'; bDC.style.top = `${top - 11}px`; bDC.style.left = `${left + cellRect.width / 2 - 11}px`; }
             }
         }
     }
