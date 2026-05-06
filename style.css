@@ -151,7 +151,7 @@
   @keyframes slideDown { from { opacity: 0; transform: translate(-50%, -20px); } to { opacity: 1; transform: translate(-50%, 0); } }
 
   .command-palette #searchInput { border: none; border-bottom: 1px solid var(--outline-2); border-radius: 0; padding: 16px 20px; font-size: 18px; background: transparent; color: var(--text); outline: none; width: 100%; }
-  .command-palette .search-dropdown { position: static; box-shadow: none; border: none; border-radius: 0; max-height: 50vh; display: none; background: transparent; padding: 8px; overflow-y: auto; }
+  .command-palette .search-dropdown { position: static; box-shadow: none; border: none; border-radius: 0; max-height: 50vh; display: none; background: transparent; padding: 8px; overflow-y: auto; flex-direction: column; gap: 8px; }
   .search-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 999; }
 
   /* Search Modal Results */
