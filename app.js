@@ -762,7 +762,12 @@ document.addEventListener("mousedown", (e) => { if (e.target.closest('[data-cmd]
 
 function updateToolbarState() {
   document.querySelectorAll('.wysiwyg-toolbar .btn').forEach(b => b.classList.remove('active-format'));
-  const sel = window.getSelection(); if (!sel.rangeCount) return; let node = sel.anchorNode; if (!node) return; if (node.nodeType === 3) node = node.parentElement;
+  const sel = window.getSelection(); 
+  if (!sel || !sel.rangeCount) return; 
+  let node = sel.anchorNode; 
+  if (!node) return; 
+  if (node.nodeType === 3) node = node.parentNode;
+  if (!node || typeof node.closest !== 'function') return;
   const ev = node.closest('.evidence');
   if (ev) {
     const toolbar = ev.previousElementSibling;
@@ -777,10 +782,11 @@ function updateToolbarState() {
 document.addEventListener("selectionchange", () => {
   updateToolbarState();
   const sel = window.getSelection();
-  if (sel.rangeCount > 0) {
-    let node = sel.getRangeAt(0).commonAncestorContainer;
+  if (sel && sel.rangeCount > 0) {
+    const range = sel.getRangeAt(0);
+    let node = range ? range.commonAncestorContainer : null;
     if (node && node.nodeType === 3) node = node.parentNode;
-    if (node && node.closest && node.closest('.evidence')) { savedRange = sel.getRangeAt(0); }
+    if (node && typeof node.closest === 'function' && node.closest('.evidence')) { savedRange = range; }
   }
 });
 
@@ -788,8 +794,8 @@ function restoreSelectionAndInsert(ev, html) {
   ev.focus();
   if (savedRange && savedRange.commonAncestorContainer) {
     let node = savedRange.commonAncestorContainer;
-    if (node.nodeType === 3) node = node.parentNode;
-    if (node && node.closest && node.closest('.evidence') === ev) {
+    if (node && node.nodeType === 3) node = node.parentNode;
+    if (node && typeof node.closest === 'function' && node.closest('.evidence') === ev) {
        const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(savedRange);
     } else { moveCursorToEnd(ev); }
   } else { moveCursorToEnd(ev); }
