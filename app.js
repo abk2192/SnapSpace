@@ -563,7 +563,10 @@ function openCommandPalette() {
     setTimeout(() => searchInput?.focus(), 50);
     const q = searchInput?.value.trim() || "";
     if(q.length >= 3) {
-        if(searchDropdown) searchDropdown.style.display = "flex";
+        if(searchDropdown) {
+            searchDropdown.style.display = "flex";
+            searchDropdown.style.flexDirection = "column";
+        }
         performSearch(q);
     }
 }
@@ -625,7 +628,10 @@ searchInput?.addEventListener("input", (e) => {
         if(searchBackdrop) searchBackdrop.style.display = "none";
         return; 
     }
-    if(searchDropdown) searchDropdown.style.display = "flex";
+    if(searchDropdown) {
+        searchDropdown.style.display = "flex";
+        searchDropdown.style.flexDirection = "column";
+    }
     if(searchBackdrop) searchBackdrop.style.display = "block";
     searchTimeout = setTimeout(() => { performSearch(q); }, 200);
 });
