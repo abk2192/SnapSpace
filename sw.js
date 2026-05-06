@@ -1,5 +1,5 @@
  
-const CACHE_NAME = "snapspace-v1";
+const CACHE_NAME = "snapspace-v2";
 
 // Update these to include your repository name
 const ASSETS_TO_CACHE = [

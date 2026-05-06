@@ -34,6 +34,7 @@
   </nav>
   <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
+  <div class="app-content">
   <header class="appbar">
     <div class="appbar-inner">
       <button class="btn secondary icon-only" id="mainMenuBtn" title="Menu" style="margin-right: 8px;"><span class="material-symbols-outlined">menu</span></button>
@@ -65,7 +66,6 @@
       </div>
     </div>
   </header>
-  <div class="app-content">
 
   <div class="tabsbar"><div class="tabs" id="tabs"></div></div>
   <main>
@@ -321,16 +321,5 @@
   </div>
 
   <script src="app.js"></script>
-  <script>
-    // Service Worker Registration
-    if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js', { scope: './' })
-      .then(reg => console.log('Service Worker registered.', reg))
-      .catch(err => console.error('Service Worker failed.', err));
-  });
-}
-
-  </script>
 </body>
 </html>
