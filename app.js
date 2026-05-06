@@ -300,27 +300,43 @@ async function bootApp() {
     injectBackupRestoreButtons();
     document.getElementById("renameTabBtn")?.remove();
 
-    // Reorder Global Kebab Menu Actions
+    // Reorder Global Kebab Menu Actions (Only the tools meant for the top bar)
     const actionsContainer = document.querySelector('.appbar .actions');
     if (actionsContainer) {
-        const btnOrder = ['importBtn', 'exportHtmlBtn', 'compareBtn', 'themeBtn', 'docsBtn', 'resetBtn'];
+        const btnOrder = ['importBtn', 'exportHtmlBtn', 'resetBtn'];
         btnOrder.forEach(id => {
             const btn = document.getElementById(id);
             if (btn) actionsContainer.appendChild(btn);
         });
     }
 
-    // Move view-related buttons to the tabs bar for better context and space saving
+    // Create a single Toggle Expand/Collapse button for space saving
     const expandAllBtn = document.getElementById('expandAllBtn');
     const collapseAllBtn = document.getElementById('collapseAllBtn');
+    if (expandAllBtn) expandAllBtn.style.display = 'none';
+    if (collapseAllBtn) collapseAllBtn.style.display = 'none';
+    
     const tabsbar = document.querySelector('.tabsbar');
-    if (expandAllBtn && collapseAllBtn && tabsbar && !tabsbar.querySelector('.tab-tools')) {
-        expandAllBtn.classList.add('icon-only', 'secondary');
-        collapseAllBtn.classList.add('icon-only', 'secondary');
+    if (tabsbar && !tabsbar.querySelector('.tab-tools')) {
         const tabTools = document.createElement('div');
         tabTools.className = 'tab-tools';
-        tabTools.appendChild(expandAllBtn);
-        tabTools.appendChild(collapseAllBtn);
+        
+        const toggleAllBtn = document.createElement('button');
+        toggleAllBtn.className = 'btn secondary icon-only';
+        toggleAllBtn.id = 'toggleAllBtn';
+        toggleAllBtn.innerHTML = '<span class="material-symbols-outlined">unfold_less</span>';
+        toggleAllBtn.title = "Collapse All";
+        
+        toggleAllBtn.addEventListener('click', () => {
+            const tab = activeTab();
+            if (tab && tab.scenarios) {
+                const anyOpen = tab.scenarios.some(sc => sc.isOpen !== false);
+                tab.scenarios.forEach(sc => sc.isOpen = !anyOpen);
+                render();
+            }
+        });
+        
+        tabTools.appendChild(toggleAllBtn);
         tabsbar.appendChild(tabTools);
     }
     
@@ -786,6 +802,14 @@ function renderPanel(){
   const active = activeTab();
   const pMeta = document.getElementById("panelMeta");
   if (pMeta) pMeta.style.display = "none";
+
+  // Update toggle button icon based on current tab state
+  const toggleAllBtn = document.getElementById('toggleAllBtn');
+  if (toggleAllBtn && active) {
+      const anyOpen = active.scenarios.some(sc => sc.isOpen !== false);
+      toggleAllBtn.innerHTML = `<span class="material-symbols-outlined">${anyOpen ? 'unfold_less' : 'unfold_more'}</span>`;
+      toggleAllBtn.title = anyOpen ? 'Collapse All' : 'Expand All';
+  }
 }
 
 function renderScenarioCard(sc, idx){
@@ -830,7 +854,7 @@ function renderScenarioCard(sc, idx){
         ${tagsHtml ? `<div class="summary-tags">${tagsHtml}</div>` : `<div class="summary-sub">Click to expand/collapse</div>`}
       </div>
       <div class="summary-actions">
-        <div class="scen-more-wrap" onclick="event.stopPropagation()">
+        <div class="scen-more-wrap">
           <button class="btn secondary action-btn icon-only scen-more-btn" type="button" title="More Actions"><span class="material-symbols-outlined">more_vert</span></button>
           <div class="scen-more-menu">
             <button class="btn secondary action-btn" type="button" title="Save as Template" data-template="${sc.id}"><span class="material-symbols-outlined">bookmark_add</span> <span class="btn-text">Save Template</span></button>
@@ -909,7 +933,7 @@ document.addEventListener("click", (e) => {
   const summary = e.target.closest("summary");
   if (summary) {
     // If clicking directly on a tag, OR if text is currently highlighted (drag-select)
-    if (e.target.closest(".tag") || window.getSelection().toString().trim().length > 0) {
+    if (e.target.closest(".tag") || e.target.closest(".scen-more-wrap") || window.getSelection().toString().trim().length > 0) {
       e.preventDefault(); // Stops the <details> element from toggling
     }
   }
@@ -925,22 +949,6 @@ document.addEventListener("click", (e) => {
   }
 });
 
-/* ========= Expand / Collapse All ========= */
-document.getElementById("expandAllBtn")?.addEventListener("click", () => {
-  const tab = activeTab();
-  if (tab && tab.scenarios) {
-    tab.scenarios.forEach(sc => sc.isOpen = true);
-    render();
-  }
-});
-
-document.getElementById("collapseAllBtn")?.addEventListener("click", () => {
-  const tab = activeTab();
-  if (tab && tab.scenarios) {
-    tab.scenarios.forEach(sc => sc.isOpen = false);
-    render();
-  }
-});
 
 document.addEventListener("mousedown", (e) => { if (e.target.closest('[data-cmd]')) { e.preventDefault(); } });
 
