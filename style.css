@@ -247,6 +247,21 @@
   .export-scen-label input, .export-tab-label input { margin: 0; width: 16px; height: 16px; accent-color: var(--primary); cursor: pointer; }
 
   @media (max-width: 1100px){
+    /* Transform action buttons to icon-only on small screens */
+    .appbar .actions .btn,
+    .panel-head .actions .btn,
+    .wysiwyg-toolbar .btn {
+      font-size: 0;
+      padding: 8px;
+      border-radius: 8px;
+    }
+    .appbar .actions .btn .material-symbols-outlined,
+    .panel-head .actions .btn .material-symbols-outlined,
+    .wysiwyg-toolbar .btn .material-symbols-outlined {
+      margin-right: 0;
+      font-size: 20px;
+    }
+
     .appbar { height: auto; min-height: 60px; padding: 12px 0;}
     .appbar-inner{ flex-wrap: wrap; padding: 0 12px; gap: 10px; }
     .title { min-width: auto; flex: none; margin-bottom: 0; }

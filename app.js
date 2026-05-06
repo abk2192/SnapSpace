@@ -282,6 +282,34 @@ async function bootApp() {
         panelHead.appendChild(panelActions);
     }
     
+    // Ensure all buttons in header/panel actions have icons and titles for mobile icon-only mode
+    const actionIcons = {
+        'exportHtmlBtn': 'download',
+        'importBtn': 'upload_file',
+        'compareBtn': 'compare_arrows',
+        'themeBtn': 'palette',
+        'docsBtn': 'description',
+        'expandAllBtn': 'unfold_more',
+        'collapseAllBtn': 'unfold_less',
+        'resetBtn': 'restart_alt',
+        'addScenarioBtn': 'add'
+    };
+    
+    document.querySelectorAll('.appbar .actions .btn, .panel-head .actions .btn').forEach(btn => {
+        if (!btn.querySelector('.material-symbols-outlined')) {
+            const iconName = actionIcons[btn.id] || 'smart_button';
+            const iconSpan = document.createElement('span');
+            iconSpan.className = 'material-symbols-outlined';
+            iconSpan.textContent = iconName;
+            btn.insertBefore(iconSpan, btn.firstChild);
+        }
+        if (!btn.title) {
+            let text = "";
+            btn.childNodes.forEach(n => { if (n.nodeType === 3) text += n.textContent; });
+            btn.title = text.trim() || "Action";
+        }
+    });
+
     let loadedState = await loadStateFromDB();
     
     if (!loadedState) {
@@ -760,7 +788,7 @@ function renderScenarioCard(sc, idx){
            <div style="width: 1px; height: 20px; background: var(--outline-2); margin: 0 4px;"></div>
            
            <button class="btn secondary action-btn" type="button" data-createfile="${sc.id}" title="Create Text/XML File"><span class="material-symbols-outlined" style="font-size: 16px;">note_add</span> New File</button>
-           <button class="btn secondary action-btn" type="button" data-attach="${sc.id}"><span class="material-symbols-outlined" style="font-size: 16px;">attach_file</span> Attach</button>
+           <button class="btn secondary action-btn" type="button" data-attach="${sc.id}" title="Attach File"><span class="material-symbols-outlined" style="font-size: 16px;">attach_file</span> Attach</button>
         </div>
         <div class="evidence" contenteditable="true" data-evidence="${sc.id}" spellcheck="false"></div>
         <div class="hint"><span class="material-symbols-outlined" style="font-size: 14px;">info</span> Paste screenshots (Ctrl+V) or use the toolbar to format. Double-click images to view full size.</div>
