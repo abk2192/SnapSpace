@@ -8,6 +8,8 @@ import { SidebarVM } from './src/viewmodels/SidebarVM.js';
 import { SidebarView } from './src/views/SidebarView.js';
 import { MainPanelVM } from './src/viewmodels/MainPanelVM.js';
 import { MainPanelView } from './src/views/MainPanelView.js';
+import { SearchVM } from './src/viewmodels/SearchVM.js';
+import { SearchView } from './src/views/SearchView.js';
 
 /* ========= PWA Service Worker Registration ========= */
 registerServiceWorker();
@@ -275,9 +277,6 @@ async function bootApp() {
         `;
         document.body.appendChild(mobilePill);
 
-        document.getElementById("pillSearchBtn").addEventListener("click", () => {
-            if (typeof openCommandPalette === 'function') openCommandPalette();
-        });
         document.getElementById("pillAddBtn").addEventListener("click", () => {
             document.getElementById("addScenarioBtn")?.click();
         });
@@ -303,6 +302,10 @@ async function bootApp() {
     mainPanelView.render();
     window.promptDialog = promptDialog;
     
+    // Initialize Search Subsystem
+    const searchVM = new SearchVM();
+    new SearchView(searchVM);
+    
     workspaceTitleInput.value = state.title || "Project";
     
     render(); 
@@ -325,189 +328,6 @@ resetBtn?.addEventListener("click", () => {
         render();
     }
 });
-
-/* ========= Global Live Search Engine Dropdown ========= */
-const searchWrap = document.getElementById("searchWrap");
-const searchInput = document.getElementById("searchInput");
-const searchDropdown = document.getElementById("searchDropdown");
-
-let searchBackdrop = document.getElementById("searchBackdrop");
-if (!searchBackdrop && searchDropdown) {
-    searchBackdrop = document.createElement("div");
-    searchBackdrop.id = "searchBackdrop";
-    searchBackdrop.className = "search-backdrop";
-    document.body.appendChild(searchBackdrop);
-}
-
-function openCommandPalette() {
-    if(searchWrap) searchWrap.classList.add("active-search");
-    if(searchBackdrop) searchBackdrop.style.display = "block";
-    setTimeout(() => searchInput?.focus(), 50);
-    const q = searchInput?.value.trim() || "";
-    if(q.length >= 3) {
-        if(searchDropdown) searchDropdown.style.display = "flex";
-        performSearch(q);
-    }
-}
-
-function closeCommandPalette() {
-    if(searchWrap) searchWrap.classList.remove("active-search");
-    if(searchBackdrop) searchBackdrop.style.display = "none";
-    if(searchDropdown) searchDropdown.style.display = "none";
-    if(searchInput) searchInput.value = "";
-    const appbar = document.querySelector('.appbar');
-    if(appbar) appbar.classList.remove("search-active");
-}
-
-if (searchWrap && searchWrap.parentElement !== document.body) {
-    if (searchDropdown && searchDropdown.parentElement !== searchWrap) {
-        searchWrap.appendChild(searchDropdown);
-    }
-    document.body.appendChild(searchWrap);
-    searchWrap.classList.add("command-palette");
-}
-
-let searchTriggerBtn = document.getElementById("searchTriggerBtn");
-if (!searchTriggerBtn && searchWrap) {
-    searchTriggerBtn = document.createElement("button");
-    searchTriggerBtn.id = "searchTriggerBtn";
-    searchTriggerBtn.className = "search-trigger-btn";
-    searchTriggerBtn.innerHTML = '<span class="material-symbols-outlined">search</span><span class="st-text">Search...</span><kbd>Ctrl+K</kbd>';
-    const appbarInner = document.querySelector('.appbar-inner');
-    const actions = document.querySelector('.appbar .actions');
-    if (appbarInner && actions) {
-        appbarInner.insertBefore(searchTriggerBtn, actions);
-    }
-    searchTriggerBtn.addEventListener("click", openCommandPalette);
-}
-
-// Click outside to close dropdown and shrink bar
-document.addEventListener("click", (e) => {
-    const pillSearchBtn = document.getElementById("pillSearchBtn");
-    if (pillSearchBtn && pillSearchBtn.contains(e.target)) return;
-    if (searchTriggerBtn && searchTriggerBtn.contains(e.target)) return;
-    if(searchWrap && !searchWrap.contains(e.target) && searchWrap.classList.contains("active-search")) {
-        closeCommandPalette();
-    }
-});
-
-function highlightText(text, query) {
-    if (!query) return escapeHtml(text);
-    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-    return escapeHtml(text).replace(regex, '<span class="search-hl">$1</span>');
-}
-
-// Live search on input
-let searchTimeout;
-searchInput?.addEventListener("input", (e) => {
-    clearTimeout(searchTimeout);
-    const q = e.target.value.trim();
-    if (q.length < 3) { 
-        if(searchDropdown) { searchDropdown.style.display = "none"; searchDropdown.innerHTML = ""; }
-        if(searchBackdrop) searchBackdrop.style.display = "none";
-        return; 
-    }
-    if(searchDropdown) searchDropdown.style.display = "flex";
-    if(searchBackdrop) searchBackdrop.style.display = "block";
-    searchTimeout = setTimeout(() => { performSearch(q); }, 200);
-});
-
-function performSearch(query) {
-    const q = query.toLowerCase();
-    let resultsHtml = "";
-    let matchCount = 0;
-
-    appState.workspaces.forEach(ws => {
-        const wsMatch = (ws.title || "").toLowerCase().includes(q);
-        ws.tabs.forEach(tab => {
-            const tabMatch = (tab.name || "").toLowerCase().includes(q);
-            tab.scenarios.forEach((sc, idx) => {
-                let hasMatch = false;
-                let snippets = [];
-
-                if (wsMatch) {
-                    hasMatch = true; snippets.push(`<b>Project:</b> ${highlightText(ws.title || "", query)}`);
-                }
-                if (tabMatch) {
-                    hasMatch = true; snippets.push(`<b>Tab:</b> ${highlightText(tab.name || "", query)}`);
-                }
-                if ((sc.name || "").toLowerCase().includes(q)) {
-                    hasMatch = true; snippets.push(`<b>Title:</b> ${highlightText(sc.name || "", query)}`);
-                }
-                
-                (sc.fields || []).forEach(f => {
-                    const keyStr = f.key || "";
-                    const valStr = f.val || "";
-                    if (keyStr.toLowerCase().includes(q) || valStr.toLowerCase().includes(q)) {
-                        hasMatch = true; snippets.push(`<b>Field:</b> ${highlightText(keyStr, query)} = ${highlightText(valStr, query)}`);
-                    }
-                });
-
-                const tempDiv = document.createElement("div");
-                tempDiv.innerHTML = sc.evidenceHtml || "";
-                const rawText = tempDiv.textContent || tempDiv.innerText || "";
-                
-                if (rawText.toLowerCase().includes(q)) {
-                    hasMatch = true;
-                    const matchIdx = rawText.toLowerCase().indexOf(q);
-                    const start = Math.max(0, matchIdx - 30);
-                    const end = Math.min(rawText.length, matchIdx + q.length + 30);
-                    const snippetText = (start > 0 ? "..." : "") + rawText.substring(start, end) + (end < rawText.length ? "..." : "");
-                    snippets.push(`<b>Notes:</b> ${highlightText(snippetText, query)}`);
-                }
-
-                if (hasMatch) {
-                    matchCount++;
-                    const wsTitleDisp = wsMatch ? highlightText(ws.title || "", query) : escapeHtml(ws.title || "");
-                    const tabNameDisp = tabMatch ? highlightText(tab.name || "", query) : escapeHtml(tab.name || "");
-                    const scNameDisp = ((sc.name || "").toLowerCase().includes(q)) ? highlightText(sc.name || "", query) : escapeHtml(sc.name || `Item ${idx+1}`);
-
-                    resultsHtml += `
-                        <div class="search-result" data-ws="${ws.id}" data-tab="${tab.id}" data-sc="${sc.id}">
-                            <div class="res-title">
-                               <span class="res-tab">${wsTitleDisp} > ${tabNameDisp}</span>
-                               ${scNameDisp}
-                            </div>
-                            <div class="res-snip">${snippets.join("<br>")}</div>
-                        </div>
-                    `;
-                }
-            });
-        });
-    });
-
-    if (matchCount === 0) {
-        searchDropdown.innerHTML = `<div style="text-align:center; padding: 12px; color: var(--muted); font-size: 13px;">No results found for "${escapeHtml(query)}".</div>`;
-    } else {
-        searchDropdown.innerHTML = `<div style="padding: 4px 8px; font-weight:bold; font-size:12px; color:var(--muted);">Found ${matchCount} matches:</div>` + resultsHtml;
-    }
-}
-
-searchDropdown?.addEventListener("click", (e) => {
-    const res = e.target.closest('.search-result');
-    if (res) {
-        // Switch context to correct project and tab
-        appState.activeWorkspaceId = res.dataset.ws;
-        state = appState.workspaces.find(w => w.id === appState.activeWorkspaceId);
-        workspaceTitleInput.value = state.title;
-        state.activeTabId = res.dataset.tab;
-        
-        globalEvents.publish('workspaces:changed');
-        render();
-        closeCommandPalette();
-        
-        setTimeout(() => {
-            const scCard = document.querySelector(`details[data-sid="${res.dataset.sc}"]`);
-            if (scCard) {
-                scCard.open = true;
-                scCard.scrollIntoView({ behavior: "smooth", block: "center" });
-                scCard.style.boxShadow = "0 0 0 3px var(--primary)";
-                setTimeout(() => scCard.style.boxShadow = "var(--shadow)", 2000);
-            }
-        }, 100);
-    }
-});
-
 
 /* ========= Rendering ========= */
 // Expose Bridge functions for Modals until Phase 5
@@ -1313,9 +1133,6 @@ document.addEventListener("keydown", (e) => {
          if (document.getElementById("imgPreviewBackdrop")) document.getElementById("imgPreviewBackdrop").style.display = "none";
          const restoreCancel = document.getElementById("restoreCancelBtn");
          if (restoreCancel) restoreCancel.click();
-         if (document.getElementById("searchBackdrop")) {
-             closeCommandPalette();
-         }
       }
       return; 
   }
@@ -1323,12 +1140,7 @@ document.addEventListener("keydown", (e) => {
   const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
   const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
 
-  // New Global Search Shortcut
-  if (cmdOrCtrl && (e.key.toLowerCase() === 'k' || (e.shiftKey && e.key.toLowerCase() === 'f'))) {
-      e.preventDefault();
-      if (typeof openCommandPalette === 'function') openCommandPalette();
-  }
-  else if (cmdOrCtrl && e.key.toLowerCase() === 's') { e.preventDefault(); document.getElementById("exportHtmlBtn")?.click(); }
+  if (cmdOrCtrl && e.key.toLowerCase() === 's') { e.preventDefault(); document.getElementById("exportHtmlBtn")?.click(); }
   else if (cmdOrCtrl && e.key.toLowerCase() === 'o') { e.preventDefault(); document.getElementById("importBtn")?.click(); }
   else if (e.altKey) {
     const key = e.key.toLowerCase();
