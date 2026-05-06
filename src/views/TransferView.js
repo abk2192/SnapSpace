@@ -175,10 +175,14 @@ export class TransferView {
     async exportHTML(exportData, filename) {
         let styles = "";
         try {
-            const res = await fetch('style.css');
-            if (res.ok) styles = await res.text();
+            for (let i = 0; i < document.styleSheets.length; i++) {
+                try {
+                    const sheet = document.styleSheets[i];
+                    const rules = sheet.cssRules || sheet.rules;
+                    for (let j = 0; j < rules.length; j++) styles += rules[j].cssText + "\n";
+                } catch (e) {} // Ignore cross-origin rules like Google Fonts
+            }
         } catch (err) {
-            console.warn("Could not fetch style.css for export", err);
         }
         const payloadStr = JSON.stringify(exportData).replace(/</g, '\\u003c');
 
@@ -203,7 +207,7 @@ export class TransferView {
     function escapeAttr(str){ return escapeHtml(str).replace(/"/g, "&quot;"); }
     function renderView() {
       const tabsEl = document.getElementById("tabs");
-      tabsEl.innerHTML = state.tabs.map(tab => \`<button class="tab \${tab.id === activeTabId ? 'active' : ''}" data-tab="\${tab.id}"><span class="tab-label" title="\${escapeAttr(tab.name)}">\${escapeHtml(tab.name)}</span></button>\`).join("");
+      tabsEl.innerHTML = state.tabs.map(tab => \`<button class="tab \${tab.id === activeTabId ? 'active' : ''}" data-tab="\${tab.id}"><span class="tab-name-wrapper"><span class="tab-label" title="\${escapeAttr(tab.name)}">\${escapeHtml(tab.name)}</span></span></button>\`).join("");
       const panelEl = document.getElementById("panel"); const activeTab = state.tabs.find(t => t.id === activeTabId); if(!activeTab) return;
       panelEl.innerHTML = activeTab.scenarios.map((sc, idx) => {
         const validFields = (sc.fields || []).filter(f => f.key.trim() || f.val.trim());
