@@ -196,8 +196,15 @@ function injectBackupRestoreButtons() {
             restoreBtn.title = 'Restore Database (JSON)';
             restoreBtn.innerHTML = '<span class="material-symbols-outlined">settings_backup_restore</span> Restore Data';
             
+            const forceUpdateBtn = document.createElement('button');
+            forceUpdateBtn.className = 'menu-item';
+            forceUpdateBtn.id = 'forceUpdateBtn';
+            forceUpdateBtn.title = 'Clear Cache & Reload App';
+            forceUpdateBtn.innerHTML = '<span class="material-symbols-outlined">system_update_alt</span> Force Update';
+            
             sidebarInner.appendChild(backupBtn);
             sidebarInner.appendChild(restoreBtn);
+            sidebarInner.appendChild(forceUpdateBtn);
         }
     } catch(err) {
         console.error("Backup button injection failed:", err);
@@ -205,6 +212,29 @@ function injectBackupRestoreButtons() {
 }
 
 document.addEventListener('click', (e) => {
+    const forceUpdateBtn = e.target.closest('#forceUpdateBtn');
+    if (forceUpdateBtn) {
+        if (confirm("This will clear the app's cache and fetch the latest version from the server. Your saved projects will NOT be deleted. Proceed?")) {
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    for(let registration of registrations) {
+                        registration.unregister();
+                    }
+                });
+            }
+            if ('caches' in window) {
+                caches.keys().then((keyList) => {
+                    return Promise.all(keyList.map((key) => caches.delete(key)));
+                }).then(() => {
+                    window.location.reload(true);
+                });
+            } else {
+                window.location.reload(true);
+            }
+        }
+        return;
+    }
+
     const backupBtn = e.target.closest('#backupBtn');
     if (backupBtn) {
         const dataStr = JSON.stringify(appState, null, 2);
@@ -320,6 +350,31 @@ async function bootApp() {
             btn.insertBefore(iconSpan, btn.firstChild);
         }
     });
+
+    // Inject Mobile Bottom Action Pill
+    let mobilePill = document.getElementById("mobileActionPill");
+    if (!mobilePill) {
+        mobilePill = document.createElement("div");
+        mobilePill.id = "mobileActionPill";
+        mobilePill.className = "mobile-action-pill";
+        mobilePill.innerHTML = `
+            <button class="pill-btn" id="pillSearchBtn" title="Search"><span class="material-symbols-outlined">search</span></button>
+            <button class="pill-btn pill-add" id="pillAddBtn"><span class="material-symbols-outlined">add</span> <span class="pill-text">Add Item</span></button>
+            <button class="pill-btn" id="pillMoreBtn" title="More Actions"><span class="material-symbols-outlined">more_vert</span></button>
+        `;
+        document.body.appendChild(mobilePill);
+
+        document.getElementById("pillSearchBtn").addEventListener("click", () => {
+            if (typeof openCommandPalette === 'function') openCommandPalette();
+        });
+        document.getElementById("pillAddBtn").addEventListener("click", () => {
+            document.getElementById("addScenarioBtn")?.click();
+        });
+        document.getElementById("pillMoreBtn").addEventListener("click", (e) => {
+            e.stopPropagation();
+            document.body.classList.toggle("show-mobile-actions");
+        });
+    }
 
     let loadedState = await loadStateFromDB();
     
@@ -832,6 +887,15 @@ document.addEventListener("click", (e) => {
     if (e.target.closest(".tag") || window.getSelection().toString().trim().length > 0) {
       e.preventDefault(); // Stops the <details> element from toggling
     }
+  }
+
+  // Close mobile action menu when clicking outside
+  if (document.body.classList.contains("show-mobile-actions")) {
+      const actions = document.querySelector('.appbar .actions');
+      const moreBtn = document.getElementById("pillMoreBtn");
+      if (actions && !actions.contains(e.target) && e.target !== moreBtn) {
+          document.body.classList.remove("show-mobile-actions");
+      }
   }
 });
 

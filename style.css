@@ -137,6 +137,9 @@
     body.sidebar-hide .app-content .appbar { width: 100%; margin-left: 0; }
   }
 
+  /* Hide Action Pill on Desktop */
+  @media (min-width: 769px) { .mobile-action-pill { display: none; } }
+
   /* ===== Search Bar Dropdown (Command Palette) ===== */
   .search-trigger-btn { display: flex; align-items: center; gap: 8px; background: var(--surface-2); border: 1px solid var(--outline-2); color: var(--muted); padding: 6px 12px; border-radius: 8px; font-family: inherit; font-size: 13px; cursor: pointer; transition: all 0.2s ease; margin: 0 auto; min-width: 200px; }
   .search-trigger-btn:hover { border-color: var(--outline); color: var(--text); background: var(--surface); box-shadow: var(--shadow-2); }
@@ -268,28 +271,45 @@
   }
 
   @media (max-width: 768px){
-    /* Transform action buttons to icon-only on small screens */
-    .appbar .actions .btn .btn-text,
-    .wysiwyg-toolbar .btn .btn-text {
-      display: none;
+    /* Mobile Appbar - Keep the Badge, Hide the Text */
+    .appbar-inner { padding: 0 12px; gap: 8px; flex-wrap: nowrap; }
+    .title { font-size: 0; gap: 0; min-width: auto; margin-right: 4px; } 
+    .title .badge { margin-right: 0; width: 32px; height: 32px; }
+    #workspaceTitleInput { flex: 1; font-size: 16px; min-width: 0; padding: 4px; }
+    
+    .search-trigger-btn { display: none !important; }
+    
+    /* The Mobile Pill (Neutral & Grounded) */
+    .mobile-action-pill { display: flex; position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--surface); border: 1px solid var(--outline); border-radius: 999px; padding: 6px 8px; gap: 8px; box-shadow: var(--shadow-2); z-index: 100; align-items: center; }
+    .pill-btn { background: transparent; border: none; color: var(--muted); padding: 8px; border-radius: 50%; display: grid; place-items: center; cursor: pointer; transition: all 0.2s; }
+    .pill-btn:hover, .pill-btn:active { background: var(--surface-2); color: var(--text); }
+    .pill-btn.pill-add { background: var(--primary); color: #fff; border-radius: 999px; padding: 8px 16px; display: flex; gap: 6px; font-weight: 600; font-size: 14px; box-shadow: 0 4px 10px var(--primary-light); }
+    .pill-btn.pill-add:hover, .pill-btn.pill-add:active { background: var(--primary-2); }
+    
+    /* The Actions Bottom Sheet (Pop-up from Pill) */
+    .appbar .actions {
+        position: fixed; bottom: 84px; left: 50%; transform: translateX(-50%) scale(0.95);
+        background: var(--surface); border: 1px solid var(--outline); border-radius: 16px;
+        padding: 8px; box-shadow: var(--shadow-2); flex-direction: column; width: 220px;
+        opacity: 0; pointer-events: none; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); z-index: 99;
+        transform-origin: bottom center; margin: 0;
     }
-    .appbar .actions .btn,
-    .wysiwyg-toolbar .btn {
-      font-size: 0 !important;
-      padding: 8px !important;
-      border-radius: 8px !important;
+    body.show-mobile-actions .appbar .actions { opacity: 1; pointer-events: auto; transform: translateX(-50%) scale(1); }
+    
+    .appbar .actions .btn {
+        width: 100%; justify-content: flex-start; padding: 12px 16px !important;
+        border-radius: 8px !important; background: transparent !important; color: var(--text) !important;
+        box-shadow: none !important; font-size: 14px !important; font-weight: 500; margin: 2px 0;
     }
-    .appbar .actions .btn .material-symbols-outlined,
-    .wysiwyg-toolbar .btn .material-symbols-outlined {
-      margin-right: 0 !important;
-      font-size: 20px !important;
-    }
+    .appbar .actions .btn:hover, .appbar .actions .btn:active { background: var(--surface-2) !important; }
+    .appbar .actions .btn .btn-text { display: inline !important; }
+    .appbar .actions .btn .material-symbols-outlined { margin-right: 12px !important; color: var(--muted); font-size: 20px !important; }
+    
+    /* Keep formatting text visible in WYSIWYG toolbar */
+    .wysiwyg-toolbar .btn .btn-text { display: none; }
+    .wysiwyg-toolbar .btn { font-size: 0 !important; padding: 8px !important; border-radius: 8px !important; }
+    .wysiwyg-toolbar .btn .material-symbols-outlined { margin-right: 0 !important; font-size: 20px !important; }
 
-  /* Mobile Search Trigger & Palette */
-  .search-trigger-btn { min-width: 0; padding: 8px; border-radius: 50%; background: transparent; border-color: transparent; margin: 0; }
-  .search-trigger-btn .st-text, .search-trigger-btn kbd { display: none; }
-  .search-trigger-btn .material-symbols-outlined { font-size: 20px; color: var(--text); }
-  .command-palette { top: 10%; width: 95%; }
   }
 
 
