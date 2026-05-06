@@ -138,7 +138,8 @@
   .search-wrap { position: relative; flex: 0 1 200px; min-width: 120px; transition: flex 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
   .search-wrap.active-search { flex: 1; }
   #searchInput { width: 100%; transition: all 0.3s ease; }
-  .search-dropdown { display: none; position: absolute; top: calc(100% + 8px); left: 0; right: 0; background: var(--surface); border: 1px solid var(--outline); border-radius: 12px; box-shadow: var(--shadow); max-height: 60vh; overflow-y: auto; z-index: 100; padding: 8px; flex-direction: column; gap: 4px;}
+  .search-dropdown { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); width: min(600px, 90vw); background: var(--surface); border: 1px solid var(--outline); border-radius: 12px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); max-height: 80vh; overflow-y: auto; z-index: 125; padding: 16px; flex-direction: column; gap: 8px;}
+  .search-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(3px); z-index: 120; }
 
   /* Search Modal Results */
   .search-result { border: 1px solid var(--outline-2); padding: 10px 12px; border-radius: 8px; cursor: pointer; transition: background 0.2s; background: var(--surface); }

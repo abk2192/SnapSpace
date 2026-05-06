@@ -414,23 +414,34 @@ const searchWrap = document.getElementById("searchWrap");
 const searchInput = document.getElementById("searchInput");
 const searchDropdown = document.getElementById("searchDropdown");
 
+let searchBackdrop = document.getElementById("searchBackdrop");
+if (!searchBackdrop && searchDropdown) {
+    searchBackdrop = document.createElement("div");
+    searchBackdrop.id = "searchBackdrop";
+    searchBackdrop.className = "search-backdrop";
+    document.body.appendChild(searchBackdrop);
+}
+
 // Focus handling for expanding the bar
 searchInput?.addEventListener("focus", () => {
     if(searchWrap) searchWrap.classList.add("active-search");
     const q = searchInput.value.trim();
     if(q.length >= 3) {
         if(searchDropdown) searchDropdown.style.display = "flex";
+        if(searchBackdrop) searchBackdrop.style.display = "block";
         performSearch(q);
     } else {
         if(searchDropdown) searchDropdown.style.display = "none";
+        if(searchBackdrop) searchBackdrop.style.display = "none";
     }
 });
 
 // Click outside to close dropdown and shrink bar
 document.addEventListener("click", (e) => {
-    if(searchWrap && !searchWrap.contains(e.target)) {
+    if(searchWrap && !searchWrap.contains(e.target) && (!searchDropdown || !searchDropdown.contains(e.target))) {
         searchWrap.classList.remove("active-search");
         if(searchDropdown) searchDropdown.style.display = "none";
+        if(searchBackdrop) searchBackdrop.style.display = "none";
     }
 });
 
@@ -447,9 +458,11 @@ searchInput?.addEventListener("input", (e) => {
     const q = e.target.value.trim();
     if (q.length < 3) { 
         if(searchDropdown) { searchDropdown.style.display = "none"; searchDropdown.innerHTML = ""; }
+        if(searchBackdrop) searchBackdrop.style.display = "none";
         return; 
     }
     if(searchDropdown) searchDropdown.style.display = "flex";
+    if(searchBackdrop) searchBackdrop.style.display = "block";
     searchTimeout = setTimeout(() => { performSearch(q); }, 200);
 });
 
@@ -537,6 +550,7 @@ searchDropdown?.addEventListener("click", (e) => {
         render();
         if(searchWrap) searchWrap.classList.remove("active-search");
         if(searchDropdown) searchDropdown.style.display = "none";
+        if(searchBackdrop) searchBackdrop.style.display = "none";
         if(searchInput) searchInput.value = ""; // Clear after selection
         
         setTimeout(() => {
@@ -1495,7 +1509,8 @@ document.addEventListener("keydown", (e) => {
       document.getElementById("imgPreviewBackdrop")?.style.display === "flex" ||
       document.getElementById("tplBackdrop")?.style.display === "flex" ||
       document.getElementById("moveBackdrop")?.style.display === "flex" ||
-      document.getElementById("restoreBackdrop")?.style.display === "flex") {
+      document.getElementById("restoreBackdrop")?.style.display === "flex" ||
+      document.getElementById("searchBackdrop")?.style.display === "block") {
       
       if (e.key === "Escape") {
          document.getElementById("dlgCancel")?.click();
@@ -1512,6 +1527,11 @@ document.addEventListener("keydown", (e) => {
          if (document.getElementById("imgPreviewBackdrop")) document.getElementById("imgPreviewBackdrop").style.display = "none";
          const restoreCancel = document.getElementById("restoreCancelBtn");
          if (restoreCancel) restoreCancel.click();
+         if (document.getElementById("searchBackdrop")) {
+             document.getElementById("searchBackdrop").style.display = "none";
+             if(document.getElementById("searchDropdown")) document.getElementById("searchDropdown").style.display = "none";
+             if(document.getElementById("searchWrap")) document.getElementById("searchWrap").classList.remove("active-search");
+         }
       }
       return; 
   }
