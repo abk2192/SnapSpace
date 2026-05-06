@@ -296,17 +296,28 @@ async function bootApp() {
     };
     
     document.querySelectorAll('.appbar .actions .btn, .panel-head .actions .btn').forEach(btn => {
+        if (!btn.title) {
+            let text = "";
+            btn.childNodes.forEach(n => { if (n.nodeType === 3) text += n.textContent; });
+            btn.title = text.trim() || "Action";
+        }
+        
+        // Wrap text nodes in span.btn-text for reliable mobile hiding
+        Array.from(btn.childNodes).forEach(n => {
+            if (n.nodeType === 3 && n.textContent.trim().length > 0) {
+                const span = document.createElement('span');
+                span.className = 'btn-text';
+                span.textContent = n.textContent;
+                btn.replaceChild(span, n);
+            }
+        });
+
         if (!btn.querySelector('.material-symbols-outlined')) {
             const iconName = actionIcons[btn.id] || 'smart_button';
             const iconSpan = document.createElement('span');
             iconSpan.className = 'material-symbols-outlined';
             iconSpan.textContent = iconName;
             btn.insertBefore(iconSpan, btn.firstChild);
-        }
-        if (!btn.title) {
-            let text = "";
-            btn.childNodes.forEach(n => { if (n.nodeType === 3) text += n.textContent; });
-            btn.title = text.trim() || "Action";
         }
     });
 
@@ -760,13 +771,13 @@ function renderScenarioCard(sc, idx){
         <div class="wysiwyg-toolbar action-btn">
            <button class="btn secondary" type="button" data-cmd="bold" title="Bold"><span class="material-symbols-outlined" style="margin:0;">format_bold</span></button>
            <button class="btn secondary" type="button" data-cmd="italic" title="Italic"><span class="material-symbols-outlined" style="margin:0;">format_italic</span></button>
-           <button class="btn secondary" type="button" data-cmd="insertUnorderedList" title="Bullet List"><span class="material-symbols-outlined" style="margin:0;">format_list_bulleted</span> List</button>
+           <button class="btn secondary" type="button" data-cmd="insertUnorderedList" title="Bullet List"><span class="material-symbols-outlined" style="margin:0;">format_list_bulleted</span> <span class="btn-text">List</span></button>
 			<button class="btn secondary" type="button" data-cmd="createLink" title="Insert Link"><span class="material-symbols-outlined" style="margin:0;">link</span></button>
            
            <div style="width: 1px; height: 20px; background: var(--outline-2); margin: 0 4px;"></div>
            
-           <button class="btn secondary action-btn" type="button" data-createfile="${sc.id}" title="Create Text/XML File"><span class="material-symbols-outlined" style="font-size: 16px;">note_add</span> New File</button>
-           <button class="btn secondary action-btn" type="button" data-attach="${sc.id}" title="Attach File"><span class="material-symbols-outlined" style="font-size: 16px;">attach_file</span> Attach</button>
+           <button class="btn secondary action-btn" type="button" data-createfile="${sc.id}" title="Create Text/XML File"><span class="material-symbols-outlined" style="font-size: 16px;">note_add</span> <span class="btn-text">New File</span></button>
+           <button class="btn secondary action-btn" type="button" data-attach="${sc.id}" title="Attach File"><span class="material-symbols-outlined" style="font-size: 16px;">attach_file</span> <span class="btn-text">Attach</span></button>
         </div>
         <div class="evidence" contenteditable="true" data-evidence="${sc.id}" spellcheck="false"></div>
         <div class="hint"><span class="material-symbols-outlined" style="font-size: 14px;">info</span> Paste screenshots (Ctrl+V) or use the toolbar to format. Double-click images to view full size.</div>
