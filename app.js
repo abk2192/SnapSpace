@@ -20,31 +20,14 @@ import { TransferVM } from './src/viewmodels/TransferVM.js';
 import { TransferView } from './src/views/TransferView.js';
 import { EditorVM } from './src/viewmodels/EditorVM.js';
 import { EditorView } from './src/views/EditorView.js';
+import { dialogService } from './src/services/DialogService.js';
+import { ShortcutService } from './src/services/ShortcutService.js';
 
 /* ========= PWA Service Worker Registration ========= */
 registerServiceWorker();
 
-/* ========= Documentation Dialog ========= */
-const docsBtn = document.getElementById("docsBtn");
-const docsBackdrop = document.getElementById("docsBackdrop");
-const docsCloseBtn = document.getElementById("docsCloseBtn");
-
-docsBtn?.addEventListener("click", () => { 
-    document.body.classList.remove("sidebar-show"); 
-    if(docsBackdrop) docsBackdrop.style.display = "flex"; 
-});
-docsCloseBtn?.addEventListener("click", () => { if(docsBackdrop) docsBackdrop.style.display = "none"; });
-docsBackdrop?.addEventListener("click", (e) => { if(e.target === docsBackdrop) docsBackdrop.style.display = "none"; });
-
 /* ========= Theme Engine ========= */
 themeService.applyTheme();
-
-const themeBtn = document.getElementById("themeBtn");
-const themeBackdrop = document.getElementById("themeBackdrop");
-const themeClose = document.getElementById("themeClose");
-themeBtn?.addEventListener("click", () => { document.body.classList.remove("sidebar-show"); if(themeBackdrop) themeBackdrop.style.display = "flex"; });
-themeClose?.addEventListener("click", () => { if(themeBackdrop) themeBackdrop.style.display = "none"; });
-themeBackdrop?.addEventListener("click", (e) => { if(e.target === themeBackdrop) themeBackdrop.style.display = "none"; });
 document.querySelectorAll('[data-set-theme]').forEach(el => { el.addEventListener('click', (e) => { themeService.setTheme(e.target.dataset.setTheme); }); });
 document.querySelectorAll('[data-set-color]').forEach(el => { el.addEventListener('click', (e) => { themeService.setColor(e.target.dataset.setColor); }); });
 
@@ -186,6 +169,9 @@ async function bootApp() {
     
     state = appState.workspaces.find(w => w.id === appState.activeWorkspaceId) || appState.workspaces[0];
     
+    dialogService.init();
+    new ShortcutService();
+
     // Initialize Sidebar Subsystem
     const sidebarVM = new SidebarVM();
     const sidebarView = new SidebarView(sidebarVM);
@@ -195,7 +181,6 @@ async function bootApp() {
     window.mainPanelVM = new MainPanelVM();
     const mainPanelView = new MainPanelView(window.mainPanelVM);
     mainPanelView.render();
-    window.promptDialog = promptDialog;
     
     // Initialize Search Subsystem
     const searchVM = new SearchVM();
@@ -306,44 +291,6 @@ document.addEventListener("click", (e) => {
 });
 
 
-// File Preview & Image Lightbox Modals
-const fpBackdrop = document.getElementById("filePreviewBackdrop");
-const fpCloseBtn = document.getElementById("fpCloseBtn");
-const fpCopyBtn = document.getElementById("fpCopyBtn");
-fpCloseBtn?.addEventListener("click", () => { if(fpBackdrop) fpBackdrop.style.display = "none"; });
-if(fpBackdrop) fpBackdrop.addEventListener("click", (e) => { if(e.target === fpBackdrop) fpBackdrop.style.display = "none"; });
-
-fpCopyBtn?.addEventListener("click", async () => {
-  const textToCopy = document.getElementById("fpContent").textContent;
-  try {
-    if (navigator.clipboard && window.isSecureContext) {
-      await navigator.clipboard.writeText(textToCopy);
-    } else {
-      const textArea = document.createElement("textarea");
-      textArea.value = textToCopy;
-      textArea.style.position = "fixed";
-      document.body.appendChild(textArea);
-      textArea.focus();
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-    }
-    const orig = fpCopyBtn.innerHTML; fpCopyBtn.innerHTML = `<span class="material-symbols-outlined">check_circle</span> Copied!`;
-    setTimeout(() => { fpCopyBtn.innerHTML = orig; }, 1500);
-  } catch(err) { alert("Failed to copy text. Your browser may block this feature."); }
-});
-
-const imgBackdrop = document.getElementById("imgPreviewBackdrop");
-if(imgBackdrop) imgBackdrop.addEventListener("click", () => { imgBackdrop.style.display = "none"; });
-
-// Create File Dialog
-const cfBackdrop = document.getElementById('cfBackdrop');
-const cfName = document.getElementById('cfName');
-const cfContent = document.getElementById('cfContent');
-const cfCancel = document.getElementById('cfCancel');
-
-if(cfBackdrop) cfBackdrop.addEventListener('click', (e) => { if (e.target === cfBackdrop) cfCancel?.click(); });
-
 document.addEventListener("toggle", (e) => {
   // We added "&& e.target.isConnected" to prevent the browser
   // from closing the item during rapid redraws
@@ -380,100 +327,9 @@ document.addEventListener("input", (e) => {
   sc.evidenceHtml = ev.innerHTML; sc.modifiedAt = Date.now(); saveState();
 });
 
-/* ========= Global Keyboard Shortcuts ========= */
-document.addEventListener("keydown", (e) => {
-  if (e.target.matches("summary .header-name-input")) {
-    if (e.key === " " || e.code === "Space") {
-      e.preventDefault();
-      if (!document.execCommand("insertText", false, " ")) {
-          const start = e.target.selectionStart; const end = e.target.selectionEnd;
-          e.target.value = e.target.value.substring(0, start) + " " + e.target.value.substring(end);
-          e.target.selectionStart = e.target.selectionEnd = start + 1;
-          e.target.dispatchEvent(new Event("input", {bubbles:true}));
-      }
-      return;
-    }
-    if (e.key === "Enter") { e.preventDefault(); e.target.blur(); return; }
-  }
-
-  if (document.getElementById("dlgBackdrop")?.style.display === "flex" || 
-      document.getElementById("themeBackdrop")?.style.display === "flex" ||
-      document.getElementById("docsBackdrop")?.style.display === "flex" ||
-      document.getElementById("cfBackdrop")?.style.display === "flex" ||
-      document.getElementById("exportBackdrop")?.style.display === "flex" ||
-      document.getElementById("importBackdrop")?.style.display === "flex" ||
-      document.getElementById("compareBackdrop")?.style.display === "flex" ||
-      document.getElementById("filePreviewBackdrop")?.style.display === "flex" ||
-      document.getElementById("imgPreviewBackdrop")?.style.display === "flex" ||
-      document.getElementById("tplBackdrop")?.style.display === "flex" ||
-      document.getElementById("moveBackdrop")?.style.display === "flex" ||
-      document.getElementById("restoreBackdrop")?.style.display === "flex" ||
-      document.getElementById("searchBackdrop")?.style.display === "block") {
-      
-      if (e.key === "Escape") {
-         document.getElementById("dlgCancel")?.click();
-         document.getElementById("themeClose")?.click();
-         const docsClose = document.getElementById("docsCloseBtn");
-         if(docsClose) docsClose.click();
-         document.getElementById("cfCancel")?.click();
-         document.getElementById("exportCancelBtn")?.click();
-         document.getElementById("importCancelBtn")?.click();
-         document.getElementById("compCloseBtn")?.click();
-         document.getElementById("fpCloseBtn")?.click();
-         document.getElementById("tplCloseBtn")?.click();
-         document.getElementById("moveCancelBtn")?.click();
-         if (document.getElementById("imgPreviewBackdrop")) document.getElementById("imgPreviewBackdrop").style.display = "none";
-         const restoreCancel = document.getElementById("restoreCancelBtn");
-         if (restoreCancel) restoreCancel.click();
-      }
-      return; 
-  }
-
-  const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-  const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
-
-  if (cmdOrCtrl && e.key.toLowerCase() === 's') { e.preventDefault(); document.getElementById("exportHtmlBtn")?.click(); }
-  else if (cmdOrCtrl && e.key.toLowerCase() === 'o') { e.preventDefault(); document.getElementById("importBtn")?.click(); }
-  else if (e.altKey) {
-    const key = e.key.toLowerCase();
-    if (key === 'n') { e.preventDefault(); document.getElementById("addScenarioBtn")?.click(); }
-    if (key === 'r') { e.preventDefault(); document.getElementById("renameTabBtn")?.click(); }
-    if (key === 't') { e.preventDefault(); window.mainPanelVM?.addTab(); }
-    if (key === 'c') { e.preventDefault(); document.getElementById("themeBtn")?.click(); }
-    if (key === 'v') { e.preventDefault(); document.getElementById("compareBtn")?.click(); }
-    if (key === 'f') { 
-      e.preventDefault(); let sc = null;
-      if (sc) {
-         sc.fields.push({ id: uid(), key:"", val:"" }); render();
-         setTimeout(() => { const inputs = document.querySelectorAll(`input[data-sid="${sc.id}"][data-fkey]`); if(inputs.length > 0) inputs[inputs.length - 1].focus(); }, 50);
-      }
-    }
-  }
-});
-
 /* ========= Helpers ========= */
 
 function findScenario(sid){ for (const ws of appState.workspaces) { for (const t of ws.tabs){ const sc = t.scenarios.find(s => s.id === sid); if (sc) return sc; } } return null; }
-
-
-/* ========= Dialog utility ========= */
-const dlgBackdrop = document.getElementById("dlgBackdrop");
-const dlgTitle = document.getElementById("dlgTitle");
-const dlgInput = document.getElementById("dlgInput");
-const dlgHint = document.getElementById("dlgHint");
-const dlgCancel = document.getElementById("dlgCancel");
-const dlgOk = document.getElementById("dlgOk");
-let dlgCallback = null;
-
-function promptDialog(title, initial, hint, onOk){
-  if(dlgTitle) dlgTitle.textContent = title; if(dlgHint) dlgHint.textContent = hint || ""; if(dlgInput) dlgInput.value = initial || "";
-  dlgCallback = onOk; if(dlgBackdrop) dlgBackdrop.style.display = "flex"; setTimeout(() => dlgInput?.focus(), 0);
-}
-
-dlgInput?.addEventListener("keydown", (e) => { if(e.key === "Enter" && dlgBackdrop?.style.display === "flex") { e.preventDefault(); dlgOk?.click(); } });
-dlgCancel?.addEventListener("click", () => { if(dlgBackdrop) dlgBackdrop.style.display = "none"; dlgCallback = null; });
-dlgOk?.addEventListener("click", () => { const val = dlgInput?.value; if(dlgBackdrop) dlgBackdrop.style.display = "none"; const cb = dlgCallback; dlgCallback = null; if (cb) cb(val); });
-if(dlgBackdrop) dlgBackdrop.addEventListener("click", (e) => { if (e.target === dlgBackdrop) dlgCancel?.click(); });
 
 /* Initial render */
 bootApp();

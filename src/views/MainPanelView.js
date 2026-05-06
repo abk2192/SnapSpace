@@ -1,5 +1,6 @@
 import { escapeHtml, escapeAttr } from '../utils/dom.js';
 import { globalEvents } from '../core/PubSub.js';
+import { dialogService } from '../services/DialogService.js';
 
 export class MainPanelView {
     constructor(vm) {
@@ -90,7 +91,9 @@ export class MainPanelView {
                 if (close){ e.stopPropagation(); this.vm.deleteTab(close.getAttribute("data-close-tab")); return; }
                 if (tab.id === activeTabId) {
                     e.stopPropagation();
-                    if (window.promptDialog) window.promptDialog("Rename tab", tab.name, "Give this tab a short name.", (val) => { this.vm.renameTab(tab.id, val); });
+                    dialogService.prompt("Rename tab", tab.name, "Give this tab a short name.").then((val) => {
+                        if (val !== undefined && val !== null) this.vm.renameTab(tab.id, val);
+                    });
                     return;
                 }
                 this.vm.setActiveTab(tab.id);
