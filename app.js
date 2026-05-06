@@ -303,7 +303,7 @@ document.addEventListener("click", (e) => {
       // Remove editing state if clicked anywhere outside the input
       document.querySelectorAll('.header-name-input.editing').forEach(el => el.classList.remove('editing'));
   }
-);
+});
 
 
 // File Preview & Image Lightbox Modals
