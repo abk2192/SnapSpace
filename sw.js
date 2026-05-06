@@ -1,13 +1,13 @@
  
 const CACHE_NAME = "snapspace-v1";
 
-// List of assets to cache for offline use
+// Update these to include your repository name
 const ASSETS_TO_CACHE = [
-  "./",
-  "./index.html",
-  "./style.css",
-  "./app.js",
-  "./manifest.json"
+  "/SnapSpace/",
+  "/SnapSpace/index.html",
+  "/SnapSpace/style.css",
+  "/SnapSpace/app.js",
+  "/SnapSpace/manifest.json"
 ];
 
 // 1. Install Event: Caches static assets
