@@ -18,6 +18,8 @@ import { MoveItemVM } from './src/viewmodels/MoveItemVM.js';
 import { MoveItemView } from './src/views/MoveItemView.js';
 import { TransferVM } from './src/viewmodels/TransferVM.js';
 import { TransferView } from './src/views/TransferView.js';
+import { EditorVM } from './src/viewmodels/EditorVM.js';
+import { EditorView } from './src/views/EditorView.js';
 
 /* ========= PWA Service Worker Registration ========= */
 registerServiceWorker();
@@ -68,9 +70,6 @@ globalEvents.subscribe('workspace:selected', () => {
 function saveState() {}
 
 /* ========= State Initialization (Multi-Project) ========= */
-let lastFocusedScenarioId = null; 
-let targetScenarioForFile = null; 
-let savedRange = null; 
 
 let appState = null; 
 let state = null; // Pointer to the active project
@@ -207,6 +206,10 @@ async function bootApp() {
     const transferVM = new TransferVM();
     new TransferView(transferVM);
     
+    // Initialize Editor Subsystem (WYSIWYG, Paste, File Handling)
+    const editorVM = new EditorVM();
+    new EditorView(editorVM);
+    
     workspaceTitleInput.value = state.title || "Project";
     
     render(); 
@@ -270,53 +273,6 @@ document.addEventListener("click", (e) => {
 });
 
 
-document.addEventListener("mousedown", (e) => { if (e.target.closest('[data-cmd]')) { e.preventDefault(); } });
-
-function updateToolbarState() {
-  document.querySelectorAll('.wysiwyg-toolbar .btn').forEach(b => b.classList.remove('active-format'));
-  const sel = window.getSelection(); 
-  if (!sel || !sel.rangeCount) return; 
-  let node = sel.anchorNode; 
-  if (!node) return; 
-  if (node?.nodeType === 3) node = node.parentNode || null;
-  if (!node || typeof node.closest !== 'function') return;
-  const ev = node.closest('.evidence');
-  if (ev) {
-    const toolbar = ev.previousElementSibling;
-    if (toolbar && toolbar.classList.contains('wysiwyg-toolbar')) {
-       ['bold', 'italic', 'insertUnorderedList'].forEach(cmd => {
-          if (document.queryCommandState(cmd)) { const btn = toolbar.querySelector(`[data-cmd="${cmd}"]`); if (btn) btn.classList.add('active-format'); }
-       });
-    }
-  }
-}
-
-document.addEventListener("selectionchange", () => {
-  updateToolbarState();
-  const sel = window.getSelection();
-  if (sel && sel.rangeCount > 0) {
-    const range = sel.getRangeAt(0);
-    let node = range?.commonAncestorContainer || null;
-    if (node?.nodeType === 3) node = node.parentNode || null;
-    if (node && typeof node.closest === 'function' && node.closest('.evidence')) { savedRange = range; }
-  }
-});
-
-function restoreSelectionAndInsert(ev, html) {
-  ev.focus();
-  if (savedRange && savedRange.commonAncestorContainer) {
-    let node = savedRange?.commonAncestorContainer || null;
-    if (node?.nodeType === 3) node = node.parentNode || null;
-    if (node && typeof node.closest === 'function' && node.closest('.evidence') === ev) {
-       const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(savedRange);
-    } else { moveCursorToEnd(ev); }
-  } else { moveCursorToEnd(ev); }
-  document.execCommand("insertHTML", false, html);
-  persistEvidence(ev);
-}
-
-document.addEventListener("focusin", (e) => { const scWrapper = e.target.closest(".scenario"); if (scWrapper) lastFocusedScenarioId = scWrapper.dataset.sid; });
-
 // File Preview & Image Lightbox Modals
 const fpBackdrop = document.getElementById("filePreviewBackdrop");
 const fpCloseBtn = document.getElementById("fpCloseBtn");
@@ -347,56 +303,13 @@ fpCopyBtn?.addEventListener("click", async () => {
 const imgBackdrop = document.getElementById("imgPreviewBackdrop");
 if(imgBackdrop) imgBackdrop.addEventListener("click", () => { imgBackdrop.style.display = "none"; });
 
-let imgClickTimer = null;
-document.addEventListener("click", (e) => {
-  const img = e.target.closest(".evidence img"); if (!img) return;
-  if (e.detail > 1) return; 
-  
-  clearTimeout(imgClickTimer);
-  imgClickTimer = setTimeout(() => {
-    let w = Number(img.dataset.w || 100); w = (w <= 40) ? 100 : (w - 20); img.dataset.w = String(w); img.style.width = w + "%";
-    const ev = img.closest('.evidence');
-    if (ev) persistEvidence(ev); 
-  }, 200);
-});
-
-document.addEventListener("dblclick", (e) => {
-  const img = e.target.closest(".evidence img");
-  if (img) { 
-    clearTimeout(imgClickTimer);
-    const el = document.getElementById("imgPreviewEl"); if(el) el.src = img.src; 
-    if(imgBackdrop) imgBackdrop.style.display = "flex"; 
-    window.getSelection().removeAllRanges(); 
-  }
-});
-
 // Create File Dialog
 const cfBackdrop = document.getElementById('cfBackdrop');
 const cfName = document.getElementById('cfName');
 const cfContent = document.getElementById('cfContent');
 const cfCancel = document.getElementById('cfCancel');
-const cfOk = document.getElementById('cfOk');
 
-function openCreateFileDialog(sid) {
-  targetScenarioForFile = sid; if(cfName) cfName.value = ''; if(cfContent) cfContent.value = '';
-  if(cfBackdrop) cfBackdrop.style.display = 'flex'; setTimeout(() => cfName?.focus(), 50);
-}
-cfCancel?.addEventListener('click', () => { if(cfBackdrop) cfBackdrop.style.display = 'none'; targetScenarioForFile = null; });
 if(cfBackdrop) cfBackdrop.addEventListener('click', (e) => { if (e.target === cfBackdrop) cfCancel?.click(); });
-cfOk?.addEventListener('click', () => {
-  const name = cfName?.value.trim() || 'document.txt'; const content = cfContent?.value;
-  if(!content) { alert("File content cannot be empty."); return; }
-  const ev = document.querySelector(`.evidence[data-evidence="${targetScenarioForFile}"]`);
-  if(ev) {
-    const blob = new Blob([content], { type: 'text/plain' }); const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result; 
-      const html = `<span class="attachment" contenteditable="false"><a href="${dataUrl}" download="${name}" data-name="${name}" data-dataurl="${dataUrl}"><span class="material-symbols-outlined" style="font-size:16px;">attachment</span> ${name}</a><span class="copy-att material-symbols-outlined" title="Copy file" data-copy="${dataUrl}" contenteditable="false">content_copy</span></span>&nbsp;`;
-      restoreSelectionAndInsert(ev, html);
-    }; reader.readAsDataURL(blob);
-  }
-  if(cfBackdrop) cfBackdrop.style.display = 'none'; targetScenarioForFile = null;
-});
 
 document.addEventListener("toggle", (e) => {
   // We added "&& e.target.isConnected" to prevent the browser
@@ -431,162 +344,6 @@ document.addEventListener("input", (e) => {
   const sc = findScenario(ev.getAttribute("data-evidence"));
   if (!sc) return;
   sc.evidenceHtml = ev.innerHTML; sc.modifiedAt = Date.now(); saveState();
-});
-
-document.addEventListener("click", (e) => {
-  const actionBtn = e.target.closest('.action-btn');
-  if(actionBtn && e.target.closest('summary')) { e.preventDefault(); }
-
-  const cfBtn = e.target.closest("[data-createfile]");
-  if (cfBtn) { openCreateFileDialog(cfBtn.dataset.createfile); return; }
-
-  // Action Buttons
-  const dupBtn = e.target.closest("[data-duplicate]");
-  if (dupBtn) {
-      const sc = findScenario(dupBtn.dataset.duplicate);
-      if(sc) {
-          const clone = JSON.parse(JSON.stringify(sc));
-          clone.id = uid(); clone.name = (clone.name || "Untitled") + " (Copy)";
-          clone.fields.forEach(f => f.id = uid());
-          const now = Date.now(); clone.createdAt = now; clone.modifiedAt = now;
-          const tab = activeTab();
-          const idx = tab.scenarios.findIndex(s => s.id === sc.id);
-          tab.scenarios.splice(idx + 1, 0, clone);
-          render();
-      }
-      return;
-  }
-
-  const cmdBtn = e.target.closest('[data-cmd]');
-  if (cmdBtn) {
-    e.preventDefault(); const cmd = cmdBtn.dataset.cmd; let val = cmdBtn.dataset.val || null;
-    if (cmd === 'createLink') {
-       val = prompt("Enter the URL:");
-       if (!val) return;
-       if (!/^https?:\/\//i.test(val)) val = 'https://' + val; 
-    }
-    document.execCommand(cmd, false, val); updateToolbarState();
-    const ev = cmdBtn.closest('.evidence-wrap').querySelector('.evidence');
-    if (ev) persistEvidence(ev);
-    return;
-  }
-  
-  const evidenceLink = e.target.closest(".evidence a");
-  if (evidenceLink && !evidenceLink.closest(".attachment") && !evidenceLink.hasAttribute("data-dataurl")) {
-      e.preventDefault();
-      window.open(evidenceLink.href, '_blank');
-      return;
-  }
-
-  const del = e.target.closest("[data-delete]"); if (del){ deleteScenario(del.dataset.delete); return; }
-  const att = e.target.closest("[data-attach]"); if (att){ openFilePicker(att.dataset.attach); return; }
-  const addF = e.target.closest("[data-addfield]");
-  if (addF){
-    const sc = findScenario(addF.dataset.addfield);
-    if(sc) { sc.fields.push({ id: uid(), key:"", val:"" }); render(); setTimeout(() => { const inputs = document.querySelectorAll(`input[data-sid="${sc.id}"][data-fkey]`); if(inputs.length > 0) inputs[inputs.length - 1].focus(); }, 50); }
-    return;
-  }
-  const delF = e.target.closest("[data-delfield]"); if (delF){ const sc = findScenario(delF.dataset.sid); if(sc) { sc.fields = sc.fields.filter(f => f.id !== delF.dataset.delfield); render(); } return; }
-});
-
-document.addEventListener("paste", (e) => {
-  const ev = e.target.closest(".evidence[data-evidence]"); if (!ev) return;
-  const dt = e.clipboardData; if (!dt) return;
-  
-  const files = [...dt.files || []]; const imgFile = files.find(f => f.type && f.type.startsWith("image/"));
-  if (imgFile){
-      e.preventDefault();
-      const sel = window.getSelection(); if (sel.rangeCount > 0) savedRange = sel.getRangeAt(0);
-      insertImageFileIntoEvidence(imgFile, ev);
-      return;
-  }
- 
-  const text = dt.getData("text/plain");
-  const urlRegex = /^(https?:\/\/[^\s]+)$/i;
-  if (text && urlRegex.test(text.trim())) {
-      e.preventDefault();
-      const url = text.trim();
-      const sel = window.getSelection(); if (sel.rangeCount > 0) savedRange = sel.getRangeAt(0);
-      const html = `<a href="${url}" target="_blank" style="color: var(--primary); text-decoration: underline; cursor: pointer;">${url}</a>&nbsp;`;
-      restoreSelectionAndInsert(ev, html);
-      return;
-  }
-});
-
-// QUICK COPY ATTACHMENT LOGIC
-document.addEventListener("click", async (e) => {
-  const copyBtn = e.target.closest(".copy-att");
-  if (copyBtn) {
-    e.preventDefault(); e.stopPropagation();
-    const attachmentSpan = copyBtn.closest('.attachment');
-    if (!attachmentSpan) return;
-
-    try {
-      const clone = attachmentSpan.cloneNode(true);
-      const html = clone.outerHTML + "&nbsp;";
-      const plainText = clone.innerText || "Attachment";
-      
-      if (navigator.clipboard && window.ClipboardItem && window.isSecureContext) {
-        const item = new ClipboardItem({
-          "text/html": new Blob([html], { type: "text/html" }),
-          "text/plain": new Blob([plainText], { type: "text/plain" })
-        });
-        await navigator.clipboard.write([item]);
-      } else {
-        throw new Error("ClipboardItem not supported or not secure context");
-      }
-    } catch(err) {
-      const temp = document.createElement("div");
-      temp.contentEditable = "true";
-      temp.innerHTML = attachmentSpan.outerHTML + "&nbsp;";
-      temp.style.position = "fixed"; temp.style.opacity = "0";
-      document.body.appendChild(temp);
-      const range = document.createRange(); range.selectNodeContents(temp);
-      const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
-      document.execCommand("copy");
-      document.body.removeChild(temp);
-    }
-
-    const oldTxt = copyBtn.innerHTML; copyBtn.innerHTML = "check_circle"; 
-    setTimeout(() => copyBtn.innerHTML = oldTxt, 1500);
-    return;
-  }
-});
-
-// The core attachment preview/download logic
-document.addEventListener("click", (e) => {
-  const a = e.target.closest("a[data-dataurl]"); if (!a) return; e.preventDefault();
-  const dataurl = a.dataset.dataurl; if (!dataurl) return;
-  const name = a.dataset.name || a.getAttribute("download") || "attachment";
-  
-  const parts = dataurl.split(",");
-  const meta = parts[0] || ""; const b64 = parts[1] || "";
-  const m = /data:(.*?);base64/.exec(meta); const mime = (m && m[1]) ? m[1] : "application/octet-stream";
-  
-  const bin = atob(b64); const arr = new Uint8Array(bin.length); for (let i=0; i<bin.length; i++) arr[i] = bin.charCodeAt(i);
-  const blob = new Blob([arr], {type:mime});
-  
-  const extMatch = name.match(/\.([a-z0-9]+)$/i);
-  const ext = extMatch ? extMatch[1].toLowerCase() : "";
-  const binaryExts = ["doc", "docx", "xls", "xlsx", "pdf", "zip", "tar", "gz", "exe", "dll"];
-  
-  const isText = !binaryExts.includes(ext) && (mime.startsWith('text/') || mime.includes('json') || mime.includes('xml') || mime.includes('sql') || mime.includes('javascript') || mime.includes('plain'));
-
-  if (isText) {
-    const reader = new FileReader();
-    reader.onload = (readEvent) => {
-      const fpTitle = document.getElementById('fpTitle'); if(fpTitle) fpTitle.textContent = name;
-      const fpContent = document.getElementById('fpContent'); if(fpContent) fpContent.textContent = readEvent.target.result;
-      const filePreviewBackdrop = document.getElementById('filePreviewBackdrop'); if(filePreviewBackdrop) filePreviewBackdrop.style.display = 'flex';
-      const fpDownloadBtn = document.getElementById('fpDownloadBtn'); if(fpDownloadBtn) fpDownloadBtn.onclick = () => {
-        const url = URL.createObjectURL(blob); const tmp = document.createElement("a");
-        tmp.href = url; tmp.download = name; document.body.appendChild(tmp); tmp.click();
-        setTimeout(() => { tmp.remove(); URL.revokeObjectURL(url); }, 500);
-      };
-    }; reader.readAsText(blob); return;
-  }
-  const url = URL.createObjectURL(blob); const tmp = document.createElement("a"); tmp.href = url; tmp.download = name;
-  document.body.appendChild(tmp); tmp.click(); setTimeout(() => { tmp.remove(); URL.revokeObjectURL(url); }, 500);
 });
 
 /* ========= Global Keyboard Shortcuts ========= */
@@ -652,8 +409,6 @@ document.addEventListener("keydown", (e) => {
     if (key === 'v') { e.preventDefault(); document.getElementById("compareBtn")?.click(); }
     if (key === 'f') { 
       e.preventDefault(); let sc = null;
-      if (lastFocusedScenarioId) sc = findScenario(lastFocusedScenarioId);
-      if (!sc) { const tab = activeTab(); if(tab && tab.scenarios.length > 0) sc = tab.scenarios[tab.scenarios.length - 1]; }
       if (sc) {
          sc.fields.push({ id: uid(), key:"", val:"" }); render();
          setTimeout(() => { const inputs = document.querySelectorAll(`input[data-sid="${sc.id}"][data-fkey]`); if(inputs.length > 0) inputs[inputs.length - 1].focus(); }, 50);
@@ -665,33 +420,6 @@ document.addEventListener("keydown", (e) => {
 /* ========= Helpers ========= */
 
 function findScenario(sid){ for (const ws of appState.workspaces) { for (const t of ws.tabs){ const sc = t.scenarios.find(s => s.id === sid); if (sc) return sc; } } return null; }
-function deleteScenario(sid){ window.mainPanelVM?.deleteScenario(sid); }
-
-function openFilePicker(sid){
-  const input = document.querySelector(`input[type="file"][data-file="${sid}"]`); const ev = document.querySelector(`.evidence[data-evidence="${sid}"]`);
-  if (!input || !ev) return;
-  input.onchange = () => {
-    const f = input.files && input.files[0]; if (!f) return;
-    if (f.type && f.type.startsWith("image/")){ insertImageFileIntoEvidence(f, ev, f.name); input.value = ""; return; }
-    const r = new FileReader();
-    r.onload = () => {
-      const dataUrl = r.result; 
-      const html = `<span class="attachment" contenteditable="false"><a href="${dataUrl}" download="${f.name}" data-name="${f.name}" data-dataurl="${dataUrl}"><span class="material-symbols-outlined" style="font-size:16px;">attachment</span> ${f.name}</a><span class="copy-att material-symbols-outlined" title="Copy file" data-copy="${dataUrl}" contenteditable="false">content_copy</span></span>&nbsp;`;
-      restoreSelectionAndInsert(ev, html);
-      input.value = ""; 
-    }; r.readAsDataURL(f);
-  }; input.click();
-}
-
-function insertImageFileIntoEvidence(file, ev, altText){
-  const r = new FileReader();
-  r.onload = () => {
-    const html = `<img src="${r.result}" alt="${altText || 'attached image'}" style="width:100%;" data-w="100" contenteditable="false" />&nbsp;`;
-    restoreSelectionAndInsert(ev, html);
-  }; r.readAsDataURL(file);
-}
-
-function persistEvidence(ev){ const sid = ev.getAttribute("data-evidence"); const sc = findScenario(sid); if (!sc) return; sc.evidenceHtml = ev.innerHTML; sc.modifiedAt = Date.now(); saveState(); }
 
 
 /* ========= Dialog utility ========= */

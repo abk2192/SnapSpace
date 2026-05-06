@@ -260,6 +260,11 @@
   .wysiwyg-toolbar .btn { padding: 4px 8px; font-size: 12px; font-weight: 700; border-radius: 6px; transition: all 0.2s ease; }
   .wysiwyg-toolbar .btn.active-format { background: var(--primary-light) !important; color: var(--primary) !important; border-color: var(--primary) !important; }
 
+  /* Table inside WYSIWYG */
+  .evidence-table { width: 100%; border-collapse: collapse; margin: 8px 0; border: 1px solid var(--outline-2); font-size: 13px; }
+  .evidence-table td, .evidence-table th { border: 1px solid var(--outline-2); padding: 8px; min-width: 50px; }
+  .evidence-table td:focus { outline: 2px solid var(--primary-light); background: var(--surface-2); }
+
   .evidence-wrap{ margin-top: 16px; }
   .evidence{ border: 1px dashed var(--outline-2); background: var(--evidence-bg); color: var(--text); border-radius: var(--r12); padding: 12px; min-height: 130px; outline:none; line-height: 1.5; transition: all 0.3s ease; }
   .evidence:focus{ border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-light); background: var(--input-bg); }

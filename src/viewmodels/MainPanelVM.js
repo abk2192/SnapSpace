@@ -85,6 +85,38 @@ export class MainPanelVM {
         tab.scenarios.forEach(sc => sc.isOpen = !anyOpen);
         globalEvents.publish('scenarios:changed');
     }
+    
+    duplicateScenario(id) {
+        const tab = this.activeTab; if(!tab) return;
+        const idx = tab.scenarios.findIndex(s => s.id === id);
+        if (idx >= 0) {
+            const sc = tab.scenarios[idx];
+            const clone = JSON.parse(JSON.stringify(sc));
+            clone.id = uid(); clone.name = (clone.name || "Untitled") + " (Copy)";
+            clone.fields.forEach(f => f.id = uid());
+            const now = Date.now(); clone.createdAt = now; clone.modifiedAt = now;
+            tab.scenarios.splice(idx + 1, 0, clone);
+            globalEvents.publish('scenarios:changed');
+        }
+    }
+    
+    addField(id) {
+        const tab = this.activeTab; if(!tab) return;
+        const sc = tab.scenarios.find(s => s.id === id);
+        if (sc) {
+            sc.fields.push({ id: uid(), key: "", val: "" });
+            globalEvents.publish('scenarios:changed');
+        }
+    }
+    
+    deleteField(scenarioId, fieldId) {
+        const tab = this.activeTab; if(!tab) return;
+        const sc = tab.scenarios.find(s => s.id === scenarioId);
+        if (sc) {
+            sc.fields = sc.fields.filter(f => f.id !== fieldId);
+            globalEvents.publish('scenarios:changed');
+        }
+    }
 
     deleteScenario(id) {
         const tab = this.activeTab; if(!tab) return;
