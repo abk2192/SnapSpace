@@ -299,8 +299,9 @@ document.addEventListener("click", (e) => {
               }, 50);
           }
       }
-  }
-      e.target.classList.remove('editing');
+  } else if (!e.target.closest('.header-name-input')) {
+      // Remove editing state if clicked anywhere outside the input
+      document.querySelectorAll('.header-name-input.editing').forEach(el => el.classList.remove('editing'));
   }
 );
 
@@ -354,6 +355,7 @@ document.addEventListener("toggle", (e) => {
 
 document.addEventListener("focusout", (e) => {
   if (e.target.matches("input[data-field='name']")) {
+      e.target.classList.remove('editing');
       if (!e.target.value.trim()) {
           e.target.value = e.target.placeholder;
           e.target.dispatchEvent(new Event("input", {bubbles: true}));
