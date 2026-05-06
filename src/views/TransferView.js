@@ -12,10 +12,15 @@ export class TransferView {
         try {
             let sidebarInner = document.getElementById('sidebarMenu') || document.querySelector('.sidebar-inner') || document.querySelector('.sidebar');
             if (sidebarInner && !document.getElementById('backupBtn')) {
+                const dataCat = document.createElement('div'); dataCat.className = 'menu-category'; dataCat.textContent = 'Data Management';
                 const backupBtn = document.createElement('button'); backupBtn.className = 'menu-item'; backupBtn.id = 'backupBtn'; backupBtn.title = 'Backup Database (JSON)'; backupBtn.innerHTML = '<span class="material-symbols-outlined">save</span> Backup Data';
                 const restoreBtn = document.createElement('button'); restoreBtn.className = 'menu-item'; restoreBtn.id = 'restoreBtn'; restoreBtn.title = 'Restore Database (JSON)'; restoreBtn.innerHTML = '<span class="material-symbols-outlined">settings_backup_restore</span> Restore Data';
+                
+                const sysCat = document.createElement('div'); sysCat.className = 'menu-category'; sysCat.textContent = 'System Tools';
                 const forceUpdateBtn = document.createElement('button'); forceUpdateBtn.className = 'menu-item'; forceUpdateBtn.id = 'forceUpdateBtn'; forceUpdateBtn.title = 'Clear Cache & Reload App'; forceUpdateBtn.innerHTML = '<span class="material-symbols-outlined">system_update_alt</span> Force Update';
-                sidebarInner.appendChild(backupBtn); sidebarInner.appendChild(restoreBtn); sidebarInner.appendChild(forceUpdateBtn);
+                
+                sidebarInner.appendChild(dataCat); sidebarInner.appendChild(backupBtn); sidebarInner.appendChild(restoreBtn);
+                sidebarInner.appendChild(sysCat); sidebarInner.appendChild(forceUpdateBtn);
             }
         } catch(err) { console.error("Backup button injection failed:", err); }
     }

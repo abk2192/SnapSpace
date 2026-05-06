@@ -12,14 +12,25 @@ export class MainPanelView {
         this.bindEvents();
 
         globalEvents.subscribe('workspaces:changed', () => this.render());
-        globalEvents.subscribe('workspace:selected', () => this.render());
+        globalEvents.subscribe('workspace:selected', () => {
+            const wsTitleInput = document.getElementById("workspaceTitleInput");
+            if (wsTitleInput && this.vm.activeWorkspace) wsTitleInput.value = this.vm.activeWorkspace.title || "Project";
+            this.render();
+        });
         globalEvents.subscribe('tabs:changed', () => this.renderTabs());
         globalEvents.subscribe('scenarios:changed', () => this.renderPanel());
         globalEvents.subscribe('tags:updated', () => this.updateTagsOnly());
     }
 
     bindEvents() {
+        const wsTitleInput = document.getElementById("workspaceTitleInput");
+        wsTitleInput?.addEventListener("input", (e) => this.vm.updateProjectTitle(e.target.value));
+
+        const resetBtn = document.getElementById("resetBtn");
+        resetBtn?.addEventListener("click", () => this.vm.resetProject());
+
         document.body.addEventListener("click", (e) => {
+            // Original panel click bindings
             const addBtn = e.target.closest("#addScenarioBtn");
             if (addBtn) {
                 const newId = this.vm.addScenario();
@@ -51,6 +62,63 @@ export class MainPanelView {
             
             const delFBtn = e.target.closest("[data-delfield]");
             if (delFBtn) { this.vm.deleteField(delFBtn.dataset.sid, delFBtn.dataset.delfield); return; }
+
+            // Structural UX interactions migrated from app.js
+            const moreBtn = e.target.closest('.scen-more-btn');
+            document.querySelectorAll('.scen-more-wrap.active').forEach(w => {
+                if (moreBtn && w === moreBtn.parentElement) return;
+                w.classList.remove('active');
+            });
+            if (moreBtn) moreBtn.parentElement.classList.toggle('active');
+
+            const summary = e.target.closest("summary");
+            if (summary) {
+                if (e.target.closest(".tag") || e.target.closest(".scen-more-wrap") || window.getSelection().toString().trim().length > 0) e.preventDefault();
+            }
+
+            if (document.body.classList.contains("show-mobile-actions")) {
+                const actions = document.querySelector('.appbar .actions');
+                const mobileMoreBtn = document.getElementById("pillMoreBtn");
+                const clickedActionBtn = e.target.closest('.appbar .actions .btn');
+                if ((actions && !actions.contains(e.target) && e.target !== mobileMoreBtn) || clickedActionBtn) document.body.classList.remove("show-mobile-actions");
+            }
+
+            const editNameBtn = e.target.closest(".edit-name-btn, [data-edit-name]");
+            if (editNameBtn) {
+                e.preventDefault(); e.stopPropagation();
+                const scId = editNameBtn.dataset.editName || editNameBtn.closest('.scenario')?.dataset.sid;
+                if (scId) {
+                    const input = document.querySelector(`input[data-sid="${scId}"][data-field="name"]`);
+                    if (input) {
+                        const card = input.closest('details'); if (card && !card.open) card.open = true;
+                        input.classList.add("editing"); setTimeout(() => { input.focus(); input.setSelectionRange(input.value.length, input.value.length); }, 50);
+                    }
+                }
+            } else if (!e.target.closest('.header-name-input')) {
+                document.querySelectorAll('.header-name-input.editing').forEach(el => el.classList.remove('editing'));
+            }
+        });
+
+        document.body.addEventListener("input", (e) => {
+            const nameInp = e.target.closest("input[data-field='name']");
+            if (nameInp) { this.vm.updateScenarioName(nameInp.dataset.sid, nameInp.value); return; }
+            const keyInp = e.target.closest("input[data-fkey]");
+            if (keyInp) { this.vm.updateFieldKey(keyInp.dataset.sid, keyInp.dataset.fkey, keyInp.value); return; }
+            const valInp = e.target.closest("input[data-fval]");
+            if (valInp) { this.vm.updateFieldVal(valInp.dataset.sid, valInp.dataset.fval, valInp.value); return; }
+            const ev = e.target.closest(".evidence[data-evidence]");
+            if (ev) { this.vm.updateEvidence(ev.dataset.evidence, ev.innerHTML); return; }
+        });
+
+        document.body.addEventListener("toggle", (e) => {
+            if (e.target.matches("details.scenario") && e.target.isConnected) this.vm.updateScenarioOpenState(e.target.dataset.sid, e.target.open);
+        }, true);
+
+        document.body.addEventListener("focusout", (e) => {
+            if (e.target.matches("input[data-field='name']")) {
+                e.target.classList.remove('editing');
+                if (!e.target.value.trim()) { e.target.value = e.target.placeholder; e.target.dispatchEvent(new Event("input", {bubbles: true})); }
+            }
         });
     }
 

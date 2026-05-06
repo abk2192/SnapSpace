@@ -41,24 +41,7 @@ globalEvents.subscribe('store:saved', () => {
     }
 });
 
-globalEvents.subscribe('workspace:selected', () => {
-    state = store.state.workspaces.find(w => w.id === store.state.activeWorkspaceId);
-    workspaceTitleInput.value = state.title || "Project";
-    render();
-});
-
-/* ========= Reactivity Compatibility ========= */
-// The Store Proxy now automatically handles saving on data mutation.
-// We leave this empty function to safely absorb legacy saveState() calls until Phase 3/4.
-function saveState() {}
-
-/* ========= State Initialization (Multi-Project) ========= */
-
-let appState = null; 
-let state = null; // Pointer to the active project
-
 async function bootApp() {
-  
     document.getElementById("renameTabBtn")?.remove();
 
     // Wrap title and input into a single unified Appbar component
@@ -80,6 +63,16 @@ async function bootApp() {
             const btn = document.getElementById(id);
             if (btn) actionsContainer.appendChild(btn);
         });
+    }
+
+    // Categorize static sidebar elements dynamically
+    const sidebarInner = document.querySelector('.sidebar-inner');
+    if (sidebarInner) {
+        const firstItem = sidebarInner.firstElementChild;
+        if (firstItem && !firstItem.classList.contains('menu-category')) {
+            const prefCat = document.createElement('div'); prefCat.className = 'menu-category'; prefCat.textContent = 'Preferences';
+            sidebarInner.insertBefore(prefCat, firstItem);
+        }
     }
 
     // Create a single Toggle Expand/Collapse button for space saving
@@ -117,6 +110,8 @@ async function bootApp() {
     };
     
     document.querySelectorAll('.appbar .actions .btn, .tab-tools .btn').forEach(btn => {
+        btn.classList.remove('danger'); // Strip aggressive colors from top bar
+
         if (!btn.title) {
             let text = "";
             btn.childNodes.forEach(n => { if (n.nodeType === 3) text += n.textContent; });
@@ -151,7 +146,7 @@ async function bootApp() {
         mobilePill.innerHTML = `
             <button class="pill-btn" id="pillSearchBtn" title="Search"><span class="material-symbols-outlined">search</span></button>
             <button class="pill-btn pill-add" id="pillAddBtn"><span class="material-symbols-outlined">add</span> <span class="pill-text">Add Item</span></button>
-            <button class="pill-btn" id="pillMoreBtn" title="More Actions"><span class="material-symbols-outlined">more_vert</span></button>
+            <button class="pill-btn" id="pillMoreBtn" title="More Actions"><span class="material-symbols-outlined">apps</span></button>
         `;
         document.body.appendChild(mobilePill);
 
@@ -165,9 +160,7 @@ async function bootApp() {
     }
 
     // Load the reactive proxy state
-    appState = await store.init();
-    
-    state = appState.workspaces.find(w => w.id === appState.activeWorkspaceId) || appState.workspaces[0];
+    await store.init();
     
     dialogService.init();
     new ShortcutService();
@@ -206,130 +199,10 @@ async function bootApp() {
     const editorVM = new EditorVM();
     new EditorView(editorVM);
     
-    workspaceTitleInput.value = state.title || "Project";
-    
-    render(); 
+    const activeWs = store.state.workspaces.find(w => w.id === store.state.activeWorkspaceId) || store.state.workspaces[0];
+    const wsTitleInput = document.getElementById("workspaceTitleInput");
+    if(wsTitleInput && activeWs) wsTitleInput.value = activeWs.title || "Project";
 }
-
-const workspaceTitleInput = document.getElementById("workspaceTitleInput");
-workspaceTitleInput.addEventListener("input", (e) => {
-    if (state) {
-        state.title = e.target.value;
-        globalEvents.publish('workspaces:changed');
-        saveState();
-    }
-});
-
-const resetBtn = document.getElementById("resetBtn");
-resetBtn?.addEventListener("click", () => {
-    if(confirm("Are you sure you want to reset the CURRENT project? This will delete all tabs and items inside it.")) {
-        const now = Date.now();
-        state.tabs = [{ id: uid(), name: "Tab 1", scenarios: [{ id: uid(), name:"Item 1", fields: [], evidenceHtml:"", isOpen: true, createdAt: now, modifiedAt: now }] }];
-        state.activeTabId = state.tabs[0].id;
-        render();
-    }
-});
-
-/* ========= Rendering ========= */
-// Expose Bridge functions for Modals until Phase 5
-function activeTab(){ return window.mainPanelVM?.activeTab; }
-function render(){ globalEvents.publish('tabs:changed'); globalEvents.publish('scenarios:changed'); }
-
-/* ========= Interactions ========= */
-
-// Global Click Handler: Manage scenario interactions, editing states, and dropdowns
-document.addEventListener("click", (e) => {
-  // Close open scenario more menus
-  const moreBtn = e.target.closest('.scen-more-btn');
-  document.querySelectorAll('.scen-more-wrap.active').forEach(w => {
-      if (moreBtn && w === moreBtn.parentElement) return;
-      w.classList.remove('active');
-  });
-  if (moreBtn) {
-      moreBtn.parentElement.classList.toggle('active');
-  }
-
-  const summary = e.target.closest("summary");
-  if (summary) {
-    // If clicking directly on a tag, OR if text is currently highlighted (drag-select)
-    if (e.target.closest(".tag") || e.target.closest(".scen-more-wrap") || window.getSelection().toString().trim().length > 0) {
-      e.preventDefault(); // Stops the <details> element from toggling
-    }
-  }
-
-  // Close mobile action menu when clicking outside
-  if (document.body.classList.contains("show-mobile-actions")) {
-      const actions = document.querySelector('.appbar .actions');
-      const mobileMoreBtn = document.getElementById("pillMoreBtn");
-      const clickedActionBtn = e.target.closest('.appbar .actions .btn');
-      if ((actions && !actions.contains(e.target) && e.target !== mobileMoreBtn) || clickedActionBtn) {
-          document.body.classList.remove("show-mobile-actions");
-      }
-  }
-
-  // Handle Edit Name Pencil/Action
-  const editNameBtn = e.target.closest(".edit-name-btn, [data-edit-name]");
-  if (editNameBtn) {
-      e.preventDefault(); e.stopPropagation();
-      const scId = editNameBtn.dataset.editName || editNameBtn.closest('.scenario')?.dataset.sid;
-      if (scId) {
-          const input = document.querySelector(`input[data-sid="${scId}"][data-field="name"]`);
-          if (input) {
-              const card = input.closest('details');
-              if (card && !card.open) card.open = true; // ensure card is open
-              input.classList.add("editing");
-              setTimeout(() => {
-                  input.focus();
-                  input.setSelectionRange(input.value.length, input.value.length);
-              }, 50);
-          }
-      }
-  } else if (!e.target.closest('.header-name-input')) {
-      // Remove editing state if clicked anywhere outside the input
-      document.querySelectorAll('.header-name-input.editing').forEach(el => el.classList.remove('editing'));
-  }
-});
-
-
-document.addEventListener("toggle", (e) => {
-  // We added "&& e.target.isConnected" to prevent the browser
-  // from closing the item during rapid redraws
-  if (e.target.matches("details.scenario") && e.target.isConnected) {
-    const sc = findScenario(e.target.dataset.sid);
-    if (sc) { sc.isOpen = e.target.open; saveState(); }
-  }
-}, true);
-
-document.addEventListener("focusout", (e) => {
-  if (e.target.matches("input[data-field='name']")) {
-      e.target.classList.remove('editing');
-      if (!e.target.value.trim()) {
-          e.target.value = e.target.placeholder;
-          e.target.dispatchEvent(new Event("input", {bubbles: true}));
-      }
-  }
-});
-
-document.addEventListener("input", (e) => {
-  const nameInp = e.target.closest("input[data-field='name']");
-  if (nameInp) { const sc = findScenario(nameInp.dataset.sid); if (sc) { sc.name = nameInp.value; sc.modifiedAt = Date.now(); } return; }
-  const keyInp = e.target.closest("input[data-fkey]");
-  if (keyInp) { const sc = findScenario(keyInp.dataset.sid); const field = sc.fields.find(f => f.id === keyInp.dataset.fkey); if (field) { field.key = keyInp.value; sc.modifiedAt = Date.now(); globalEvents.publish('tags:updated'); } return; }
-  const valInp = e.target.closest("input[data-fval]");
-  if (valInp) { const sc = findScenario(valInp.dataset.sid); const field = sc.fields.find(f => f.id === valInp.dataset.fval); if (field) { field.val = valInp.value; sc.modifiedAt = Date.now(); globalEvents.publish('tags:updated'); } return; }
-});
-
-document.addEventListener("input", (e) => {
-  const ev = e.target.closest(".evidence[data-evidence]");
-  if (!ev) return;
-  const sc = findScenario(ev.getAttribute("data-evidence"));
-  if (!sc) return;
-  sc.evidenceHtml = ev.innerHTML; sc.modifiedAt = Date.now(); saveState();
-});
-
-/* ========= Helpers ========= */
-
-function findScenario(sid){ for (const ws of appState.workspaces) { for (const t of ws.tabs){ const sc = t.scenarios.find(s => s.id === sid); if (sc) return sc; } } return null; }
 
 /* Initial render */
 bootApp();

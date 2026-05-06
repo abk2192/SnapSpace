@@ -7,6 +7,20 @@ export class MainPanelVM {
     get tabs() { return this.activeWorkspace?.tabs || []; }
     get activeTab() { return this.tabs.find(t => t.id === this.activeWorkspace?.activeTabId); }
 
+    updateProjectTitle(title) {
+        if (this.activeWorkspace) { this.activeWorkspace.title = title; globalEvents.publish('workspaces:changed'); }
+    }
+
+    resetProject() {
+        if(this.activeWorkspace && confirm("Are you sure you want to reset the CURRENT project? This will delete all tabs and items inside it.")) {
+            const now = Date.now();
+            this.activeWorkspace.tabs = [{ id: uid(), name: "Tab 1", scenarios: [{ id: uid(), name:"Item 1", fields: [], evidenceHtml:"", isOpen: true, createdAt: now, modifiedAt: now }] }];
+            this.activeWorkspace.activeTabId = this.activeWorkspace.tabs[0].id;
+            globalEvents.publish('tabs:changed');
+            globalEvents.publish('scenarios:changed');
+        }
+    }
+
     setActiveTab(id) {
         if (this.activeWorkspace) {
             this.activeWorkspace.activeTabId = id;
@@ -124,5 +138,32 @@ export class MainPanelVM {
             tab.scenarios = tab.scenarios.filter(s => s.id !== id); 
             globalEvents.publish('scenarios:changed'); 
         }
+    }
+
+    updateScenarioName(sid, name) {
+        const tab = this.activeTab; if(!tab) return;
+        const sc = tab.scenarios.find(s => s.id === sid);
+        if (sc) { sc.name = name; sc.modifiedAt = Date.now(); }
+    }
+
+    updateScenarioOpenState(sid, isOpen) {
+        const tab = this.activeTab; if(!tab) return;
+        const sc = tab.scenarios.find(s => s.id === sid);
+        if (sc) sc.isOpen = isOpen; 
+    }
+
+    updateFieldKey(sid, fid, key) {
+        const tab = this.activeTab; if(!tab) return; const sc = tab.scenarios.find(s => s.id === sid);
+        if (sc) { const f = sc.fields.find(f => f.id === fid); if(f) { f.key = key; sc.modifiedAt = Date.now(); globalEvents.publish('tags:updated'); } }
+    }
+
+    updateFieldVal(sid, fid, val) {
+        const tab = this.activeTab; if(!tab) return; const sc = tab.scenarios.find(s => s.id === sid);
+        if (sc) { const f = sc.fields.find(f => f.id === fid); if(f) { f.val = val; sc.modifiedAt = Date.now(); globalEvents.publish('tags:updated'); } }
+    }
+
+    updateEvidence(sid, html) {
+        const tab = this.activeTab; if(!tab) return; const sc = tab.scenarios.find(s => s.id === sid);
+        if (sc) { sc.evidenceHtml = html; sc.modifiedAt = Date.now(); }
     }
 }

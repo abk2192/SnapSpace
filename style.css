@@ -88,6 +88,11 @@
   .actions{ display:flex; gap:8px; flex: none; flex-wrap: nowrap; justify-content:flex-end; align-items: center; overflow: visible; scrollbar-width: none; }
   .actions::-webkit-scrollbar { display: none; } /* Hide scrollbar for clean look */
   
+  /* Uniform sleek appbar buttons */
+  .appbar .actions .btn { background: var(--surface); color: var(--text); border: 1px solid var(--outline-2); box-shadow: none; padding: 8px 12px; }
+  .appbar .actions .btn:hover { background: var(--surface-2); border-color: var(--outline); }
+  .appbar .actions .btn .material-symbols-outlined { color: var(--muted); }
+
   .btn{ display: inline-flex; align-items: center; justify-content: center; appearance:none; border: 1px solid transparent; background: var(--primary); color:#fff; padding: 9px 12px; border-radius: 999px; cursor:pointer; font-weight: 650; font-size: 13px; box-shadow: 0 4px 10px var(--primary-light); transition: all .15s ease; user-select:none; white-space:nowrap; flex-shrink: 0; }
   .btn:hover{ background: var(--primary-2); }
   .btn:active{ transform: translateY(1px); box-shadow: none; }
@@ -120,6 +125,8 @@
   body.sidebar-show .sidebar { transform: translateX(0); box-shadow: var(--shadow); }
   body.sidebar-show .sidebar-backdrop { display: block; opacity: 1; }
 
+  .menu-category { font-size: 11px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 16px; margin-bottom: 4px; padding: 0 12px; }
+  .menu-category:first-child { margin-top: 0; }
   .menu-item { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: transparent; border: none; border-radius: 8px; color: var(--text); cursor: pointer; font-size: 14px; font-weight: 600; text-align: left; transition: all 0.2s ease; font-family: inherit; width: 100%;}
   .menu-item:hover { background: var(--surface-2); }
   .menu-item .material-symbols-outlined { font-size: 20px; color: var(--muted); flex-shrink: 0;}
@@ -361,6 +368,7 @@
     .mobile-action-pill { display: flex; position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--surface); border: 1px solid var(--outline); border-radius: 999px; padding: 0 24px; justify-content: space-between; box-shadow: var(--shadow-2); z-index: 100; align-items: center; height: 56px; width: 240px; }
     .pill-btn { background: transparent; border: none; color: var(--muted); padding: 8px; border-radius: 50%; display: grid; place-items: center; cursor: pointer; transition: all 0.2s; }
     .pill-btn:hover, .pill-btn:active { background: var(--surface-2); color: var(--text); }
+    .pill-btn .material-symbols-outlined { font-size: 26px; }
     .pill-btn.pill-add { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background: linear-gradient(135deg, var(--grad-1), var(--grad-2)); color: #fff; border-radius: 50%; width: 64px; height: 64px; margin-top: 0; display: grid; place-items: center; box-shadow: 0 6px 16px var(--primary-light), 0 0 0 6px var(--bg); transition: transform 0.2s ease, box-shadow 0.2s ease; z-index: 10; }
     .pill-btn.pill-add .material-symbols-outlined { font-size: 32px; }
     .pill-btn.pill-add .pill-text { display: none; }
