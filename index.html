@@ -21,6 +21,9 @@
       <button class="menu-item" id="compareBtn"><span class="material-symbols-outlined">compare_arrows</span> Compare Mode</button>
       <button class="menu-item" id="tplOpenBtn"><span class="material-symbols-outlined">bookmarks</span> Templates</button>
       <button class="menu-item" id="themeBtn"><span class="material-symbols-outlined">palette</span> Theme Settings</button>
+      <button class="menu-item" id="backupBtn"><span class="material-symbols-outlined">save</span> Backup All Projects</button>
+      <button class="menu-item" id="restoreBtn"><span class="material-symbols-outlined">restore</span> Restore Projects</button>
+      <input type="file" id="restoreInput" accept=".json" hidden />
       <button class="menu-item" id="docsBtn"><span class="material-symbols-outlined">menu_book</span> Documentation</button>
     </div>
     
@@ -34,7 +37,6 @@
   </nav>
   <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
 
-  <div class="app-content">
   <header class="appbar">
     <div class="appbar-inner">
       <button class="btn secondary icon-only" id="mainMenuBtn" title="Menu" style="margin-right: 8px;"><span class="material-symbols-outlined">menu</span></button>
@@ -66,6 +68,7 @@
       </div>
     </div>
   </header>
+  <div class="app-content">
 
   <div class="tabsbar"><div class="tabs" id="tabs"></div></div>
   <main>
@@ -224,6 +227,35 @@
       <div class="dlg-actions">
         <button class="btn secondary" id="importCancelBtn">Cancel</button>
         <button class="btn" id="importConfirmBtn">Import Data</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="dlg-backdrop" id="restoreBackdrop" role="dialog" aria-modal="true">
+    <div class="dlg" style="max-width: 500px;">
+      <div class="dlg-head"><span style="display:flex; align-items:center; gap:8px;"><span class="material-symbols-outlined">restore</span> Restore Projects</span></div>
+      <div class="dlg-body">
+        <div class="label" style="margin-bottom: 12px; font-size: 14px;" id="restoreDetails">Found X projects. How would you like to load them?</div>
+        
+        <label class="export-tab-label" style="border: 1px solid var(--outline-2); padding: 12px; border-radius: 8px; transition: border-color 0.2s ease; margin-bottom: 8px; display: block; cursor: pointer;">
+          <input type="radio" name="restoreMode" value="append" checked style="float: left; margin-right: 12px;">
+          <div>
+            <div style="font-weight:700;">Append Projects</div>
+            <div style="font-size:12px; color:var(--muted); font-weight:400;">Adds the backed up projects safely alongside your current ones.</div>
+          </div>
+        </label>
+
+        <label class="export-tab-label" style="border: 1px solid var(--danger-border); padding: 12px; border-radius: 8px; transition: border-color 0.2s ease; background: var(--danger-hover); display: block; cursor: pointer;">
+          <input type="radio" name="restoreMode" value="replace" style="float: left; margin-right: 12px;">
+          <div>
+            <div style="font-weight:700; color:var(--danger);">Replace All Projects</div>
+            <div style="font-size:12px; color:var(--muted); font-weight:400;">Wipes everything currently here and restores exactly from the backup.</div>
+          </div>
+        </label>
+      </div>
+      <div class="dlg-actions">
+        <button class="btn secondary" id="restoreCancelBtn">Cancel</button>
+        <button class="btn" id="restoreConfirmBtn">Restore Data</button>
       </div>
     </div>
   </div>

@@ -1386,7 +1386,8 @@ document.addEventListener("keydown", (e) => {
       document.getElementById("filePreviewBackdrop").style.display === "flex" ||
       document.getElementById("imgPreviewBackdrop").style.display === "flex" ||
       document.getElementById("tplBackdrop").style.display === "flex" ||
-      document.getElementById("moveBackdrop").style.display === "flex") {
+      document.getElementById("moveBackdrop").style.display === "flex" ||
+      document.getElementById("restoreBackdrop").style.display === "flex") {
       
       if (e.key === "Escape") {
          document.getElementById("dlgCancel").click();
@@ -1401,6 +1402,8 @@ document.addEventListener("keydown", (e) => {
          document.getElementById("tplCloseBtn").click();
          document.getElementById("moveCancelBtn").click();
          document.getElementById("imgPreviewBackdrop").style.display = "none";
+         const restoreCancel = document.getElementById("restoreCancelBtn");
+         if (restoreCancel) restoreCancel.click();
       }
       return; 
   }

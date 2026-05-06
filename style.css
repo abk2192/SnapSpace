@@ -112,7 +112,7 @@
 
   /* Desktop Sidebar States */
   @media (min-width: 1100px) {
-    .sidebar { top: 0; transform: translateX(0); z-index: 40; }
+    .sidebar { top: 64px; transform: translateX(0); z-index: 40; }
     .mobile-close-nav { display: none !important; }
     body.sidebar-hide .sidebar { transform: translateX(-100%); }
     body.sidebar-show .sidebar-backdrop { display: none; }
