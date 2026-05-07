@@ -76,13 +76,6 @@ export class MainPanelView {
                 if (e.target.closest(".tag") || e.target.closest(".scen-more-wrap") || window.getSelection().toString().trim().length > 0) e.preventDefault();
             }
 
-            if (document.body.classList.contains("show-mobile-actions")) {
-                const actions = document.querySelector('.appbar .actions');
-                const mobileMoreBtn = document.getElementById("pillMoreBtn");
-                const clickedActionBtn = e.target.closest('.appbar .actions .btn');
-                if ((actions && !actions.contains(e.target) && e.target !== mobileMoreBtn) || clickedActionBtn) document.body.classList.remove("show-mobile-actions");
-            }
-
             const editNameBtn = e.target.closest(".edit-name-btn, [data-edit-name]");
             if (editNameBtn) {
                 e.preventDefault(); e.stopPropagation();
@@ -90,12 +83,15 @@ export class MainPanelView {
                 if (scId) {
                     const input = document.querySelector(`input[data-sid="${scId}"][data-field="name"]`);
                     if (input) {
-                        const card = input.closest('details'); if (card && !card.open) card.open = true;
-                        input.classList.add("editing"); setTimeout(() => { input.focus(); input.setSelectionRange(input.value.length, input.value.length); }, 50);
+                        const card = input.closest('details'); 
+                        if (card && !card.open) card.open = true;
+                        input.readOnly = false;
+                        input.classList.add("editing"); 
+                        setTimeout(() => { input.focus(); input.setSelectionRange(input.value.length, input.value.length); }, 50);
                     }
                 }
             } else if (!e.target.closest('.header-name-input')) {
-                document.querySelectorAll('.header-name-input.editing').forEach(el => el.classList.remove('editing'));
+                document.querySelectorAll('.header-name-input.editing').forEach(el => { el.classList.remove('editing'); el.readOnly = true; });
             }
         });
 
@@ -116,6 +112,7 @@ export class MainPanelView {
 
         document.body.addEventListener("focusout", (e) => {
             if (e.target.matches("input[data-field='name']")) {
+                e.target.readOnly = true;
                 e.target.classList.remove('editing');
                 if (!e.target.value.trim()) { e.target.value = e.target.placeholder; e.target.dispatchEvent(new Event("input", {bubbles: true})); }
             }

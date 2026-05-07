@@ -150,12 +150,28 @@ async function bootApp() {
         `;
         document.body.appendChild(mobilePill);
 
+        document.getElementById("pillSearchBtn").addEventListener("click", () => {
+            document.querySelector('.search-trigger-btn')?.click();
+        });
         document.getElementById("pillAddBtn").addEventListener("click", () => {
             document.getElementById("addScenarioBtn")?.click();
         });
         document.getElementById("pillMoreBtn").addEventListener("click", (e) => {
             e.stopPropagation();
             document.body.classList.toggle("show-mobile-actions");
+        });
+
+        // This listener is now responsible for closing the mobile menu when clicking outside
+        document.addEventListener('click', e => {
+            if (document.body.classList.contains("show-mobile-actions")) {
+                const actions = document.querySelector('.appbar .actions');
+                const mobileMoreBtn = document.getElementById("pillMoreBtn");
+                const clickedActionBtn = e.target.closest('.appbar .actions .btn');
+                // Close if click is on an action, or if click is outside the menu AND not on the toggle button
+                if (clickedActionBtn || (actions && !actions.contains(e.target) && !mobileMoreBtn.contains(e.target) && e.target !== mobileMoreBtn)) {
+                    document.body.classList.remove("show-mobile-actions");
+                }
+            }
         });
     }
 

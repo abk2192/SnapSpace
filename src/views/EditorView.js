@@ -111,6 +111,32 @@ export class EditorView {
             }
         });
 
+        document.addEventListener('keydown', e => {
+            if (e.key !== 'Enter' || e.shiftKey) return;
+        
+            const sel = window.getSelection();
+            if (!sel.rangeCount) return;
+            const range = sel.getRangeAt(0);
+            let container = range.startContainer;
+        
+            if (container.nodeType === 3) container = container.parentNode;
+            const evidence = container.closest('.evidence');
+            if (!evidence) return;
+        
+            let block = container;
+            while (block && block.parentElement !== evidence && !['DIV', 'P', 'LI', 'BODY'].includes(block.tagName)) {
+                block = block.parentElement;
+            }
+            if (!block || block === evidence) return;
+        
+            const firstChild = block.firstChild;
+            if (firstChild && firstChild.nodeName === 'INPUT' && firstChild.type === 'checkbox' && firstChild.classList.contains('editor-checkbox')) {
+                e.preventDefault();
+                document.execCommand('insertHTML', false, '<br><input type="checkbox" class="editor-checkbox" style="width:14px;height:14px;margin-right:6px;vertical-align:middle;cursor:pointer;" contenteditable="false">&nbsp;');
+                evidence.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        });
+
         document.addEventListener("paste", (e) => {
             const ev = e.target.closest(".evidence[data-evidence]"); if (!ev) return;
             const dt = e.clipboardData; if (!dt) return;

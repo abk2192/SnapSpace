@@ -134,8 +134,8 @@
   .ws-item.active-ws { background: var(--primary-light); color: var(--primary); }
   .ws-item.active-ws .material-symbols-outlined { color: var(--primary); }
   .ws-item .ws-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .ws-del { opacity: 0; transition: opacity 0.2s; color: var(--muted); }
-  .ws-item:hover .ws-del { opacity: 1; }
+  .ws-del { opacity: 0.6; transition: opacity 0.2s; color: var(--muted); } /* Default visibility for touch */
+  .ws-item:hover .ws-del { opacity: 1; } /* Full opacity on hover */
   .ws-del:hover { color: var(--danger); }
   .ws-item.drag-over-ws { border: 2px dashed var(--primary); background: var(--surface-2); }
 
