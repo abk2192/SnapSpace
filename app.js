@@ -115,12 +115,19 @@ async function bootApp() {
         const tabTools = document.createElement('div');
         tabTools.className = 'tab-tools';
         
+        const toggleEditBtn = document.createElement('button');
+        toggleEditBtn.className = 'btn secondary icon-only';
+        toggleEditBtn.id = 'toggleEditBtn';
+        toggleEditBtn.innerHTML = '<span class="material-symbols-outlined">lock_open</span>';
+        toggleEditBtn.title = "Lock (Read-Only Mode)";
+        
         const toggleAllBtn = document.createElement('button');
         toggleAllBtn.className = 'btn secondary icon-only';
         toggleAllBtn.id = 'toggleAllBtn';
         toggleAllBtn.innerHTML = '<span class="material-symbols-outlined">unfold_less</span>';
         toggleAllBtn.title = "Collapse All";
         
+        tabTools.appendChild(toggleEditBtn);
         tabTools.appendChild(toggleAllBtn);
         tabsbar.appendChild(tabTools);
     }

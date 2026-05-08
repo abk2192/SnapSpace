@@ -286,6 +286,61 @@ export class TransferView {
       const img = e.target.closest(".evidence img");
       if (img){ let backdrop = document.getElementById("imgPreviewBackdropExport"); if (!backdrop) { backdrop = document.createElement("div"); backdrop.id = "imgPreviewBackdropExport"; backdrop.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:zoom-out;"; const imgEl = document.createElement("img"); imgEl.id = "imgPreviewElExport"; imgEl.style.cssText = "max-width:90vw;max-height:90vh;border-radius:8px;box-shadow:var(--shadow);background:var(--surface);"; backdrop.appendChild(imgEl); document.body.appendChild(backdrop); backdrop.onclick = () => backdrop.style.display = "none"; } document.getElementById("imgPreviewElExport").src = img.src; backdrop.style.display = "flex"; window.getSelection().removeAllRanges(); }
     });
+    let checkboxTouchMoved = false;
+    document.addEventListener("touchstart", (e) => { if (e.target.type === 'checkbox' && e.target.classList.contains('editor-checkbox')) checkboxTouchMoved = false; }, { passive: true });
+    document.addEventListener("touchmove", (e) => { if (e.target.type === 'checkbox' && e.target.classList.contains('editor-checkbox')) checkboxTouchMoved = true; }, { passive: true });
+    document.addEventListener("touchend", (e) => {
+      if (e.target.type === 'checkbox' && e.target.classList.contains('editor-checkbox')) {
+        if (!checkboxTouchMoved) {
+          if (e.cancelable) e.preventDefault();
+          if (document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur();
+          e.target.checked = !e.target.checked;
+          e.target.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      }
+    }, { passive: false });
+    document.addEventListener("mousedown", (e) => { if (e.target.type === 'checkbox' && e.target.classList.contains('editor-checkbox')) { if (document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur(); } });
+      document.addEventListener("change", (e) => {
+        if (e.target.type === 'checkbox' && e.target.classList.contains('editor-checkbox')) {
+          if (e.target.checked) e.target.setAttribute('checked', 'checked'); else e.target.removeAttribute('checked');
+          const ev = e.target.closest('.evidence');
+          if (ev) {
+            let block = e.target;
+            while (block && block.parentElement && block.parentElement !== ev && !['DIV', 'P', 'LI', 'TD', 'TH'].includes(block.tagName)) { block = block.parentElement; }
+            if (block && !['DIV', 'P', 'LI', 'TD', 'TH'].includes(block.tagName)) {
+              const wrapper = document.createElement('div'); block.parentNode.insertBefore(wrapper, block);
+              let current = block;
+              while (current && current.tagName !== 'BR' && !['DIV', 'P', 'LI', 'TD', 'TH', 'TR', 'TABLE', 'TBODY', 'THEAD', 'UL', 'OL'].includes(current.tagName)) {
+                let next = current.nextSibling; wrapper.appendChild(current); current = next;
+              }
+              if (current && current.tagName === 'BR') wrapper.appendChild(current);
+              block = wrapper;
+            }
+            block.style.transition = 'all 0.3s ease';
+            if (e.target.checked) { block.style.textDecoration = 'line-through'; block.style.opacity = '0.5'; block.style.transform = 'scale(0.98) translateX(4px)'; }
+            else { block.style.textDecoration = ''; block.style.opacity = '1'; block.style.transform = 'scale(1) translateX(0)'; }
+            setTimeout(() => {
+              let groupStart = block; while (groupStart.previousElementSibling && groupStart.previousElementSibling.nodeType === 1 && groupStart.previousElementSibling.querySelector && groupStart.previousElementSibling.querySelector('.editor-checkbox')) { groupStart = groupStart.previousElementSibling; }
+              let groupEnd = block; while (groupEnd.nextElementSibling && groupEnd.nextElementSibling.nodeType === 1 && groupEnd.nextElementSibling.querySelector && groupEnd.nextElementSibling.querySelector('.editor-checkbox')) { groupEnd = groupEnd.nextElementSibling; }
+              let items = []; let curr = groupStart; while (curr) { items.push(curr); if (curr === groupEnd) break; curr = curr.nextElementSibling; }
+              let unchecked = []; let checked = [];
+              items.forEach(item => {
+                const cb = item.querySelector('.editor-checkbox'); item.style.transition = 'all 0.3s ease';
+                if (cb && cb.checked) { item.style.textDecoration = 'line-through'; item.style.opacity = '0.5'; item.style.transform = 'scale(0.98) translateX(4px)'; checked.push(item); }
+                else { item.style.textDecoration = ''; item.style.opacity = '1'; item.style.transform = 'scale(1) translateX(0)'; unchecked.push(item); }
+              });
+              const newOrder = [...unchecked, ...checked];
+              let needsReorder = false; for (let i = 0; i < items.length; i++) { if (items[i] !== newOrder[i]) { needsReorder = true; break; } }
+              if (needsReorder) {
+                const savedScrollY = window.scrollY; const savedEvScroll = ev.scrollTop;
+                const anchor = document.createElement('span'); block.parentNode.insertBefore(anchor, groupEnd.nextSibling);
+                newOrder.forEach(item => anchor.parentNode.insertBefore(item, anchor)); anchor.remove();
+                ev.scrollTop = savedEvScroll; window.scrollTo(window.scrollX, savedScrollY);
+              }
+            }, 300);
+          }
+        }
+      });
     renderView(); 
   <\/script>
 </body>

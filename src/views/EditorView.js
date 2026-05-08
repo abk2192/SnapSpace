@@ -10,7 +10,13 @@ export class EditorView {
     }
 
     bindEvents() {
-        document.addEventListener("mousedown", (e) => { if (e.target.closest('[data-cmd]')) e.preventDefault(); });
+        document.addEventListener("mousedown", (e) => { 
+            if (e.target.closest('[data-cmd]')) e.preventDefault(); 
+            if (e.target.type === 'checkbox' && e.target.classList.contains('editor-checkbox')) {
+                const activeEl = document.activeElement;
+                if (activeEl && typeof activeEl.blur === 'function') activeEl.blur();
+            }
+        });
 
         document.addEventListener("selectionchange", () => {
             this.updateToolbarState();
@@ -105,6 +111,21 @@ export class EditorView {
             const img = e.target.closest(".evidence img");
             if (img) { clearTimeout(this.imgClickTimer); const el = document.getElementById("imgPreviewEl"); if(el) el.src = img.src; document.getElementById("imgPreviewBackdrop").style.display = "flex"; window.getSelection().removeAllRanges(); }
         });
+
+        let checkboxTouchMoved = false;
+        document.addEventListener("touchstart", (e) => { if (e.target.type === 'checkbox' && e.target.classList.contains('editor-checkbox')) checkboxTouchMoved = false; }, { passive: true });
+        document.addEventListener("touchmove", (e) => { if (e.target.type === 'checkbox' && e.target.classList.contains('editor-checkbox')) checkboxTouchMoved = true; }, { passive: true });
+        document.addEventListener("touchend", (e) => {
+            if (e.target.type === 'checkbox' && e.target.classList.contains('editor-checkbox')) {
+                if (!checkboxTouchMoved) {
+                    if (e.cancelable) e.preventDefault();
+                    const activeEl = document.activeElement;
+                    if (activeEl && typeof activeEl.blur === 'function') activeEl.blur();
+                    e.target.checked = !e.target.checked;
+                    e.target.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            }
+        }, { passive: false });
 
         document.addEventListener("change", (e) => {
             if (e.target.type === 'checkbox' && e.target.classList.contains('editor-checkbox')) {
