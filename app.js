@@ -104,16 +104,6 @@ async function bootApp() {
         });
     }
 
-    // Categorize static sidebar elements dynamically
-    const sidebarInner = document.querySelector('.sidebar-inner');
-    if (sidebarInner) {
-        const firstItem = sidebarInner.firstElementChild;
-        if (firstItem && !firstItem.classList.contains('menu-category')) {
-            const prefCat = document.createElement('div'); prefCat.className = 'menu-category'; prefCat.textContent = 'Preferences';
-            sidebarInner.insertBefore(prefCat, firstItem);
-        }
-    }
-
     // Create a single Toggle Expand/Collapse button for space saving
     const expandAllBtn = document.getElementById('expandAllBtn');
     const collapseAllBtn = document.getElementById('collapseAllBtn');

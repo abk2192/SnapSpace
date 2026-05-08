@@ -3,32 +3,20 @@ export class TransferView {
         this.vm = vm;
         this.pendingImportData = null;
         this.injectBackupRestoreButtons();
-        this.bindSystemEvents();pe
+        this.bindSystemEvents();
         this.bindImportEvents();
         this.bindExportEvents();
     }
 
     injectBackupRestoreButtons() {
-        try {
-            let sidebarInner = document.getElementById('sidebarMenu') || document.querySelector('.sidebar-inner') || document.querySelector('.sidebar');
-            if (sidebarInner && !document.getElementById('backupBtn')) {
-                const dataCat = document.createElement('div'); dataCat.className = 'menu-category'; dataCat.textContent = 'Data Management';
-                const backupBtn = document.createElement('button'); backupBtn.className = 'menu-item'; backupBtn.id = 'backupBtn'; backupBtn.title = 'Backup Database (JSON)'; backupBtn.innerHTML = '<span class="material-symbols-outlined">save</span> Backup Data';
-                const restoreBtn = document.createElement('button'); restoreBtn.className = 'menu-item'; restoreBtn.id = 'restoreBtn'; restoreBtn.title = 'Restore Database (JSON)'; restoreBtn.innerHTML = '<span class="material-symbols-outlined">settings_backup_restore</span> Restore Data';
-                
-                const sysCat = document.createElement('div'); sysCat.className = 'menu-category'; sysCat.textContent = 'System Tools';
-                const forceUpdateBtn = document.createElement('button'); forceUpdateBtn.className = 'menu-item'; forceUpdateBtn.id = 'forceUpdateBtn'; forceUpdateBtn.title = 'Clear Cache & Reload App'; forceUpdateBtn.innerHTML = '<span class="material-symbols-outlined">system_update_alt</span> Force Update';
-                
-                sidebarInner.appendChild(dataCat); sidebarInner.appendChild(backupBtn); sidebarInner.appendChild(restoreBtn);
-                sidebarInner.appendChild(sysCat); sidebarInner.appendChild(forceUpdateBtn);
-            }
-        } catch(err) { console.error("Backup button injection failed:", err); }
+        // Buttons are now natively structured in index.html, no injection required.
     }
 
     bindSystemEvents() {
-        document.addEventListener('click', (e) => {
+        document.addEventListener('click', async (e) => {
             if (e.target.closest('#forceUpdateBtn')) {
-                if (confirm("This will clear the app's cache and fetch the latest version from the server. Your saved projects will NOT be deleted. Proceed?")) {
+                const confirmed = await window.appConfirm("This will clear the app's cache and fetch the latest version from the server. Your saved projects will NOT be deleted. Proceed?");
+                if (confirmed) {
                     if ('serviceWorker' in navigator) navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => r.unregister()));
                     if ('caches' in window) caches.keys().then(keys => Promise.all(keys.map(k => caches.delete(k)))).then(() => window.location.reload(true));
                     else window.location.reload(true);
@@ -48,15 +36,15 @@ export class TransferView {
                     fileInput.addEventListener('change', (ev) => {
                         const file = ev.target.files[0]; if (!file) return;
                         const reader = new FileReader();
-                        reader.onload = (event) => {
+                        reader.onload = async (event) => {
                             try {
                                 const importedData = JSON.parse(event.target.result);
                                 if (importedData && importedData.workspaces) {
-                                    if (confirm("WARNING: This will replace ALL your current projects and data. Are you sure you want to proceed?")) {
-                                        this.vm.restoreBackup(importedData); alert("Data restored successfully!");
+                                    if (await window.appConfirm("WARNING: This will replace ALL your current projects and data. Are you sure you want to proceed?")) {
+                                        this.vm.restoreBackup(importedData); window.appAlert("Data restored successfully!");
                                     }
-                                } else alert("Invalid backup file format.");
-                            } catch (err) { alert("Error parsing backup file."); }
+                                } else window.appAlert("Invalid backup file format.");
+                            } catch (err) { window.appAlert("Error parsing backup file."); }
                             fileInput.value = ""; 
                         }; reader.readAsText(file);
                     });
@@ -86,9 +74,9 @@ export class TransferView {
                             const detailsEl = document.getElementById("importDetails"); 
                             if(detailsEl) detailsEl.textContent = `Found ${tCount} tab(s) and ${sCount} item(s). How would you like to load them?`;
                             if(importBackdrop) importBackdrop.style.display = "flex";
-                        } else alert("Invalid export format.");
-                    } else alert("No data found in this HTML file.");
-                } catch (err) { alert("Error reading file."); }
+                        } else window.appAlert("Invalid export format.");
+                    } else window.appAlert("No data found in this HTML file.");
+                } catch (err) { window.appAlert("Error reading file."); }
                 e.target.value = ""; 
             }; reader.readAsText(file);
         });
@@ -158,7 +146,7 @@ export class TransferView {
                     }
                 }
             });
-            if (filteredState.tabs.length === 0) { alert("Please select at least one item to export."); return; }
+            if (filteredState.tabs.length === 0) { window.appAlert("Please select at least one item to export."); return; }
             filteredState.activeTabId = filteredState.tabs[0].id;
             if(exportBackdrop) exportBackdrop.style.display = "none";
             

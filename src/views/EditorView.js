@@ -9,7 +9,7 @@ export class EditorView {
         this.bindEvents();
     }
 
- ab    bindEvents() {
+    bindEvents() {
         document.addEventListener("mousedown", (e) => { if (e.target.closest('[data-cmd]')) e.preventDefault(); });
 
         document.addEventListener("selectionchange", () => {
@@ -111,7 +111,88 @@ export class EditorView {
                 if (e.target.checked) e.target.setAttribute('checked', 'checked');
                 else e.target.removeAttribute('checked');
                 const ev = e.target.closest('.evidence');
-                if (ev) ev.dispatchEvent(new Event('input', { bubbles: true }));
+                if (ev) {
+                    let block = e.target;
+                    while (block && block.parentElement && block.parentElement !== ev && !['DIV', 'P', 'LI', 'TD', 'TH'].includes(block.tagName)) {
+                        block = block.parentElement;
+                    }
+
+                    if (block && !['DIV', 'P', 'LI', 'TD', 'TH'].includes(block.tagName)) {
+                        const wrapper = document.createElement('div');
+                        block.parentNode.insertBefore(wrapper, block);
+                        let current = block;
+                        while (current && current.tagName !== 'BR' && !['DIV', 'P', 'LI', 'TD', 'TH', 'TR', 'TABLE', 'TBODY', 'THEAD', 'UL', 'OL'].includes(current.tagName)) {
+                            let next = current.nextSibling;
+                            wrapper.appendChild(current);
+                            current = next;
+                        }
+                        if (current && current.tagName === 'BR') wrapper.appendChild(current);
+                        block = wrapper;
+                    }
+
+                    // Apply visual styling instantly with smooth transition
+                    block.style.transition = 'all 0.3s ease';
+                    if (e.target.checked) {
+                        block.style.textDecoration = 'line-through';
+                        block.style.opacity = '0.5';
+                        block.style.transform = 'scale(0.98) translateX(4px)';
+                    } else {
+                        block.style.textDecoration = '';
+                        block.style.opacity = '1';
+                        block.style.transform = 'scale(1) translateX(0)';
+                    }
+
+                    // Delay the DOM reorder to allow the animation to play
+                    setTimeout(() => {
+                        let groupStart = block;
+                        while (groupStart.previousElementSibling && groupStart.previousElementSibling.nodeType === 1 && groupStart.previousElementSibling.querySelector && groupStart.previousElementSibling.querySelector('.editor-checkbox')) { 
+                            groupStart = groupStart.previousElementSibling; 
+                        }
+                        
+                        let groupEnd = block;
+                        while (groupEnd.nextElementSibling && groupEnd.nextElementSibling.nodeType === 1 && groupEnd.nextElementSibling.querySelector && groupEnd.nextElementSibling.querySelector('.editor-checkbox')) { 
+                            groupEnd = groupEnd.nextElementSibling; 
+                        }
+
+                        let items = []; let curr = groupStart;
+                        while (curr) { items.push(curr); if (curr === groupEnd) break; curr = curr.nextElementSibling; }
+
+                        let unchecked = []; let checked = [];
+                        items.forEach(item => { 
+                            const cb = item.querySelector('.editor-checkbox'); 
+                            item.style.transition = 'all 0.3s ease';
+                            if (cb && cb.checked) { 
+                                item.style.textDecoration = 'line-through'; item.style.opacity = '0.5'; item.style.transform = 'scale(0.98) translateX(4px)';
+                                checked.push(item); 
+                            } else { 
+                                item.style.textDecoration = ''; item.style.opacity = '1'; item.style.transform = 'scale(1) translateX(0)';
+                                unchecked.push(item); 
+                            } 
+                        });
+
+                        const newOrder = [...unchecked, ...checked];
+                        let needsReorder = false; for (let i = 0; i < items.length; i++) { if (items[i] !== newOrder[i]) { needsReorder = true; break; } }
+
+                        if (needsReorder) { 
+                            const savedScrollY = window.scrollY;
+                            const savedEvScroll = ev.scrollTop;
+                            
+                            const activeEl = document.activeElement;
+                            const needsBlur = activeEl && ev.contains(activeEl);
+                            if (needsBlur && typeof activeEl.blur === 'function') activeEl.blur();
+
+                            const anchor = document.createElement('span'); block.parentNode.insertBefore(anchor, groupEnd.nextSibling); 
+                            newOrder.forEach(item => anchor.parentNode.insertBefore(item, anchor)); 
+                            anchor.remove(); 
+                            
+                            ev.scrollTop = savedEvScroll; window.scrollTo(window.scrollX, savedScrollY);
+                            
+                            if (needsBlur && typeof e.target.focus === 'function') e.target.focus({ preventScroll: true });
+                        }
+
+                        ev.dispatchEvent(new Event('input', { bubbles: true }));
+                    }, 300);
+                }
             }
         });
 
@@ -129,6 +210,9 @@ export class EditorView {
                             prev.remove();
                             e.preventDefault();
                             const evidence = node.closest('.evidence');
+                            let block = node;
+                            while (block && block.parentElement && block.parentElement !== evidence && !['DIV', 'P', 'LI', 'TD', 'TH'].includes(block.tagName)) { block = block.parentElement; }
+                            if (block && ['DIV', 'P', 'LI', 'TD', 'TH'].includes(block.tagName)) { block.style.textDecoration = ''; block.style.opacity = ''; }
                             if (evidence) evidence.dispatchEvent(new Event('input', { bubbles: true }));
                             return;
                         }
@@ -138,6 +222,9 @@ export class EditorView {
                             prev.remove();
                             e.preventDefault();
                             const evidence = node.closest('.evidence');
+                            let block = node;
+                            while (block && block.parentElement && block.parentElement !== evidence && !['DIV', 'P', 'LI', 'TD', 'TH'].includes(block.tagName)) { block = block.parentElement; }
+                            if (block && ['DIV', 'P', 'LI', 'TD', 'TH'].includes(block.tagName)) { block.style.textDecoration = ''; block.style.opacity = ''; }
                             if (evidence) evidence.dispatchEvent(new Event('input', { bubbles: true }));
                             return;
                         }

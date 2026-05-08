@@ -17,22 +17,32 @@
        <span style="font-weight: 750;">Menu</span>
        <button class="btn secondary icon-only" id="mobileSidebarClose"><span class="material-symbols-outlined">close</span></button>
     </div>
-    <div class="sidebar-inner" style="border-bottom: 1px solid var(--outline-2); padding-bottom: 16px; margin-bottom: 4px;">
-      <button class="menu-item" id="compareBtn"><span class="material-symbols-outlined">compare_arrows</span> Compare Mode</button>
-      <button class="menu-item" id="tplOpenBtn"><span class="material-symbols-outlined">bookmarks</span> Templates</button>
-      <button class="menu-item" id="themeBtn"><span class="material-symbols-outlined">palette</span> Theme Settings</button>
-      <button class="menu-item" id="backupBtn"><span class="material-symbols-outlined">save</span> Backup All Projects</button>
-      <button class="menu-item" id="restoreBtn"><span class="material-symbols-outlined">restore</span> Restore Projects</button>
-      <input type="file" id="restoreInput" accept=".json" hidden />
-      <button class="menu-item" id="docsBtn"><span class="material-symbols-outlined">menu_book</span> Documentation</button>
-    </div>
     
-    <div class="sidebar-inner" style="flex: 1; overflow-y: auto;">
+    <div class="sidebar-inner" style="flex: 1; overflow-y: auto; padding-bottom: 12px;">
        <div class="label" style="padding: 0 4px; margin-bottom: 8px;">Your Projects</div>
        <div id="workspaceListItems" style="display: flex; flex-direction: column; gap: 4px;"></div>
+       <button class="menu-item" id="addWorkspaceBtn" style="color: var(--primary); margin-top: 8px; font-weight: 700;"><span class="material-symbols-outlined">add_circle</span> New Project</button>
     </div>
-    <div class="sidebar-inner" style="border-top: 1px solid var(--outline-2); padding-top: 16px;">
-       <button class="menu-item" id="addWorkspaceBtn" style="color: var(--primary);"><span class="material-symbols-outlined">add_circle</span> New Project</button>
+
+    <div class="sidebar-inner" style="border-top: 1px solid var(--outline-2); padding: 8px; padding-bottom: 16px; background: var(--surface-2);">
+       <details class="sidebar-settings" style="cursor: pointer;">
+         <summary class="menu-item" style="display: flex; align-items: center; gap: 12px; justify-content: space-between; font-weight: 700; padding: 10px 12px; list-style: none;">
+           <div style="display: flex; align-items: center; gap: 12px;">
+             <span class="material-symbols-outlined" style="color: var(--muted);">settings</span>
+             <span>Settings & Tools</span>
+           </div>
+           <span class="material-symbols-outlined settings-chev" style="transition: transform 0.2s; color: var(--muted);">expand_more</span>
+         </summary>
+         <div class="sidebar-settings-content" style="padding-left: 28px; display: flex; flex-direction: column; gap: 4px; margin-top: 6px;">
+            <button class="menu-item" id="compareBtn" style="padding: 8px 12px; font-size: 13px;"><span class="material-symbols-outlined" style="font-size: 18px;">compare_arrows</span> Compare Mode</button>
+            <button class="menu-item" id="tplOpenBtn" style="padding: 8px 12px; font-size: 13px;"><span class="material-symbols-outlined" style="font-size: 18px;">bookmarks</span> Templates</button>
+            <button class="menu-item" id="themeBtn" style="padding: 8px 12px; font-size: 13px;"><span class="material-symbols-outlined" style="font-size: 18px;">palette</span> Theme Settings</button>
+            <button class="menu-item" id="backupBtn" style="padding: 8px 12px; font-size: 13px;"><span class="material-symbols-outlined" style="font-size: 18px;">save</span> Backup Projects</button>
+            <button class="menu-item" id="restoreBtn" style="padding: 8px 12px; font-size: 13px;"><span class="material-symbols-outlined" style="font-size: 18px;">restore</span> Restore Projects</button>
+            <button class="menu-item" id="forceUpdateBtn" style="padding: 8px 12px; font-size: 13px;"><span class="material-symbols-outlined" style="font-size: 18px;">system_update_alt</span> Force Update</button>
+            <button class="menu-item" id="docsBtn" style="padding: 8px 12px; font-size: 13px;"><span class="material-symbols-outlined" style="font-size: 18px;">menu_book</span> Documentation</button>
+         </div>
+       </details>
     </div>
   </nav>
   <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
@@ -52,13 +62,13 @@
         <div style="width: 2px; height: 18px; background: var(--outline-2); margin: 0 8px; border-radius: 2px;"></div>
         <input type="text" id="workspaceTitleInput" placeholder="Project Name" title="Rename Project" style="border: none; background: transparent; font-weight: 600; font-size: 15px; color: var(--muted); outline: none; flex: 1; min-width: 100px; font-family: inherit;" />
       </div>
+      <span id="saveIndicator" style="font-size: 12px; color: var(--primary); font-weight: 700; margin-right: 8px; opacity: 0; transition: opacity 0.3s; display: flex; align-items: center; gap: 4px; pointer-events: none; flex-shrink: 0;"><span class="material-symbols-outlined" style="font-size: 16px;">cloud_done</span> Saved</span>
       <div class="actions">
         <div id="searchWrap" class="search-wrap">
             <input type="text" id="searchInput" class="input" placeholder="Search Projects..." title="Shortcut: Ctrl+Shift+F" style="padding-left: 32px; height: 36px; border-radius: 18px;" autocomplete="off" />
             <span class="material-symbols-outlined" style="position: absolute; left: 10px; top: 10px; font-size: 16px; color: var(--muted); pointer-events: none;">search</span>
             <div id="searchDropdown" class="search-dropdown"></div>
         </div>
-        <span id="saveIndicator" style="font-size: 12px; color: var(--primary); font-weight: 700; margin-right: 8px; opacity: 0; transition: opacity 0.3s; display: flex; align-items: center; gap: 4px; pointer-events: none; flex-shrink: 0;"><span class="material-symbols-outlined" style="font-size: 16px;">cloud_done</span> Saved</span>
         <button class="btn secondary" id="renameTabBtn"><span class="material-symbols-outlined">edit</span> Rename Tab</button>
         <button class="btn secondary" id="importBtn"><span class="material-symbols-outlined">upload</span> Import</button>
         <input type="file" id="importInput" accept=".html" hidden />

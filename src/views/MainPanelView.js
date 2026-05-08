@@ -125,7 +125,7 @@ export class MainPanelView {
 
         // Touch gestures for Swipe-to-switch Tabs
         let touchStartX = 0; let touchStartY = 0;
-        document.body.addEventListener('touchstart', e => {
+        document.addEventListener('touchstart', e => {
             if (e.target.closest('.tabs') || e.target.closest('.evidence-table') || e.target.closest('.evidence')) return;
             if (e.touches && e.touches.length > 0) {
                 touchStartX = e.touches[0].screenX;
@@ -133,7 +133,7 @@ export class MainPanelView {
             }
         }, {passive: true});
 
-        document.body.addEventListener('touchend', e => {
+        document.addEventListener('touchend', e => {
             if (e.target.closest('.tabs') || e.target.closest('.evidence-table') || e.target.closest('.evidence')) return;
             if (!e.changedTouches || e.changedTouches.length === 0) return;
             
@@ -160,7 +160,7 @@ export class MainPanelView {
         // Mobile Touch Drag & Drop for Items
         let touchDragEl = null; let touchDragGhost = null; let touchDragFromIdx = -1;
 
-        document.body.addEventListener("touchstart", (e) => {
+        document.addEventListener("touchstart", (e) => {
             const handle = e.target.closest('.drag-handle');
             if (handle) {
                 const scenario = handle.closest('details.scenario');
@@ -182,7 +182,7 @@ export class MainPanelView {
             }
         }, {passive: false});
 
-        document.body.addEventListener("touchmove", (e) => {
+        document.addEventListener("touchmove", (e) => {
             if (touchDragGhost && touchDragEl) {
                 e.preventDefault(); // Stop page scroll smoothly during reorder
                 const touch = e.touches[0];
@@ -197,7 +197,7 @@ export class MainPanelView {
             }
         }, {passive: false});
 
-        document.body.addEventListener("touchend", (e) => {
+        document.addEventListener("touchend", (e) => {
             if (touchDragGhost && touchDragEl) {
                 const touch = e.changedTouches[0];
                 const overEl = document.elementFromPoint(touch.clientX, touch.clientY);

@@ -84,6 +84,33 @@ export class SearchView {
             if (e.key === "Escape" && this.searchBackdrop?.style.display === "block") {
                 this.close();
             }
+            
+            if (this.searchWrap && this.searchWrap.classList.contains("active-search")) {
+                const results = Array.from(this.searchDropdown?.querySelectorAll('.search-result') || []);
+                if (results.length > 0) {
+                    const currentIndex = results.findIndex(r => r.classList.contains('focused'));
+                    
+                    if (e.key === "ArrowDown") {
+                        e.preventDefault();
+                        let nextIndex = currentIndex + 1;
+                        if (nextIndex >= results.length) nextIndex = 0;
+                        results.forEach(r => r.classList.remove('focused'));
+                        results[nextIndex].classList.add('focused');
+                        results[nextIndex].scrollIntoView({ block: 'nearest' });
+                    } else if (e.key === "ArrowUp") {
+                        e.preventDefault();
+                        let prevIndex = currentIndex - 1;
+                        if (prevIndex < 0) prevIndex = results.length - 1;
+                        results.forEach(r => r.classList.remove('focused'));
+                        results[prevIndex].classList.add('focused');
+                        results[prevIndex].scrollIntoView({ block: 'nearest' });
+                    } else if (e.key === "Enter") {
+                        e.preventDefault();
+                        const selected = currentIndex >= 0 ? results[currentIndex] : results[0];
+                        if (selected) this.selectResult(selected.dataset.ws, selected.dataset.tab, selected.dataset.sc);
+                    }
+                }
+            }
         });
         
         document.getElementById("pillSearchBtn")?.addEventListener("click", () => this.open());

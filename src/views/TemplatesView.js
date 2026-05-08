@@ -73,4 +73,4 @@ export class TemplatesView {
             this.tplListEl.appendChild(div);
         });
     }
-}e tab is working in 
+}
