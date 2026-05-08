@@ -112,6 +112,35 @@ export class EditorView {
         });
 
         document.addEventListener('keydown', e => {
+            if (e.key === 'Backspace') {
+                const sel = window.getSelection();
+                if (sel && sel.isCollapsed && sel.rangeCount > 0) {
+                    const range = sel.getRangeAt(0);
+                    let node = range.startContainer;
+                    let offset = range.startOffset;
+
+                    if (node.nodeType === 3 && offset === 0) {
+                        let prev = node.previousSibling;
+                        if (prev && prev.nodeName === 'INPUT' && prev.classList.contains('editor-checkbox')) {
+                            prev.remove();
+                            e.preventDefault();
+                            const evidence = node.closest('.evidence');
+                            if (evidence) evidence.dispatchEvent(new Event('input', { bubbles: true }));
+                            return;
+                        }
+                    } else if (node.nodeType === 1) {
+                        let prev = node.childNodes[offset - 1];
+                        if (prev && prev.nodeName === 'INPUT' && prev.classList.contains('editor-checkbox')) {
+                            prev.remove();
+                            e.preventDefault();
+                            const evidence = node.closest('.evidence');
+                            if (evidence) evidence.dispatchEvent(new Event('input', { bubbles: true }));
+                            return;
+                        }
+                    }
+                }
+            }
+
             if (e.key !== 'Enter' || e.shiftKey) return;
         
             const sel = window.getSelection();
@@ -132,7 +161,14 @@ export class EditorView {
             const firstChild = block.firstChild;
             if (firstChild && firstChild.nodeName === 'INPUT' && firstChild.type === 'checkbox' && firstChild.classList.contains('editor-checkbox')) {
                 e.preventDefault();
-                document.execCommand('insertHTML', false, '<br><input type="checkbox" class="editor-checkbox" style="width:14px;height:14px;margin-right:6px;vertical-align:middle;cursor:pointer;" contenteditable="false">&nbsp;');
+                if (block.textContent.trim() === '') {
+                    block.innerHTML = '<br>';
+                    evidence.dispatchEvent(new Event('input', { bubbles: true }));
+                    return;
+                }
+                
+                document.execCommand('insertParagraph');
+                document.execCommand('insertHTML', false, '<input type="checkbox" class="editor-checkbox" style="width:14px;height:14px;margin-right:6px;vertical-align:middle;cursor:pointer;" contenteditable="false">&nbsp;');
                 evidence.dispatchEvent(new Event('input', { bubbles: true }));
             }
         });
