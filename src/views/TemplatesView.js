@@ -19,15 +19,14 @@ export class TemplatesView {
         this.tplCloseBtn?.addEventListener("click", () => { if(this.tplBackdrop) this.tplBackdrop.style.display = "none"; });
         if(this.tplBackdrop) this.tplBackdrop.addEventListener("click", (e) => { if(e.target === this.tplBackdrop) this.tplBackdrop.style.display = "none"; });
 
-        document.addEventListener('click', (e) => {
+        document.addEventListener('click', async (e) => {
             const tplBtn = e.target.closest("[data-template]");
             if (tplBtn) {
                 const sc = this.vm.getScenarioById(tplBtn.dataset.template);
-                if(sc && window.promptDialog) {
-                    window.promptDialog("Save Template", (sc.name || "Item") + " Template", "Name your template:", (name) => {
-                        if(!name) return;
-                        this.vm.addTemplate(name, sc);
-                    });
+                if (sc) {
+                    const name = await window.appPrompt("Name your template:", (sc.name || "Item") + " Template", "Save Template");
+                    if(!name) return;
+                    this.vm.addTemplate(name, sc);
                 }
             }
         });
@@ -54,8 +53,8 @@ export class TemplatesView {
             r.onload = (event) => {
                 try {
                     const loaded = JSON.parse(event.target.result);
-                    if(Array.isArray(loaded)) { loaded.forEach(l => { l.id = uid(); this.vm.templates.push(l); }); this.vm.saveTemplates(); this.render(); alert("Templates imported successfully!"); }
-                } catch(err) { alert("Invalid template JSON file."); }
+                    if(Array.isArray(loaded)) { loaded.forEach(l => { l.id = uid(); this.vm.templates.push(l); }); this.vm.saveTemplates(); this.render(); window.appAlert("Templates imported successfully!"); }
+                } catch(err) { window.appAlert("Invalid template JSON file."); }
             };
             r.readAsText(file); e.target.value = '';
         });
@@ -74,4 +73,4 @@ export class TemplatesView {
             this.tplListEl.appendChild(div);
         });
     }
-}
+}e tab is working in 

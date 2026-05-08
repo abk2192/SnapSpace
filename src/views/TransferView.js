@@ -3,7 +3,7 @@ export class TransferView {
         this.vm = vm;
         this.pendingImportData = null;
         this.injectBackupRestoreButtons();
-        this.bindSystemEvents();
+        this.bindSystemEvents();pe
         this.bindImportEvents();
         this.bindExportEvents();
     }

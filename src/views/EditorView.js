@@ -9,7 +9,7 @@ export class EditorView {
         this.bindEvents();
     }
 
-    bindEvents() {
+ ab    bindEvents() {
         document.addEventListener("mousedown", (e) => { if (e.target.closest('[data-cmd]')) e.preventDefault(); });
 
         document.addEventListener("selectionchange", () => {
@@ -24,14 +24,18 @@ export class EditorView {
         });
 
         // Core Editor Command Executor
-        document.addEventListener("click", (e) => {
+        document.addEventListener("click", async (e) => {
             const cmdBtn = e.target.closest('[data-cmd]');
             if (cmdBtn) {
                 e.preventDefault(); const cmd = cmdBtn.dataset.cmd; let val = cmdBtn.dataset.val || null;
                 
                 if (cmd === 'createLink') {
-                    val = prompt("Enter the URL:"); if (!val) return;
-                    if (!/^https?:\/\//i.test(val)) val = 'https://' + val; 
+                    val = await window.appPrompt("Enter the URL:"); if (!val) return;
+                    if (!/^https?:\/\//i.test(val)) val = 'https://' + val;
+                    
+                    const ev = cmdBtn.closest('.evidence-wrap').querySelector('.evidence');
+                    if (ev) ev.focus();
+                    if (this.savedRange) { const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(this.savedRange); }
                 } else if (cmd === 'insertCheckbox') {
                     document.execCommand("insertHTML", false, '<input type="checkbox" class="editor-checkbox" style="width:14px;height:14px;margin-right:6px;vertical-align:middle;cursor:pointer;" contenteditable="false">&nbsp;');
                     const ev = cmdBtn.closest('.evidence-wrap').querySelector('.evidence');
@@ -188,7 +192,7 @@ export class EditorView {
         document.getElementById('cfCancel')?.addEventListener('click', () => { document.getElementById('cfBackdrop').style.display = 'none'; this.targetScenarioForFile = null; });
         document.getElementById('cfOk')?.addEventListener('click', () => {
             const name = document.getElementById('cfName')?.value.trim() || 'document.txt'; const content = document.getElementById('cfContent')?.value;
-            if(!content) { alert("File content cannot be empty."); return; }
+            if(!content) { window.appAlert("File content cannot be empty."); return; }
             const ev = document.querySelector(`.evidence[data-evidence="${this.targetScenarioForFile}"]`);
             if(ev) {
                 const blob = new Blob([content], { type: 'text/plain' }); const reader = new FileReader();
@@ -267,7 +271,7 @@ export class EditorView {
 
     async copyAttachment(copyBtn, e) {
         e.preventDefault(); e.stopPropagation(); const span = copyBtn.closest('.attachment'); if (!span) return;
-        try { const clone = span.cloneNode(true); const html = clone.outerHTML + "&nbsp;"; const text = clone.innerText || "Attachment"; await navigator.clipboard.write([new ClipboardItem({"text/html": new Blob([html], { type: "text/html" }), "text/plain": new Blob([text], { type: "text/plain" })})]); } catch(err) { alert("Copy failed. Try manual copy."); }
+        try { const clone = span.cloneNode(true); const html = clone.outerHTML + "&nbsp;"; const text = clone.innerText || "Attachment"; await navigator.clipboard.write([new ClipboardItem({"text/html": new Blob([html], { type: "text/html" }), "text/plain": new Blob([text], { type: "text/plain" })})]); } catch(err) { window.appAlert("Copy failed. Try manual copy."); }
         const oldTxt = copyBtn.innerHTML; copyBtn.innerHTML = "check_circle"; setTimeout(() => copyBtn.innerHTML = oldTxt, 1500);
     }
 

@@ -41,6 +41,45 @@ globalEvents.subscribe('store:saved', () => {
     }
 });
 
+window.appAlert = (msg, title="Alert") => {
+    return new Promise(resolve => {
+        const dlg = document.getElementById("appSysDialog");
+        document.getElementById("appSysTitle").textContent = title;
+        document.getElementById("appSysMsg").textContent = msg;
+        document.getElementById("appSysCancel").style.display = "none";
+        document.getElementById("appSysOk").textContent = "OK";
+        document.getElementById("appSysOk").onclick = () => { dlg.style.display = "none"; resolve(); };
+        dlg.style.display = "flex";
+    });
+};
+
+window.appConfirm = (msg, title="Confirm") => {
+    return new Promise(resolve => {
+        const dlg = document.getElementById("appSysDialog");
+        document.getElementById("appSysTitle").textContent = title;
+        document.getElementById("appSysMsg").textContent = msg;
+        document.getElementById("appSysCancel").style.display = "block";
+        document.getElementById("appSysOk").textContent = "Yes";
+        document.getElementById("appSysCancel").onclick = () => { dlg.style.display = "none"; resolve(false); };
+        document.getElementById("appSysOk").onclick = () => { dlg.style.display = "none"; resolve(true); };
+        dlg.style.display = "flex";
+    });
+};
+
+window.appPrompt = (msg, defaultVal="", title="Input Required") => {
+    return new Promise(resolve => {
+        const dlg = document.getElementById("appSysDialog");
+        document.getElementById("appSysTitle").textContent = title;
+        document.getElementById("appSysMsg").innerHTML = `<div>${escapeHtml(msg)}</div><input class="input" id="appSysInput" style="margin-top: 12px; width: 100%;" value="${escapeAttr(defaultVal)}" />`;
+        document.getElementById("appSysCancel").style.display = "block";
+        document.getElementById("appSysOk").textContent = "OK";
+        document.getElementById("appSysCancel").onclick = () => { dlg.style.display = "none"; resolve(null); };
+        document.getElementById("appSysOk").onclick = () => { dlg.style.display = "none"; resolve(document.getElementById("appSysInput").value); };
+        dlg.style.display = "flex";
+        setTimeout(() => document.getElementById("appSysInput").focus(), 50);
+    });
+};
+
 async function bootApp() {
     document.getElementById("renameTabBtn")?.remove();
 
