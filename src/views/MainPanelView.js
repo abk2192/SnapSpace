@@ -37,7 +37,12 @@ export class MainPanelView {
                 if (newId) {
                     setTimeout(() => { 
                         const inp = document.querySelector(`input[data-sid="${newId}"][data-field="name"]`); 
-                        if (inp) { inp.focus(); inp.select(); } 
+                        if (inp) { 
+                            inp.readOnly = false;
+                            inp.classList.add("editing");
+                            inp.focus(); 
+                            inp.select(); 
+                        } 
                     }, 50);
                 }
             }
@@ -87,7 +92,7 @@ export class MainPanelView {
                         if (card && !card.open) card.open = true;
                         input.readOnly = false;
                         input.classList.add("editing"); 
-                        setTimeout(() => { input.focus(); input.setSelectionRange(input.value.length, input.value.length); }, 50);
+                        setTimeout(() => { input.focus(); input.select(); }, 50);
                     }
                 }
             } else if (!e.target.closest('.header-name-input')) {
@@ -115,6 +120,100 @@ export class MainPanelView {
                 e.target.readOnly = true;
                 e.target.classList.remove('editing');
                 if (!e.target.value.trim()) { e.target.value = e.target.placeholder; e.target.dispatchEvent(new Event("input", {bubbles: true})); }
+            }
+        });
+
+        // Touch gestures for Swipe-to-switch Tabs
+        let touchStartX = 0; let touchStartY = 0;
+        document.body.addEventListener('touchstart', e => {
+            if (e.target.closest('.tabs') || e.target.closest('.evidence-table') || e.target.closest('.evidence')) return;
+            if (e.touches && e.touches.length > 0) {
+                touchStartX = e.touches[0].screenX;
+                touchStartY = e.touches[0].screenY;
+            }
+        }, {passive: true});
+
+        document.body.addEventListener('touchend', e => {
+            if (e.target.closest('.tabs') || e.target.closest('.evidence-table') || e.target.closest('.evidence')) return;
+            if (!e.changedTouches || e.changedTouches.length === 0) return;
+            
+            const touchEndX = e.changedTouches[0].screenX;
+            const touchEndY = e.changedTouches[0].screenY;
+            
+            const xDiff = touchStartX - touchEndX;
+            const yDiff = touchStartY - touchEndY;
+            
+            if (Math.abs(xDiff) > Math.abs(yDiff) && Math.abs(xDiff) > 80) { // 80px horizontal swipe threshold
+                const tabs = this.vm.tabs;
+                if (!tabs || tabs.length <= 1) return;
+                const activeId = this.vm.activeTab?.id;
+                const currentIndex = tabs.findIndex(t => t.id === activeId);
+                
+                if (xDiff > 0) { // Swiped left -> Next tab
+                    if (currentIndex < tabs.length - 1) this.vm.setActiveTab(tabs[currentIndex + 1].id);
+                } else { // Swiped right -> Previous tab
+                    if (currentIndex > 0) this.vm.setActiveTab(tabs[currentIndex - 1].id);
+                }
+            }
+        }, {passive: true});
+
+        // Mobile Touch Drag & Drop for Items
+        let touchDragEl = null; let touchDragGhost = null; let touchDragFromIdx = -1;
+
+        document.body.addEventListener("touchstart", (e) => {
+            const handle = e.target.closest('.drag-handle');
+            if (handle) {
+                const scenario = handle.closest('details.scenario');
+                if (scenario) {
+                    touchDragEl = scenario;
+                    touchDragFromIdx = Array.from(scenario.parentNode.children).indexOf(scenario);
+                    
+                    touchDragGhost = scenario.cloneNode(true);
+                    touchDragGhost.style.position = 'fixed'; touchDragGhost.style.zIndex = '9999';
+                    touchDragGhost.style.opacity = '0.8'; touchDragGhost.style.pointerEvents = 'none';
+                    touchDragGhost.style.width = scenario.offsetWidth + 'px';
+                    touchDragGhost.style.left = scenario.getBoundingClientRect().left + 'px';
+                    touchDragGhost.style.top = scenario.getBoundingClientRect().top + 'px';
+                    touchDragGhost.style.boxShadow = '0 10px 25px rgba(0,0,0,0.2)';
+                    document.body.appendChild(touchDragGhost);
+                    
+                    scenario.style.opacity = '0.3';
+                }
+            }
+        }, {passive: false});
+
+        document.body.addEventListener("touchmove", (e) => {
+            if (touchDragGhost && touchDragEl) {
+                e.preventDefault(); // Stop page scroll smoothly during reorder
+                const touch = e.touches[0];
+                touchDragGhost.style.top = (touch.clientY - 20) + 'px';
+                
+                const overEl = document.elementFromPoint(touch.clientX, touch.clientY);
+                if (overEl) {
+                    const overScenario = overEl.closest('details.scenario');
+                    document.querySelectorAll('.drag-over-scenario').forEach(el => el.classList.remove('drag-over-scenario'));
+                    if (overScenario && overScenario !== touchDragEl) overScenario.classList.add('drag-over-scenario');
+                }
+            }
+        }, {passive: false});
+
+        document.body.addEventListener("touchend", (e) => {
+            if (touchDragGhost && touchDragEl) {
+                const touch = e.changedTouches[0];
+                const overEl = document.elementFromPoint(touch.clientX, touch.clientY);
+                let toIdx = -1;
+                
+                if (overEl) {
+                    const overScenario = overEl.closest('details.scenario');
+                    if (overScenario && overScenario !== touchDragEl) toIdx = Array.from(overScenario.parentNode.children).indexOf(overScenario);
+                }
+                
+                touchDragGhost.remove(); touchDragGhost = null;
+                touchDragEl.style.opacity = '1';
+                document.querySelectorAll('.drag-over-scenario').forEach(el => el.classList.remove('drag-over-scenario'));
+                
+                if (toIdx !== -1 && touchDragFromIdx !== -1 && toIdx !== touchDragFromIdx) this.vm.reorderScenarios(touchDragFromIdx, toIdx);
+                touchDragEl = null; touchDragFromIdx = -1;
             }
         });
     }
@@ -159,6 +258,10 @@ export class MainPanelView {
                     dialogService.prompt("Rename tab", tab.name, "Give this tab a short name.").then((val) => {
                         if (val !== undefined && val !== null) this.vm.renameTab(tab.id, val);
                     });
+                    setTimeout(() => {
+                        const dlgInput = document.getElementById("dlgInput");
+                        if (dlgInput) { dlgInput.focus(); dlgInput.select(); }
+                    }, 100);
                     return;
                 }
                 this.vm.setActiveTab(tab.id);
@@ -169,7 +272,15 @@ export class MainPanelView {
         plus.className = "tab plus"; plus.type = "button"; plus.textContent = "＋ New tab";
         plus.addEventListener("click", () => {
             const newScenId = this.vm.addTab();
-            if(newScenId) setTimeout(() => { const inp = document.querySelector(`input[data-sid="${newScenId}"][data-field="name"]`); if (inp) { inp.focus(); inp.select(); } }, 50);
+            if(newScenId) setTimeout(() => { 
+                const inp = document.querySelector(`input[data-sid="${newScenId}"][data-field="name"]`); 
+                if (inp) { 
+                    inp.readOnly = false;
+                    inp.classList.add("editing");
+                    inp.focus(); 
+                    inp.select(); 
+                } 
+            }, 50);
         });
         this.tabsEl.appendChild(plus);
     }
@@ -218,7 +329,7 @@ export class MainPanelView {
             </div>
         `).join("");
 
-        d.innerHTML = `<summary><div class="summary-content"><div style="display:flex; align-items:center; gap:6px; width: 100%;"><span class="material-symbols-outlined" style="font-size: 18px; cursor: grab; color: var(--muted);" onmousedown="this.closest('details').draggable=true" onmouseup="this.closest('details').draggable=false" onmouseleave="this.closest('details').draggable=false">drag_indicator</span><input class="header-name-input" data-field="name" data-sid="${sc.id}" value="${escapeAttr(sc.name||"")}" placeholder="Item ${idx+1}" readonly /><button class="btn secondary action-btn icon-only edit-name-btn" type="button" title="Edit Name"><span class="material-symbols-outlined">edit</span></button></div>${tagsHtml ? `<div class="summary-tags">${tagsHtml}</div>` : ``}</div><div class="summary-actions"><div class="scen-more-wrap"><button class="btn secondary action-btn icon-only scen-more-btn" type="button" title="More Actions"><span class="material-symbols-outlined">more_vert</span></button><div class="scen-more-menu"><button class="btn secondary action-btn" type="button" title="Edit Name" data-edit-name="${sc.id}"><span class="material-symbols-outlined">edit</span> <span class="btn-text">Edit Name</span></button><button class="btn secondary action-btn" type="button" title="Save as Template" data-template="${sc.id}"><span class="material-symbols-outlined">bookmark_add</span> <span class="btn-text">Save Template</span></button><button class="btn secondary action-btn" type="button" title="Duplicate Item" data-duplicate="${sc.id}"><span class="material-symbols-outlined">content_copy</span> <span class="btn-text">Duplicate</span></button><button class="btn secondary action-btn" type="button" title="Move Item" data-move="${sc.id}"><span class="material-symbols-outlined">move_item</span> <span class="btn-text">Move</span></button><button class="btn danger action-btn" type="button" title="Delete Item" data-delete="${sc.id}"><span class="material-symbols-outlined">delete</span> <span class="btn-text">Delete Item</span></button></div></div><div class="chev"><span class="material-symbols-outlined">expand_more</span></div></div></summary><div class="card-body"><div class="label"><span class="material-symbols-outlined" style="font-size: 14px;">tune</span> Properties</div><div class="field-list">${fieldsHtml}<div><button class="btn secondary action-btn" type="button" data-addfield="${sc.id}" style="font-size: 12px; padding: 6px 12px;"><span class="material-symbols-outlined">add</span> Add Field</button></div></div><div class="evidence-wrap"><div class="label" style="margin-bottom: 6px;"><span class="material-symbols-outlined" style="font-size: 14px;">image</span> Notes & Media</div><div class="tbl-controls tbl-row-controls"><button class="tbl-btn tbl-add-row" data-cmd="tableAddRow" title="Add Row Below"><span class="material-symbols-outlined">add</span></button><div class="tbl-divider"></div><button class="tbl-btn tbl-del-row" data-cmd="tableDelRow" title="Delete Row"><span class="material-symbols-outlined">remove</span></button></div><div class="tbl-controls tbl-col-controls"><button class="tbl-btn tbl-add-col" data-cmd="tableAddCol" title="Add Column Right"><span class="material-symbols-outlined">add</span></button><div class="tbl-divider"></div><button class="tbl-btn tbl-del-col" data-cmd="tableDelCol" title="Delete Column"><span class="material-symbols-outlined">remove</span></button></div><div class="wysiwyg-toolbar action-btn"><button class="btn secondary" type="button" data-cmd="bold" title="Bold"><span class="material-symbols-outlined" style="margin:0;">format_bold</span></button><button class="btn secondary" type="button" data-cmd="italic" title="Italic"><span class="material-symbols-outlined" style="margin:0;">format_italic</span></button><button class="btn secondary" type="button" data-cmd="strikeThrough" title="Strikethrough"><span class="material-symbols-outlined" style="margin:0;">strikethrough_s</span></button><button class="btn secondary" type="button" data-cmd="insertUnorderedList" title="Bullet List"><span class="material-symbols-outlined" style="margin:0;">format_list_bulleted</span> <span class="btn-text">List</span></button><button class="btn secondary" type="button" data-cmd="insertOrderedList" title="Numbered List"><span class="material-symbols-outlined" style="margin:0;">format_list_numbered</span> <span class="btn-text">Num List</span></button><button class="btn secondary" type="button" data-cmd="insertCheckbox" title="Insert Checkbox"><span class="material-symbols-outlined" style="margin:0;">check_box</span> <span class="btn-text">Checkbox</span></button><div style="width: 1px; height: 20px; background: var(--outline-2); margin: 0 4px;"></div><button class="btn secondary" type="button" data-cmd="outdent" title="Outdent"><span class="material-symbols-outlined" style="margin:0;">format_indent_decrease</span></button><button class="btn secondary" type="button" data-cmd="indent" title="Indent"><span class="material-symbols-outlined" style="margin:0;">format_indent_increase</span></button><div style="width: 1px; height: 20px; background: var(--outline-2); margin: 0 4px;"></div><button class="btn secondary" type="button" data-cmd="createLink" title="Insert Link"><span class="material-symbols-outlined" style="margin:0;">link</span></button><button class="btn secondary" type="button" data-cmd="insertTable" title="Insert Table"><span class="material-symbols-outlined" style="margin:0;">table_chart</span></button><div style="width: 1px; height: 20px; background: var(--outline-2); margin: 0 4px;"></div><button class="btn secondary action-btn" type="button" data-createfile="${sc.id}" title="Create Text/XML File"><span class="material-symbols-outlined" style="font-size: 16px;">note_add</span> <span class="btn-text">New File</span></button><button class="btn secondary action-btn" type="button" data-attach="${sc.id}" title="Attach File"><span class="material-symbols-outlined" style="font-size: 16px;">attach_file</span> <span class="btn-text">Attach</span></button></div><div class="evidence" contenteditable="true" data-evidence="${sc.id}" spellcheck="false"></div><div class="hint"><span class="material-symbols-outlined" style="font-size: 14px;">info</span> Paste screenshots (Ctrl+V) or use the toolbar to format. Double-click images to view full size.</div><input type="file" hidden data-file="${sc.id}" /></div></div>`;
+        d.innerHTML = `<summary><div class="summary-content"><div style="display:flex; align-items:center; gap:6px; width: 100%;"><span class="drag-handle material-symbols-outlined" style="font-size: 18px; cursor: grab; color: var(--muted);" onmousedown="this.closest('details').draggable=true" onmouseup="this.closest('details').draggable=false" onmouseleave="this.closest('details').draggable=false">drag_indicator</span><input class="header-name-input" data-field="name" data-sid="${sc.id}" value="${escapeAttr(sc.name||"")}" placeholder="Item ${idx+1}" readonly /><button class="btn secondary action-btn icon-only edit-name-btn" type="button" title="Edit Name"><span class="material-symbols-outlined">edit</span></button></div>${tagsHtml ? `<div class="summary-tags">${tagsHtml}</div>` : ``}</div><div class="summary-actions"><div class="scen-more-wrap"><button class="btn secondary action-btn icon-only scen-more-btn" type="button" title="More Actions"><span class="material-symbols-outlined">more_vert</span></button><div class="scen-more-menu"><button class="btn secondary action-btn" type="button" title="Edit Name" data-edit-name="${sc.id}"><span class="material-symbols-outlined">edit</span> <span class="btn-text">Edit Name</span></button><button class="btn secondary action-btn" type="button" title="Save as Template" data-template="${sc.id}"><span class="material-symbols-outlined">bookmark_add</span> <span class="btn-text">Save Template</span></button><button class="btn secondary action-btn" type="button" title="Duplicate Item" data-duplicate="${sc.id}"><span class="material-symbols-outlined">content_copy</span> <span class="btn-text">Duplicate</span></button><button class="btn secondary action-btn" type="button" title="Move Item" data-move="${sc.id}"><span class="material-symbols-outlined">move_item</span> <span class="btn-text">Move</span></button><button class="btn danger action-btn" type="button" title="Delete Item" data-delete="${sc.id}"><span class="material-symbols-outlined">delete</span> <span class="btn-text">Delete Item</span></button></div></div><div class="chev"><span class="material-symbols-outlined">expand_more</span></div></div></summary><div class="card-body"><div class="label"><span class="material-symbols-outlined" style="font-size: 14px;">tune</span> Properties</div><div class="field-list">${fieldsHtml}<div><button class="btn secondary action-btn" type="button" data-addfield="${sc.id}" style="font-size: 12px; padding: 6px 12px;"><span class="material-symbols-outlined">add</span> Add Field</button></div></div><div class="evidence-wrap"><div class="label" style="margin-bottom: 6px;"><span class="material-symbols-outlined" style="font-size: 14px;">image</span> Notes & Media</div><div class="tbl-controls tbl-row-controls"><button class="tbl-btn tbl-add-row" data-cmd="tableAddRow" title="Add Row Below"><span class="material-symbols-outlined">add</span></button><div class="tbl-divider"></div><button class="tbl-btn tbl-del-row" data-cmd="tableDelRow" title="Delete Row"><span class="material-symbols-outlined">remove</span></button></div><div class="tbl-controls tbl-col-controls"><button class="tbl-btn tbl-add-col" data-cmd="tableAddCol" title="Add Column Right"><span class="material-symbols-outlined">add</span></button><div class="tbl-divider"></div><button class="tbl-btn tbl-del-col" data-cmd="tableDelCol" title="Delete Column"><span class="material-symbols-outlined">remove</span></button></div><div class="wysiwyg-toolbar action-btn"><button class="btn secondary" type="button" data-cmd="bold" title="Bold"><span class="material-symbols-outlined" style="margin:0;">format_bold</span></button><button class="btn secondary" type="button" data-cmd="italic" title="Italic"><span class="material-symbols-outlined" style="margin:0;">format_italic</span></button><button class="btn secondary" type="button" data-cmd="strikeThrough" title="Strikethrough"><span class="material-symbols-outlined" style="margin:0;">strikethrough_s</span></button><button class="btn secondary" type="button" data-cmd="insertUnorderedList" title="Bullet List"><span class="material-symbols-outlined" style="margin:0;">format_list_bulleted</span> <span class="btn-text">List</span></button><button class="btn secondary" type="button" data-cmd="insertOrderedList" title="Numbered List"><span class="material-symbols-outlined" style="margin:0;">format_list_numbered</span> <span class="btn-text">Num List</span></button><button class="btn secondary" type="button" data-cmd="insertCheckbox" title="Insert Checkbox"><span class="material-symbols-outlined" style="margin:0;">check_box</span> <span class="btn-text">Checkbox</span></button><div style="width: 1px; height: 20px; background: var(--outline-2); margin: 0 4px;"></div><button class="btn secondary" type="button" data-cmd="outdent" title="Outdent"><span class="material-symbols-outlined" style="margin:0;">format_indent_decrease</span></button><button class="btn secondary" type="button" data-cmd="indent" title="Indent"><span class="material-symbols-outlined" style="margin:0;">format_indent_increase</span></button><div style="width: 1px; height: 20px; background: var(--outline-2); margin: 0 4px;"></div><button class="btn secondary" type="button" data-cmd="createLink" title="Insert Link"><span class="material-symbols-outlined" style="margin:0;">link</span></button><button class="btn secondary" type="button" data-cmd="insertTable" title="Insert Table"><span class="material-symbols-outlined" style="margin:0;">table_chart</span></button><div style="width: 1px; height: 20px; background: var(--outline-2); margin: 0 4px;"></div><button class="btn secondary action-btn" type="button" data-createfile="${sc.id}" title="Create Text/XML File"><span class="material-symbols-outlined" style="font-size: 16px;">note_add</span> <span class="btn-text">New File</span></button><button class="btn secondary action-btn" type="button" data-attach="${sc.id}" title="Attach File"><span class="material-symbols-outlined" style="font-size: 16px;">attach_file</span> <span class="btn-text">Attach</span></button></div><div class="evidence" contenteditable="true" data-evidence="${sc.id}" spellcheck="false"></div><div class="hint"><span class="material-symbols-outlined" style="font-size: 14px;">info</span> Paste screenshots (Ctrl+V) or use the toolbar to format. Double-click images to view full size.</div><input type="file" hidden data-file="${sc.id}" /></div></div>`;
 
         const evidence = d.querySelector(`[data-evidence="${sc.id}"]`);
         evidence.innerHTML = sc.evidenceHtml || "";
