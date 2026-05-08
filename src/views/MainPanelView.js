@@ -51,7 +51,7 @@ export class MainPanelView {
             if (toggleEditBtn) {
                 document.body.classList.toggle("readonly");
                 const isLocked = document.body.classList.contains("readonly");
-                toggleEditBtn.innerHTML = `<span class="material-symbols-outlined">${isLocked ? 'lock' : 'lock_open'}</span>`;
+                toggleEditBtn.innerHTML = `<span class="material-symbols-outlined">${isLocked ? 'lock' : 'lock_open'}</span> <span class="btn-text">${isLocked ? 'Unlock Mode' : 'Read-Only Mode'}</span>`;
                 toggleEditBtn.title = isLocked ? "Unlock (Edit Mode)" : "Lock (Read-Only Mode)";
                 document.querySelectorAll('.evidence').forEach(el => el.setAttribute('contenteditable', isLocked ? 'false' : 'true'));
             }

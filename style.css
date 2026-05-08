@@ -372,6 +372,15 @@
   body.readonly #pillAddBtn,
   body.readonly .hint { display: none !important; }
 
+  body.readonly #pillUnlockBtn { 
+      display: grid !important; 
+      background: var(--surface) !important; 
+      color: var(--text) !important; 
+      border: 1px solid var(--outline); 
+      box-shadow: var(--shadow-2), 0 0 0 6px var(--bg) !important;
+  }
+  body.readonly #pillUnlockBtn:hover, body.readonly #pillUnlockBtn:active { box-shadow: var(--shadow), 0 0 0 6px var(--bg) !important; }
+
   body.readonly .field-list .input { pointer-events: none; border-color: transparent; background: transparent; padding: 4px 0; }
   body.readonly .field-row { background: transparent !important; }
 

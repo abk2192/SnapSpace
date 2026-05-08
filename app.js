@@ -115,19 +115,12 @@ async function bootApp() {
         const tabTools = document.createElement('div');
         tabTools.className = 'tab-tools';
         
-        const toggleEditBtn = document.createElement('button');
-        toggleEditBtn.className = 'btn secondary icon-only';
-        toggleEditBtn.id = 'toggleEditBtn';
-        toggleEditBtn.innerHTML = '<span class="material-symbols-outlined">lock_open</span>';
-        toggleEditBtn.title = "Lock (Read-Only Mode)";
-        
         const toggleAllBtn = document.createElement('button');
         toggleAllBtn.className = 'btn secondary icon-only';
         toggleAllBtn.id = 'toggleAllBtn';
         toggleAllBtn.innerHTML = '<span class="material-symbols-outlined">unfold_less</span>';
         toggleAllBtn.title = "Collapse All";
         
-        tabTools.appendChild(toggleEditBtn);
         tabTools.appendChild(toggleAllBtn);
         tabsbar.appendChild(tabTools);
     }
@@ -182,6 +175,7 @@ async function bootApp() {
         mobilePill.innerHTML = `
             <button class="pill-btn" id="pillSearchBtn" title="Search"><span class="material-symbols-outlined">search</span></button>
             <button class="pill-btn pill-add" id="pillAddBtn"><span class="material-symbols-outlined">add</span> <span class="pill-text">Add Item</span></button>
+            <button class="pill-btn pill-add" id="pillUnlockBtn" style="display: none;"><span class="material-symbols-outlined">lock</span></button>
             <button class="pill-btn" id="pillMoreBtn" title="More Actions"><span class="material-symbols-outlined">apps</span></button>
         `;
         document.body.appendChild(mobilePill);
@@ -191,6 +185,9 @@ async function bootApp() {
         });
         document.getElementById("pillAddBtn").addEventListener("click", () => {
             document.getElementById("addScenarioBtn")?.click();
+        });
+        document.getElementById("pillUnlockBtn").addEventListener("click", () => {
+            document.getElementById("toggleEditBtn")?.click();
         });
         document.getElementById("pillMoreBtn").addEventListener("click", (e) => {
             e.stopPropagation();
