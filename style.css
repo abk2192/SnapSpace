@@ -393,6 +393,10 @@
   body.readonly .evidence { border-color: transparent !important; background: transparent !important; }
   body.readonly #workspaceTitleInput { pointer-events: none; }
 
+  /* Read-Only Checklist Tapping */
+  body.readonly .evidence div:has(> .editor-checkbox), body.readonly .evidence p:has(> .editor-checkbox), body.readonly .evidence li:has(> .editor-checkbox) { cursor: pointer; border-radius: 6px; padding: 2px; margin-left: -2px; }
+  @media (hover: hover) { body.readonly .evidence div:has(> .editor-checkbox):hover, body.readonly .evidence p:has(> .editor-checkbox):hover, body.readonly .evidence li:has(> .editor-checkbox):hover { background: var(--surface-2); } }
+
   /* Export UI Indentation CSS */
   .export-tab-group { margin-bottom: 16px; }
   .export-tab-label { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; cursor: pointer; padding: 4px 0; color: var(--text); }

@@ -248,6 +248,16 @@ export class TransferView {
     }
     let imgClickTimerExport = null;
     document.addEventListener("click", (e) => {
+      const block = e.target.closest('.evidence div, .evidence p, .evidence li');
+      if (block && e.target.tagName !== 'INPUT' && e.target.tagName !== 'A' && e.target.tagName !== 'IMG' && !e.target.closest('summary') && !e.target.closest('.copy-att')) {
+          const cb = block.querySelector('.editor-checkbox');
+          if (cb && (block.firstElementChild === cb || block.firstChild === cb || cb.parentNode === block)) {
+              e.preventDefault();
+              cb.checked = !cb.checked;
+              cb.dispatchEvent(new Event('change', { bubbles: true }));
+              return;
+          }
+      }
       if (e.target.closest("#expandAllBtn")) { document.querySelectorAll("details.scenario").forEach(d => d.open = true); return; }
       if (e.target.closest("#collapseAllBtn")) { document.querySelectorAll("details.scenario").forEach(d => d.open = false); return; }
       const img = e.target.closest(".evidence img"); 
@@ -319,25 +329,55 @@ export class TransferView {
               if (current && current.tagName === 'BR') wrapper.appendChild(current);
               block = wrapper;
             }
+            const baseIndent = parseInt(block.style.marginLeft || '0', 10);
+            const isChecked = e.target.checked;
             block.style.transition = 'all 0.3s ease';
-            if (e.target.checked) { block.style.textDecoration = 'line-through'; block.style.opacity = '0.5'; block.style.transform = 'scale(0.98) translateX(4px)'; }
+            if (isChecked) { block.style.textDecoration = 'line-through'; block.style.opacity = '0.5'; block.style.transform = 'scale(0.98) translateX(4px)'; }
             else { block.style.textDecoration = ''; block.style.opacity = '1'; block.style.transform = 'scale(1) translateX(0)'; }
+            let child = block.nextElementSibling;
+            while (child && child.nodeType === 1 && child.querySelector && child.querySelector('.editor-checkbox')) {
+              let childInd = parseInt(child.style.marginLeft || '0', 10);
+              if (childInd <= baseIndent) break;
+              const childCb = child.querySelector('.editor-checkbox');
+              if (childCb) {
+                childCb.checked = isChecked;
+                if (isChecked) childCb.setAttribute('checked', 'checked'); else childCb.removeAttribute('checked');
+                child.style.transition = 'all 0.3s ease';
+                if (isChecked) { child.style.textDecoration = 'line-through'; child.style.opacity = '0.5'; child.style.transform = 'scale(0.98) translateX(4px)'; }
+                else { child.style.textDecoration = ''; child.style.opacity = '1'; child.style.transform = 'scale(1) translateX(0)'; }
+              }
+              child = child.nextElementSibling;
+            }
             setTimeout(() => {
-              let groupStart = block; while (groupStart.previousElementSibling && groupStart.previousElementSibling.nodeType === 1 && groupStart.previousElementSibling.querySelector && groupStart.previousElementSibling.querySelector('.editor-checkbox')) { groupStart = groupStart.previousElementSibling; }
-              let groupEnd = block; while (groupEnd.nextElementSibling && groupEnd.nextElementSibling.nodeType === 1 && groupEnd.nextElementSibling.querySelector && groupEnd.nextElementSibling.querySelector('.editor-checkbox')) { groupEnd = groupEnd.nextElementSibling; }
-              let items = []; let curr = groupStart; while (curr) { items.push(curr); if (curr === groupEnd) break; curr = curr.nextElementSibling; }
-              let unchecked = []; let checked = [];
-              items.forEach(item => {
-                const cb = item.querySelector('.editor-checkbox'); item.style.transition = 'all 0.3s ease';
-                if (cb && cb.checked) { item.style.textDecoration = 'line-through'; item.style.opacity = '0.5'; item.style.transform = 'scale(0.98) translateX(4px)'; checked.push(item); }
-                else { item.style.textDecoration = ''; item.style.opacity = '1'; item.style.transform = 'scale(1) translateX(0)'; unchecked.push(item); }
-              });
-              const newOrder = [...unchecked, ...checked];
-              let needsReorder = false; for (let i = 0; i < items.length; i++) { if (items[i] !== newOrder[i]) { needsReorder = true; break; } }
+              let firstPeer = block; let currNode = block;
+              while (currNode.previousElementSibling && currNode.previousElementSibling.nodeType === 1 && currNode.previousElementSibling.querySelector && currNode.previousElementSibling.querySelector('.editor-checkbox')) {
+                let ind = parseInt(currNode.previousElementSibling.style.marginLeft || '0', 10);
+                if (ind < baseIndent) break;
+                if (ind === baseIndent) firstPeer = currNode.previousElementSibling;
+                currNode = currNode.previousElementSibling;
+              }
+              let bundles = []; let currentBundle = []; let currentBundleChecked = false; currNode = firstPeer; let lastNodeInGroup = firstPeer;
+              while (currNode && currNode.nodeType === 1 && currNode.querySelector && currNode.querySelector('.editor-checkbox')) {
+                let ind = parseInt(currNode.style.marginLeft || '0', 10);
+                if (ind < baseIndent) break;
+                const cb = currNode.querySelector('.editor-checkbox'); currNode.style.transition = 'all 0.3s ease';
+                if (cb && cb.checked) { currNode.style.textDecoration = 'line-through'; currNode.style.opacity = '0.5'; currNode.style.transform = 'scale(0.98) translateX(4px)'; }
+                else { currNode.style.textDecoration = ''; currNode.style.opacity = '1'; currNode.style.transform = 'scale(1) translateX(0)'; }
+                if (ind === baseIndent) {
+                  if (currentBundle.length > 0) bundles.push({ elements: currentBundle, checked: currentBundleChecked });
+                  currentBundle = [currNode]; currentBundleChecked = cb ? cb.checked : false;
+                } else { if (currentBundle.length > 0) currentBundle.push(currNode); }
+                lastNodeInGroup = currNode; currNode = currNode.nextElementSibling;
+              }
+              if (currentBundle.length > 0) bundles.push({ elements: currentBundle, checked: currentBundleChecked });
+              const uncheckedBundles = bundles.filter(b => !b.checked); const checkedBundles = bundles.filter(b => b.checked);
+              const newOrderElements = [...uncheckedBundles.flatMap(b => b.elements), ...checkedBundles.flatMap(b => b.elements)];
+              const originalElements = bundles.flatMap(b => b.elements);
+              let needsReorder = false; for (let i = 0; i < originalElements.length; i++) { if (originalElements[i] !== newOrderElements[i]) { needsReorder = true; break; } }
               if (needsReorder) {
                 const savedScrollY = window.scrollY; const savedEvScroll = ev.scrollTop;
-                const anchor = document.createElement('span'); block.parentNode.insertBefore(anchor, groupEnd.nextSibling);
-                newOrder.forEach(item => anchor.parentNode.insertBefore(item, anchor)); anchor.remove();
+                const anchor = document.createElement('span'); lastNodeInGroup.parentNode.insertBefore(anchor, lastNodeInGroup.nextSibling);
+                newOrderElements.forEach(item => anchor.parentNode.insertBefore(item, anchor)); anchor.remove();
                 ev.scrollTop = savedEvScroll; window.scrollTo(window.scrollX, savedScrollY);
               }
             }, 300);
