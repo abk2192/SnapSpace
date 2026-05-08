@@ -10,7 +10,6 @@ export class MainPanelView {
         this.draggedTabIdx = null;
 
         this.bindEvents();
-
         globalEvents.subscribe('workspaces:changed', () => this.render());
         globalEvents.subscribe('workspace:selected', () => {
             const wsTitleInput = document.getElementById("workspaceTitleInput");
@@ -292,6 +291,28 @@ export class MainPanelView {
             }, 50);
         });
         this.tabsEl.appendChild(plus);
+
+        // Ensure active tab and surrounding tabs remain visible on swipe/click
+        setTimeout(() => {
+            const activeTabEl = this.tabsEl.querySelector('.tab.active');
+            if (activeTabEl) {
+                const prev = activeTabEl.previousElementSibling;
+                const next = activeTabEl.nextElementSibling;
+                
+                const elLeft = (prev && prev.classList.contains('tab')) ? prev : activeTabEl;
+                const elRight = (next && next.classList.contains('tab') && !next.classList.contains('plus')) ? next : activeTabEl;
+                
+                const cRect = this.tabsEl.getBoundingClientRect();
+                const lRect = elLeft.getBoundingClientRect();
+                const rRect = elRight.getBoundingClientRect();
+                
+                if (lRect.left < cRect.left) {
+                    this.tabsEl.scrollBy({ left: lRect.left - cRect.left - 16, behavior: 'smooth' });
+                } else if (rRect.right > cRect.right) {
+                    this.tabsEl.scrollBy({ left: rRect.right - cRect.right + 16, behavior: 'smooth' });
+                }
+            }
+        }, 50);
     }
 
     renderPanel() {

@@ -62,6 +62,39 @@ export class EditorView {
                 } else if (cmd === 'insertTable') {
                     document.execCommand("insertHTML", false, this.vm.generateTableHtml());
                     return;
+                } else if (cmd === 'indent' || cmd === 'outdent') {
+                    const sel = window.getSelection();
+                    if (sel && sel.rangeCount > 0) {
+                        const ev = cmdBtn.closest('.evidence-wrap').querySelector('.evidence');
+                        if (ev && ev.contains(sel.anchorNode)) {
+                            if (ev === sel.anchorNode || (sel.anchorNode.nodeType === 3 && sel.anchorNode.parentNode === ev)) {
+                                document.execCommand('formatBlock', false, 'div');
+                            }
+                            
+                            let blocks = new Set();
+                            const range = sel.getRangeAt(0);
+                            Array.from(ev.children).forEach(child => {
+                                if (['DIV', 'P', 'LI', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6'].includes(child.tagName)) {
+                                    if (range.intersectsNode(child) || child.contains(sel.anchorNode) || child.contains(sel.focusNode)) {
+                                        blocks.add(child);
+                                    }
+                                }
+                            });
+                            
+                            if (blocks.size > 0) {
+                                blocks.forEach(b => {
+                                    let currentMargin = parseInt(b.style.marginLeft || '0', 10);
+                                    if (cmd === 'indent') currentMargin += 24;
+                                    else currentMargin = Math.max(0, currentMargin - 24);
+                                    if (currentMargin > 0) b.style.marginLeft = currentMargin + 'px';
+                                    else b.style.marginLeft = '';
+                                });
+                                ev.dispatchEvent(new Event('input', { bubbles: true }));
+                                this.updateToolbarState();
+                                return;
+                            }
+                        }
+                    }
                 } else if (cmd.startsWith('table')) {
                     const sel = window.getSelection(); let node = sel.anchorNode; if (node?.nodeType === 3) node = node.parentNode;
                     const cell = node?.closest('td, th'); const row = cell?.closest('tr'); const table = row?.closest('table.evidence-table');
@@ -230,6 +263,26 @@ export class EditorView {
         });
 
         document.addEventListener('keydown', e => {
+            if (e.key === 'Tab') {
+                const sel = window.getSelection();
+                if (sel && sel.rangeCount > 0) {
+                    let node = sel.anchorNode;
+                    if (node && node.nodeType === 3) node = node.parentNode;
+                    if (node && typeof node.closest === 'function') {
+                        const ev = node.closest('.evidence');
+                        if (ev) {
+                            e.preventDefault();
+                            const wrap = ev.closest('.evidence-wrap');
+                            if (wrap) {
+                                const btn = wrap.querySelector(`[data-cmd="${e.shiftKey ? 'outdent' : 'indent'}"]`);
+                                if (btn) btn.click();
+                            }
+                            return;
+                        }
+                    }
+                }
+            }
+
             if (e.key === 'Backspace') {
                 const sel = window.getSelection();
                 if (sel && sel.isCollapsed && sel.rangeCount > 0) {
@@ -293,6 +346,23 @@ export class EditorView {
                 
                 document.execCommand('insertParagraph');
                 document.execCommand('insertHTML', false, '<input type="checkbox" class="editor-checkbox" style="width:14px;height:14px;margin-right:6px;vertical-align:middle;cursor:pointer;" contenteditable="false">&nbsp;');
+                
+                // Clear inherited inline styles from the checked block
+                const newSel = window.getSelection();
+                if (newSel && newSel.rangeCount > 0) {
+                    let newContainer = newSel.getRangeAt(0).startContainer;
+                    if (newContainer.nodeType === 3) newContainer = newContainer.parentNode;
+                    let newBlock = newContainer;
+                    while (newBlock && newBlock.parentElement !== evidence && !['DIV', 'P', 'LI', 'TD', 'TH'].includes(newBlock.tagName)) {
+                        newBlock = newBlock.parentElement;
+                    }
+                    if (newBlock && newBlock !== evidence) {
+                        newBlock.style.textDecoration = '';
+                        newBlock.style.opacity = '1';
+                        newBlock.style.transform = 'scale(1) translateX(0)';
+                    }
+                }
+
                 evidence.dispatchEvent(new Event('input', { bubbles: true }));
             }
         });
