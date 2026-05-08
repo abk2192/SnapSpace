@@ -43,8 +43,20 @@ export class EditorView {
                     if (ev) ev.focus();
                     if (this.savedRange) { const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(this.savedRange); }
                 } else if (cmd === 'insertCheckbox') {
-                    document.execCommand("insertHTML", false, '<input type="checkbox" class="editor-checkbox" style="width:14px;height:14px;margin-right:6px;vertical-align:middle;cursor:pointer;" contenteditable="false">&nbsp;');
                     const ev = cmdBtn.closest('.evidence-wrap').querySelector('.evidence');
+                    if (ev) {
+                        const sel = window.getSelection();
+                        if (sel && sel.rangeCount && ev.contains(sel.anchorNode)) {
+                            let node = sel.anchorNode;
+                            if (node.nodeType === 3) node = node.parentNode;
+                            let block = node;
+                            while (block && block !== ev && !['DIV', 'P', 'LI', 'TD', 'TH'].includes(block.tagName)) {
+                                block = block.parentNode;
+                            }
+                            if (block === ev) document.execCommand('formatBlock', false, 'div');
+                        }
+                    }
+                    document.execCommand("insertHTML", false, '<input type="checkbox" class="editor-checkbox" style="width:14px;height:14px;margin-right:6px;vertical-align:middle;cursor:pointer;" contenteditable="false">&nbsp;');
                     if (ev) ev.dispatchEvent(new Event('input', { bubbles: true }));
                     return;
                 } else if (cmd === 'insertTable') {
@@ -270,7 +282,7 @@ export class EditorView {
             }
             if (!block || block === evidence) return;
         
-            const firstChild = block.firstChild;
+            const firstChild = block.firstElementChild || block.firstChild;
             if (firstChild && firstChild.nodeName === 'INPUT' && firstChild.type === 'checkbox' && firstChild.classList.contains('editor-checkbox')) {
                 e.preventDefault();
                 if (block.textContent.trim() === '') {
@@ -308,6 +320,49 @@ export class EditorView {
                 reader.readAsDataURL(blob);
             }
             document.getElementById('cfBackdrop').style.display = 'none'; this.targetScenarioForFile = null;
+        });
+
+        document.getElementById('fpCloseBtn')?.addEventListener('click', () => { document.getElementById('filePreviewBackdrop').style.display = 'none'; this.activeAttachmentNode = null; });
+        
+        document.getElementById('fpSaveBtn')?.addEventListener('click', () => {
+            const newContent = document.getElementById('fpContent')?.value || "";
+            if (this.activeAttachmentNode) {
+                const blob = new Blob([newContent], { type: 'text/plain' });
+                const reader = new FileReader();
+                reader.onload = () => {
+                    this.activeAttachmentNode.dataset.dataurl = reader.result;
+                    this.activeAttachmentNode.href = reader.result;
+                    const copyBtn = this.activeAttachmentNode.parentElement.querySelector('.copy-att');
+                    if (copyBtn) copyBtn.dataset.copy = reader.result;
+                    const ev = this.activeAttachmentNode.closest('.evidence');
+                    if (ev) ev.dispatchEvent(new Event('input', { bubbles: true }));
+                    
+                    const btn = document.getElementById('fpSaveBtn');
+                    const origHtml = btn.innerHTML;
+                    btn.innerHTML = '<span class="material-symbols-outlined">check</span> Saved';
+                    setTimeout(() => { btn.innerHTML = origHtml; }, 1500);
+                };
+                reader.readAsDataURL(blob);
+            }
+        });
+
+        document.getElementById('fpCopyBtn')?.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(document.getElementById('fpContent')?.value || "");
+                const btn = document.getElementById('fpCopyBtn');
+                const orig = btn.innerHTML;
+                btn.innerHTML = '<span class="material-symbols-outlined">check_circle</span> Copied!';
+                setTimeout(() => { btn.innerHTML = orig; }, 1500);
+            } catch(err) { window.appAlert("Failed to copy text."); }
+        });
+        
+        document.getElementById('fpDownloadBtn')?.addEventListener('click', () => {
+            if (this.activeAttachmentNode) {
+                const a = document.createElement("a");
+                a.href = this.activeAttachmentNode.href;
+                a.download = this.activeAttachmentNode.dataset.name || "download";
+                document.body.appendChild(a); a.click(); setTimeout(() => { a.remove(); }, 500);
+            }
         });
     }
 
@@ -387,8 +442,23 @@ export class EditorView {
         e.preventDefault(); const dataurl = a.dataset.dataurl; if (!dataurl) return; const name = a.dataset.name || a.getAttribute("download") || "attachment";
         const [meta, b64] = dataurl.split(","); const mime = (/data:(.*?);base64/.exec(meta) || [])[1] || "application/octet-stream";
         const bin = atob(b64); const arr = new Uint8Array(bin.length); for (let i=0; i<bin.length; i++) arr[i] = bin.charCodeAt(i); const blob = new Blob([arr], {type:mime});
-        const ext = (name.match(/\.([a-z0-9]+)$/i) || [])[1]?.toLowerCase() || ""; const isText = !["doc", "docx", "xls", "xlsx", "pdf", "zip", "tar", "gz", "exe", "dll"].includes(ext) && (mime.startsWith('text/') || mime.includes('json') || mime.includes('xml') || mime.includes('sql') || mime.includes('javascript') || mime.includes('plain'));
-        if (isText) { const r = new FileReader(); r.onload = (re) => { document.getElementById('fpTitle').textContent = name; document.getElementById('fpContent').textContent = re.target.result; document.getElementById('filePreviewBackdrop').style.display = 'flex'; document.getElementById('fpDownloadBtn').onclick = () => { const u = URL.createObjectURL(blob); const t = document.createElement("a"); t.href = u; t.download = name; document.body.appendChild(t); t.click(); setTimeout(() => { t.remove(); URL.revokeObjectURL(u); }, 500); }; }; r.readAsText(blob); return; }
+        const ext = (name.match(/\.([a-z0-9]+)$/i) || [])[1]?.toLowerCase() || ""; 
+        
+        const binaryExts = ["doc", "docx", "xls", "xlsx", "pdf", "zip", "tar", "gz", "exe", "dll", "png", "jpg", "jpeg", "gif", "bmp", "mp3", "mp4", "wav"];
+        const isText = !binaryExts.includes(ext) && (mime.startsWith('text/') || mime.includes('json') || mime.includes('xml') || mime.includes('sql') || mime.includes('javascript') || mime.includes('plain') || mime === 'application/x-www-form-urlencoded' || ["txt", "md", "csv", "log"].includes(ext));
+        
+        if (isText) { 
+            const r = new FileReader(); 
+            r.onload = (re) => { 
+                this.activeAttachmentNode = a;
+                document.getElementById('fpTitle').textContent = name; 
+                document.getElementById('fpContent').value = re.target.result;
+                document.getElementById('fpContent').readOnly = document.body.classList.contains("readonly");
+                document.getElementById('filePreviewBackdrop').style.display = 'flex'; 
+            }; 
+            r.readAsText(blob); 
+            return; 
+        }
         const url = URL.createObjectURL(blob); const tmp = document.createElement("a"); tmp.href = url; tmp.download = name; document.body.appendChild(tmp); tmp.click(); setTimeout(() => { tmp.remove(); URL.revokeObjectURL(url); }, 500);
     }
 }

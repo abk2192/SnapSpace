@@ -26,7 +26,7 @@
 
     <div class="sidebar-inner" style="border-top: 1px solid var(--outline-2); padding: 8px; padding-bottom: 16px; background: var(--surface-2);">
        <details class="sidebar-settings" style="cursor: pointer;">
-         <summary class="menu-item" style="display: flex; align-items: center; gap: 12px; justify-content: space-between; font-weight: 700; padding: 10px 12px; list-style: none;">
+         <summary class="settings-summary" style="display: flex; align-items: center; gap: 12px; justify-content: space-between; font-weight: 700; padding: 10px 12px; list-style: none;">
            <div style="display: flex; align-items: center; gap: 12px;">
              <span class="material-symbols-outlined" style="color: var(--muted);">settings</span>
              <span>Settings & Tools</span>
@@ -37,8 +37,8 @@
             <button class="menu-item" id="compareBtn" style="padding: 8px 12px; font-size: 13px;"><span class="material-symbols-outlined" style="font-size: 18px;">compare_arrows</span> Compare Mode</button>
             <button class="menu-item" id="tplOpenBtn" style="padding: 8px 12px; font-size: 13px;"><span class="material-symbols-outlined" style="font-size: 18px;">bookmarks</span> Templates</button>
             <button class="menu-item" id="themeBtn" style="padding: 8px 12px; font-size: 13px;"><span class="material-symbols-outlined" style="font-size: 18px;">palette</span> Theme Settings</button>
-            <button class="menu-item" id="backupBtn" style="padding: 8px 12px; font-size: 13px;"><span class="material-symbols-outlined" style="font-size: 18px;">save</span> Backup Projects</button>
-            <button class="menu-item" id="restoreBtn" style="padding: 8px 12px; font-size: 13px;"><span class="material-symbols-outlined" style="font-size: 18px;">restore</span> Restore Projects</button>
+            <button class="menu-item" id="backupBtn" style="padding: 8px 12px; font-size: 13px;"><span class="material-symbols-outlined" style="font-size: 18px;">save</span> Backup Workspace</button>
+            <button class="menu-item" id="restoreBtn" style="padding: 8px 12px; font-size: 13px;"><span class="material-symbols-outlined" style="font-size: 18px;">restore</span> Restore Workspace</button>
             <button class="menu-item" id="forceUpdateBtn" style="padding: 8px 12px; font-size: 13px;"><span class="material-symbols-outlined" style="font-size: 18px;">system_update_alt</span> Force Update</button>
             <button class="menu-item" id="docsBtn" style="padding: 8px 12px; font-size: 13px;"><span class="material-symbols-outlined" style="font-size: 18px;">menu_book</span> Documentation</button>
          </div>
@@ -65,7 +65,7 @@
       <span id="saveIndicator" style="font-size: 12px; color: var(--primary); font-weight: 700; margin-right: 8px; opacity: 0; transition: opacity 0.3s; display: flex; align-items: center; gap: 4px; pointer-events: none; flex-shrink: 0;"><span class="material-symbols-outlined" style="font-size: 16px;">cloud_done</span> Saved</span>
       <div class="actions">
         <div id="searchWrap" class="search-wrap">
-            <input type="text" id="searchInput" class="input" placeholder="Search Projects..." title="Shortcut: Ctrl+Shift+F" style="padding-left: 32px; height: 36px; border-radius: 18px;" autocomplete="off" />
+            <input type="text" id="searchInput" class="input" placeholder="Search Projects..." title="Shortcut: Ctrl+K" style="padding-left: 32px; height: 36px; border-radius: 18px;" autocomplete="off" />
             <span class="material-symbols-outlined" style="position: absolute; left: 10px; top: 10px; font-size: 16px; color: var(--muted); pointer-events: none;">search</span>
             <div id="searchDropdown" class="search-dropdown"></div>
         </div>
@@ -85,7 +85,7 @@
   <main>
     <div class="panel-head">
       <div style="flex: 1; min-width: 0;">
-        <div class="panel-meta" id="panelMeta"><span class="material-symbols-outlined" style="font-size: 16px;">lightbulb</span> Tip: Press Ctrl+Shift+F to search all projects. Paste screenshots directly into Notes.</div>
+        <div class="panel-meta" id="panelMeta"><span class="material-symbols-outlined" style="font-size: 16px;">lightbulb</span> Tip: Press Ctrl+K to search all projects. Paste screenshots directly into Notes.</div>
       </div>
       <div style="display: flex; gap: 8px; flex-shrink: 0;">
         <button class="btn secondary" id="expandAllBtn" style="padding: 6px 10px; font-size: 12px;"><span class="material-symbols-outlined" style="font-size: 16px;">unfold_more</span> Expand All</button>
@@ -288,17 +288,18 @@
   </div>
 
   <div class="dlg-backdrop" id="filePreviewBackdrop" role="dialog" aria-modal="true" style="z-index: 1000;">
-    <div class="dlg" style="max-width: 800px; max-height: 90vh;">
-      <div class="dlg-head" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px;">
+    <div class="dlg" style="max-width: 800px; max-height: 90vh; display: flex; flex-direction: column;">
+      <div class="dlg-head" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; flex-shrink: 0;">
         <span id="fpTitle" style="word-break: break-all;">File Preview</span>
         <div>
           <button class="btn secondary" id="fpCopyBtn" style="padding: 6px 12px; margin-right: 8px;"><span class="material-symbols-outlined">content_copy</span> Copy Text</button>
+          <button class="btn" id="fpSaveBtn" style="padding: 6px 12px; margin-right: 8px;"><span class="material-symbols-outlined">save</span> Save</button>
           <button class="btn" id="fpDownloadBtn" style="padding: 6px 12px; margin-right: 8px;"><span class="material-symbols-outlined">download</span> Download</button>
           <button class="btn secondary" id="fpCloseBtn" style="padding: 6px 12px;">Close</button>
         </div>
       </div>
-      <div class="dlg-body" style="padding: 0; background: var(--input-bg);">
-        <pre id="fpContent" style="margin: 0; padding: 16px; font-family: monospace; font-size: 13px; white-space: pre-wrap; word-wrap: break-word; color: var(--text);"></pre>
+      <div class="dlg-body" style="padding: 0; background: var(--input-bg); flex: 1; display: flex; flex-direction: column;">
+        <textarea id="fpContent" style="margin: 0; padding: 16px; font-family: monospace; font-size: 13px; white-space: pre-wrap; word-wrap: break-word; color: var(--text); background: transparent; border: none; outline: none; resize: none; width: 100%; flex: 1; min-height: 50vh;"></textarea>
       </div>
     </div>
   </div>
@@ -313,13 +314,14 @@
       <div class="dlg-body" style="line-height: 1.6; font-size: 14px;">
         <div class="label">Keyboard Shortcuts</div>
         <ul style="margin-top: 4px; padding-left: 20px; margin-bottom: 16px;">
-          <li><code>Ctrl + Shift + F</code> : Search all projects</li>
+          <li><code>Ctrl + K</code> : Search all projects</li>
           <li><code>Ctrl + S</code> : Export project</li>
           <li><code>Ctrl + O</code> : Import project</li>
           <li><code>Alt + N</code> : Add new item</li>
           <li><code>Alt + T</code> : Add new tab</li>
           <li><code>Alt + R</code> : Rename tab</li>
           <li><code>Alt + F</code> : Add new field to current item</li>
+          <li><code>Alt + H</code> : Open Help & Shortcuts</li>
         </ul>
         <div class="label">Tips</div>
         <ul style="margin-top: 4px; padding-left: 20px;">

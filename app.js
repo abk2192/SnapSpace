@@ -21,7 +21,6 @@ import { TransferView } from './src/views/TransferView.js';
 import { EditorVM } from './src/viewmodels/EditorVM.js';
 import { EditorView } from './src/views/EditorView.js';
 import { dialogService } from './src/services/DialogService.js';
-import { ShortcutService } from './src/services/ShortcutService.js';
 
 /* ========= PWA Service Worker Registration ========= */
 registerServiceWorker();
@@ -212,7 +211,32 @@ async function bootApp() {
     await store.init();
     
     dialogService.init();
-    new ShortcutService();
+    
+    // Global Keyboard Shortcuts
+    document.addEventListener('keydown', (e) => {
+        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+        const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
+
+        if (cmdOrCtrl && e.key.toLowerCase() === 's') {
+            e.preventDefault(); document.getElementById('exportHtmlBtn')?.click();
+        } else if (cmdOrCtrl && e.key.toLowerCase() === 'o') {
+            e.preventDefault(); document.getElementById('importBtn')?.click();
+        } else if (e.altKey && e.key.toLowerCase() === 'n') {
+            e.preventDefault(); document.getElementById('addScenarioBtn')?.click();
+        } else if (e.altKey && e.key.toLowerCase() === 't') {
+            e.preventDefault(); document.querySelector('.tab.plus')?.click();
+        } else if (e.altKey && e.key.toLowerCase() === 'r') {
+            e.preventDefault(); document.querySelector('.tab.active')?.click();
+        } else if (e.altKey && e.key.toLowerCase() === 'f') {
+            e.preventDefault();
+            const activeScenario = document.activeElement.closest('details.scenario') || document.querySelector('details.scenario[open]');
+            if (activeScenario) {
+                activeScenario.querySelector('[data-addfield]')?.click();
+            }
+        } else if (e.altKey && e.key.toLowerCase() === 'h') {
+            e.preventDefault(); document.getElementById('docsBtn')?.click();
+        }
+    });
 
     // Initialize Sidebar Subsystem
     const sidebarVM = new SidebarVM();

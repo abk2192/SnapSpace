@@ -77,7 +77,7 @@ export class SearchView {
         document.addEventListener("keydown", (e) => {
             const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
             const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
-            if (cmdOrCtrl && (e.key.toLowerCase() === 'k' || (e.shiftKey && e.key.toLowerCase() === 'f'))) {
+            if (cmdOrCtrl && e.key.toLowerCase() === 'k') {
                 e.preventDefault();
                 this.open();
             }
