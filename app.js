@@ -30,6 +30,17 @@ themeService.applyTheme();
 document.querySelectorAll('[data-set-theme]').forEach(el => { el.addEventListener('click', (e) => { themeService.setTheme(e.target.dataset.setTheme); }); });
 document.querySelectorAll('[data-set-color]').forEach(el => { el.addEventListener('click', (e) => { themeService.setColor(e.target.dataset.setColor); }); });
 
+/* ========= Viewport / Keyboard Offset Engine ========= */
+if (window.visualViewport) {
+    const updateKeyboardOffset = () => {
+        const offset = window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop;
+        document.documentElement.style.setProperty('--keyboard-offset', `${Math.max(0, offset)}px`);
+    };
+    window.visualViewport.addEventListener('resize', updateKeyboardOffset);
+    window.visualViewport.addEventListener('scroll', updateKeyboardOffset);
+    updateKeyboardOffset();
+}
+
 /* ========= Global Reactivity Subscribers ========= */
 globalEvents.subscribe('store:saved', () => {
     const ind = document.getElementById("saveIndicator");
