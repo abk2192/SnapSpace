@@ -53,11 +53,15 @@ export class MainPanelView {
 
         document.addEventListener('click', e => {
             const calDay = e.target.closest('.cal-day');
-            if (calDay) { this.vm.setDashboardDateFilter(calDay.dataset.date); this.renderTabs(); this.renderPanel(); return; }
+            if (calDay) { 
+                this.vm.setActiveTab("dashboard", "dashboard");
+                this.vm.setDashboardDateFilter(calDay.dataset.date); 
+                return; 
+            }
             
             if (e.target.closest('#clearDashFilterBtn')) {
                 this.vm.setDashboardDateFilter(null);
-                this.renderTabs(); this.renderPanel(); return;
+                return;
             }
             
             if (e.target.closest('#calPrevBtn')) { this.vm.changeCalendarMonth(-1); return; }
@@ -71,8 +75,8 @@ export class MainPanelView {
                     const parts = e.target.value.split('-');
                     this.vm._calYear = parseInt(parts[0]);
                     this.vm._calMonth = parseInt(parts[1]) - 1;
+                    this.vm.setActiveTab("dashboard", "dashboard");
                     this.vm.setDashboardDateFilter(e.target.value);
-                    this.renderTabs(); this.renderPanel();
                 }
             }
         });
@@ -279,6 +283,16 @@ export class MainPanelView {
                 touchDragEl = null; touchDragFromIdx = -1;
             }
         });
+
+        let isDesktop = window.innerWidth > 900;
+        window.addEventListener('resize', () => {
+            const nowDesktop = window.innerWidth > 900;
+            if (isDesktop !== nowDesktop) {
+                isDesktop = nowDesktop;
+                this.renderTabs();
+                if (this.vm.viewMode === 'dashboard') this.renderPanel();
+            }
+        });
     }
 
     renderWorkspaceSwitcher() {
@@ -320,7 +334,7 @@ export class MainPanelView {
         const activeTabId = this.vm.activeTab?.id || (this.vm.activeWorkspace?.activeTabId === "dashboard" ? "dashboard" : null);
 
         const calWrap = document.getElementById("dashCalendarWrap");
-        if (this.vm.viewMode === "dashboard") {
+        if (this.vm.viewMode === "dashboard" || window.innerWidth > 900) {
             calWrap.style.display = "block";
             
             const year = this.vm.calendarYear; const month = this.vm.calendarMonth; 
@@ -419,7 +433,7 @@ export class MainPanelView {
                     }, 100);
                     return;
                 }
-                this.vm.setActiveTab(tab.id, 'dashboard');
+                this.vm.setActiveTab(tab.id, 'maximized');
             });
             this.tabsEl.appendChild(btn);
         });
@@ -491,7 +505,8 @@ export class MainPanelView {
 
             // Sort descending by modifiedAt
             allScenarios.sort((a, b) => (b.modifiedAt || 0) - (a.modifiedAt || 0));
-            const recent = allScenarios.slice(0, 5); 
+            const limit = window.innerWidth > 900 ? undefined : 5;
+            const recent = limit ? allScenarios.slice(0, limit) : allScenarios;
             
             if (recent.length === 0) {
                 wrap.innerHTML = `<div style="padding: 32px; text-align: center; color: var(--muted); border: 1px dashed var(--outline); border-radius: var(--r12); margin-top: 16px;">${this.vm.dashboardDateFilter ? 'No notes found for this date.' : 'No notes yet. Create one to see it on your dashboard!'}</div>`;
