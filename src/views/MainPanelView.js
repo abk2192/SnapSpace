@@ -94,8 +94,11 @@ export class MainPanelView {
             
             const addFBtn = e.target.closest("[data-addfield]");
             if (addFBtn) { 
-                this.vm.addField(addFBtn.dataset.addfield); 
-                setTimeout(() => { const inputs = document.querySelectorAll(`input[data-sid="${addFBtn.dataset.addfield}"][data-fkey]`); if(inputs.length > 0) inputs[inputs.length - 1].focus(); }, 50);
+                window.appDualPrompt().then(res => {
+                    if (res && res.key) {
+                        this.vm.addField(addFBtn.dataset.addfield, res.key, res.val); 
+                    }
+                });
                 return; 
             }
             
@@ -400,23 +403,59 @@ export class MainPanelView {
         if (activeTabId === "dashboard") {
             const wrap = document.createElement("div"); wrap.className = "tab-panel"; wrap.style.display = "block";
             
+            const gridWrap = document.createElement("div");
+            gridWrap.style.display = "grid"; gridWrap.style.gap = "16px";
+            gridWrap.style.gridTemplateColumns = window.innerWidth >= 900 ? "1fr 320px" : "1fr";
+            const mainCol = document.createElement("div"); const sideCol = document.createElement("div");
+            
+            // Calendar Component
+            const now = new Date(); const year = now.getFullYear(); const month = now.getMonth(); const today = now.getDate();
+            const firstDay = new Date(year, month, 1).getDay(); const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const monthName = now.toLocaleString('default', { month: 'long' });
+            let daysHtml = ''; const dayNames = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+            dayNames.forEach(d => daysHtml += `<div style="font-weight: bold; color: var(--muted); padding: 4px 0; font-size: 11px;">${d}</div>`);
+            for (let i = 0; i < firstDay; i++) { daysHtml += `<div></div>`; }
+            for (let i = 1; i <= daysInMonth; i++) {
+                if (i === today) { daysHtml += `<div style="display: flex; align-items: center; justify-content: center;"><span style="background: var(--primary); color: white; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; border-radius: 50%; box-shadow: 0 2px 8px var(--primary-light); font-weight: bold;">${i}</span></div>`; } 
+                else { daysHtml += `<div style="display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; margin: 0 auto; color: var(--text);">${i}</div>`; }
+            }
+            sideCol.innerHTML = `
+                <div style="background: var(--surface); border: 1px solid var(--outline-2); border-radius: var(--r12); padding: 16px; margin-bottom: 16px; box-shadow: var(--shadow);">
+                    <div style="font-weight: 800; font-size: 15px; margin-bottom: 12px; color: var(--text); display: flex; align-items: center; justify-content: space-between;">
+                        <span>${monthName} ${year}</span>
+                        <span class="material-symbols-outlined" style="color: var(--primary);">calendar_month</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; gap: 4px; font-size: 12px;">
+                        ${daysHtml}
+                    </div>
+                </div>
+            `;
+
             let allScenarios = [];
             this.vm.tabs.forEach(t => {
                 t.scenarios.forEach(sc => {
-                    allScenarios.push({ ...sc, _tabName: t.name });
+                    allScenarios.push({ ...sc, _tabId: t.id, _tabName: t.name });
                 });
             });
             
             // Sort descending by modifiedAt
             allScenarios.sort((a, b) => (b.modifiedAt || 0) - (a.modifiedAt || 0));
-            const recent = allScenarios.slice(0, 20); 
+            const limit = window.innerWidth <= 768 ? 5 : 20;
+            const recent = allScenarios.slice(0, limit); 
             
             if (recent.length === 0) {
-                wrap.innerHTML = '<div style="padding: 32px; text-align: center; color: var(--muted);">No notes yet. Create one to see it on your dashboard!</div>';
+                mainCol.innerHTML = '<div style="padding: 32px; text-align: center; color: var(--muted); border: 1px dashed var(--outline); border-radius: var(--r12);">No notes yet. Create one to see it on your dashboard!</div>';
             } else {
-                recent.forEach((sc, idx) => { wrap.appendChild(this.renderScenarioCard(sc, idx, true)); });
+                const header = document.createElement("div");
+                header.innerHTML = `<div style="font-weight: 800; font-size: 16px; margin-bottom: 12px; color: var(--text);">Recent Notes</div>`;
+                mainCol.appendChild(header);
+                recent.forEach((sc, idx) => { mainCol.appendChild(this.renderScenarioCard(sc, idx, true)); });
             }
-            this.panelEl.appendChild(wrap);
+
+            if (window.innerWidth >= 900) { gridWrap.appendChild(mainCol); gridWrap.appendChild(sideCol); } 
+            else { gridWrap.appendChild(sideCol); gridWrap.appendChild(mainCol); }
+            
+            wrap.appendChild(gridWrap); this.panelEl.appendChild(wrap);
             const pMeta = document.getElementById("panelMeta"); if (pMeta) pMeta.style.display = "block";
             return;
         }
@@ -457,7 +496,7 @@ export class MainPanelView {
         let dashBadge = "";
         let dashSnippet = "";
         if (isDashboard) {
-            dashBadge = `<span class="tag" style="background: var(--primary-light); color: var(--primary); border: none; margin-right: 4px;">${escapeHtml(sc._tabName || "")}</span>`;
+            dashBadge = `<span class="tag dash-badge-link" style="background: var(--primary-light); color: var(--primary); border: none; margin-right: 4px; cursor: pointer;">${escapeHtml(sc._tabName || "")}</span>`;
         }
 
         if (sc.evidenceHtml) {
@@ -476,6 +515,20 @@ export class MainPanelView {
             <button class="btn secondary del action-btn icon-only" type="button" data-delfield="${f.id}" data-sid="${sc.id}"><span class="material-symbols-outlined">close</span></button>
             </div>
         `).join("");
+
+        if (isDashboard) {
+            d.addEventListener('click', (e) => {
+                if (e.target.closest('.dash-badge-link')) { e.preventDefault(); e.stopPropagation(); this.vm.setActiveTab(sc._tabId); return; }
+                if (e.target.closest('summary')) {
+                    e.preventDefault(); e.stopPropagation();
+                    this.vm.setActiveTab(sc._tabId);
+                    setTimeout(() => {
+                        const targetCard = document.querySelector(`details.scenario[data-sid="${sc.id}"]`);
+                        if (targetCard) { targetCard.open = true; targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+                    }, 50);
+                }
+            });
+        }
 
         d.innerHTML = `<summary><div class="summary-content"><div style="display:flex; align-items:center; gap:6px; width: 100%;"><span class="drag-handle material-symbols-outlined" style="font-size: 18px; cursor: grab; color: var(--muted);" onmousedown="this.closest('details').draggable=true" onmouseup="this.closest('details').draggable=false" onmouseleave="this.closest('details').draggable=false">drag_indicator</span><input class="header-name-input" data-field="name" data-sid="${sc.id}" value="${escapeAttr(sc.name||"")}" placeholder="Item ${idx+1}" readonly /><button class="btn secondary action-btn icon-only edit-name-btn" type="button" title="Edit Name"><span class="material-symbols-outlined">edit</span></button></div>${dashSnippet}${tagsHtml ? `<div class="summary-tags">${tagsHtml}</div>` : ``}</div><div class="summary-actions">${dashBadge}<div class="scen-more-wrap"><button class="btn secondary action-btn icon-only scen-more-btn" type="button" title="More Actions"><span class="material-symbols-outlined">more_vert</span></button><div class="scen-more-menu"><button class="btn secondary action-btn" type="button" title="Edit Name" data-edit-name="${sc.id}"><span class="material-symbols-outlined">edit</span> <span class="btn-text">Edit Name</span></button><button class="btn secondary action-btn" type="button" title="Save as Template" data-template="${sc.id}"><span class="material-symbols-outlined">bookmark_add</span> <span class="btn-text">Save Template</span></button><button class="btn secondary action-btn" type="button" title="Duplicate Item" data-duplicate="${sc.id}"><span class="material-symbols-outlined">content_copy</span> <span class="btn-text">Duplicate</span></button><button class="btn secondary action-btn" type="button" title="Move Item" data-move="${sc.id}"><span class="material-symbols-outlined">move_item</span> <span class="btn-text">Move</span></button><button class="btn danger action-btn" type="button" title="Delete Item" data-delete="${sc.id}"><span class="material-symbols-outlined">delete</span> <span class="btn-text">Delete Item</span></button></div></div><div class="chev"><span class="material-symbols-outlined">expand_more</span></div></div></summary><div class="card-body"><div class="label" style="justify-content: space-between;"><span style="display:flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size: 14px;">tune</span> Properties</span><button class="btn secondary action-btn icon-only" type="button" data-addfield="${sc.id}" style="padding: 2px; min-height: auto; border: none; background: transparent; color: var(--primary); box-shadow: none;" title="Add Property Field"><span class="material-symbols-outlined" style="font-size: 18px;">add_circle</span></button></div><div class="field-list">${fieldsHtml}</div><div class="evidence-wrap"><div class="label" style="margin-bottom: 6px;"><span class="material-symbols-outlined" style="font-size: 14px;">image</span> Notes & Media</div><div class="tbl-controls tbl-row-controls"><button class="tbl-btn tbl-add-row" data-cmd="tableAddRow" title="Add Row Below"><span class="material-symbols-outlined">add</span></button><div class="tbl-divider"></div><button class="tbl-btn tbl-del-row" data-cmd="tableDelRow" title="Delete Row"><span class="material-symbols-outlined">remove</span></button></div><div class="tbl-controls tbl-col-controls"><button class="tbl-btn tbl-add-col" data-cmd="tableAddCol" title="Add Column Right"><span class="material-symbols-outlined">add</span></button><div class="tbl-divider"></div><button class="tbl-btn tbl-del-col" data-cmd="tableDelCol" title="Delete Column"><span class="material-symbols-outlined">remove</span></button></div><div class="wysiwyg-toolbar action-btn"><button class="btn secondary" type="button" data-cmd="bold" title="Bold"><span class="material-symbols-outlined" style="margin:0;">format_bold</span></button><button class="btn secondary" type="button" data-cmd="italic" title="Italic"><span class="material-symbols-outlined" style="margin:0;">format_italic</span></button><button class="btn secondary" type="button" data-cmd="strikeThrough" title="Strikethrough"><span class="material-symbols-outlined" style="margin:0;">strikethrough_s</span></button><button class="btn secondary" type="button" data-cmd="insertUnorderedList" title="Bullet List"><span class="material-symbols-outlined" style="margin:0;">format_list_bulleted</span> <span class="btn-text">List</span></button><button class="btn secondary" type="button" data-cmd="insertOrderedList" title="Numbered List"><span class="material-symbols-outlined" style="margin:0;">format_list_numbered</span> <span class="btn-text">Num List</span></button><button class="btn secondary" type="button" data-cmd="insertCheckbox" title="Insert Checkbox"><span class="material-symbols-outlined" style="margin:0;">check_box</span> <span class="btn-text">Checkbox</span></button><div style="width: 1px; height: 20px; background: var(--outline-2); margin: 0 4px;"></div><button class="btn secondary" type="button" data-cmd="outdent" title="Outdent"><span class="material-symbols-outlined" style="margin:0;">format_indent_decrease</span></button><button class="btn secondary" type="button" data-cmd="indent" title="Indent"><span class="material-symbols-outlined" style="margin:0;">format_indent_increase</span></button><div style="width: 1px; height: 20px; background: var(--outline-2); margin: 0 4px;"></div><button class="btn secondary" type="button" data-cmd="createLink" title="Insert Link"><span class="material-symbols-outlined" style="margin:0;">link</span></button><button class="btn secondary" type="button" data-cmd="insertTable" title="Insert Table"><span class="material-symbols-outlined" style="margin:0;">table_chart</span></button><div style="width: 1px; height: 20px; background: var(--outline-2); margin: 0 4px;"></div><button class="btn secondary action-btn" type="button" data-createfile="${sc.id}" title="Create Text/XML File"><span class="material-symbols-outlined" style="font-size: 16px;">note_add</span> <span class="btn-text">New File</span></button><button class="btn secondary action-btn" type="button" data-attach="${sc.id}" title="Attach File"><span class="material-symbols-outlined" style="font-size: 16px;">attach_file</span> <span class="btn-text">Attach</span></button><button class="btn secondary" type="button" data-cmd="closeKeyboard" title="Close Keyboard"><span class="material-symbols-outlined" style="margin:0; font-size: 20px;">keyboard_hide</span></button></div><div class="evidence" contenteditable="${isLocked ? 'false' : 'true'}" data-evidence="${sc.id}" spellcheck="false"></div><input type="file" hidden data-file="${sc.id}" /></div></div>`;
 

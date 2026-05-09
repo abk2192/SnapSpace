@@ -119,11 +119,11 @@ export class MainPanelVM {
         }
     }
     
-    addField(id) {
+    addField(id, key, val) {
         const tab = this.activeTab; if(!tab) return;
         const sc = tab.scenarios.find(s => s.id === id);
         if (sc) {
-            sc.fields.push({ id: uid(), key: "", val: "" });
+            sc.fields.push({ id: uid(), key: key || "", val: val || "" });
             globalEvents.publish('scenarios:changed');
         }
     }

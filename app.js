@@ -96,6 +96,30 @@ window.appPrompt = (msg, defaultVal="", title="Input Required") => {
     });
 };
 
+window.appDualPrompt = () => {
+    return new Promise(resolve => {
+        const dlg = document.getElementById("addFieldBackdrop");
+        const kInp = document.getElementById("afKeyInput");
+        const vInp = document.getElementById("afValInput");
+        kInp.value = ""; vInp.value = "";
+        
+        const cancel = () => { dlg.style.display = "none"; resolve(null); cleanup(); };
+        const save = () => { dlg.style.display = "none"; resolve({ key: kInp.value, val: vInp.value }); cleanup(); };
+        
+        const onKey = (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (e.target === kInp) vInp.focus(); else if (e.target === vInp) save();
+            }
+        };
+        document.getElementById("afCancelBtn").onclick = cancel;
+        document.getElementById("afSaveBtn").onclick = save;
+        kInp.addEventListener('keydown', onKey); vInp.addEventListener('keydown', onKey);
+        const cleanup = () => { kInp.removeEventListener('keydown', onKey); vInp.removeEventListener('keydown', onKey); };
+        dlg.style.display = "flex"; setTimeout(() => kInp.focus(), 50);
+    });
+};
+
 async function bootApp() {
     document.getElementById("renameTabBtn")?.remove();
 
@@ -387,45 +411,43 @@ async function bootApp() {
         });
 
         qnAddField?.addEventListener('click', async () => {
-            const key = await window.appPrompt("Enter field name:"); if (!key) return;
-            const val = await window.appPrompt(`Enter value for "${key}":`);
-            currentFields.push({ id: uid(), key: key, val: val || "" }); renderQnTags();
+            const result = await window.appDualPrompt();
+            if (result && result.key) {
+                currentFields.push({ id: uid(), key: result.key, val: result.val || "" }); renderQnTags();
+            }
         });
 
+        const saveQuickNoteState = () => {
+            if (editingScenarioId) {
+                window.mainPanelVM.updateScenarioName(editingScenarioId, qnTitle.value.trim() || "Note");
+                window.mainPanelVM.updateEvidence(editingScenarioId, qnEditor.innerHTML);
+                let targetSc = null;
+                for (const t of window.mainPanelVM.tabs) { targetSc = t.scenarios.find(s => s.id === editingScenarioId); if (targetSc) break; }
+                if (targetSc) { targetSc.fields = currentFields; targetSc.modifiedAt = Date.now(); globalEvents.publish('scenarios:changed'); }
+            } else {
+                const isEmptyContent = !qnEditor.textContent.trim() && !qnEditor.querySelector('img') && !qnEditor.querySelector('input[type="checkbox"]');
+                const isDefaultTitle = qnTitle.value.startsWith('Note ');
+                if (isDefaultTitle && isEmptyContent && currentFields.length === 0) return false;
+                
+                const newId = window.mainPanelVM?.addScenario();
+                if (newId) {
+                    window.mainPanelVM.updateScenarioName(newId, qnTitle.value.trim() || "Note");
+                    window.mainPanelVM.updateEvidence(newId, qnEditor.innerHTML);
+                    const sc = window.mainPanelVM.tabs.flatMap(t => t.scenarios).find(s => s.id === newId);
+                    if (sc) { sc.fields = currentFields; globalEvents.publish('scenarios:changed'); }
+                    editingScenarioId = newId; 
+                }
+            }
+            return true;
+        };
+        
         let isClosingQn = false;
         const closeAndSaveQuickNote = (fromPopState = false) => {
             if (isClosingQn || qnBackdrop.style.display === 'none') return;
             isClosingQn = true;
-
             if (!fromPopState) history.back();
-
             qnBackdrop.classList.add('qn-animating');
-            setTimeout(() => {
-                qnBackdrop.style.display = 'none';
-                if (editingScenarioId) {
-                    window.mainPanelVM.updateScenarioName(editingScenarioId, qnTitle.value.trim() || "Note");
-                    window.mainPanelVM.updateEvidence(editingScenarioId, qnEditor.innerHTML);
-                    let targetSc = null;
-                    for (const t of window.mainPanelVM.tabs) { targetSc = t.scenarios.find(s => s.id === editingScenarioId); if (targetSc) break; }
-                    if (targetSc) { targetSc.fields = currentFields; targetSc.modifiedAt = Date.now(); globalEvents.publish('scenarios:changed'); }
-                } else {
-                    const isEmptyContent = !qnEditor.textContent.trim() && !qnEditor.querySelector('img') && !qnEditor.querySelector('input[type="checkbox"]');
-                    const isDefaultTitle = qnTitle.value.startsWith('Note ');
-                    if (isDefaultTitle && isEmptyContent && currentFields.length === 0) {
-                        // Discard untouched empty notes silently
-                        isClosingQn = false;
-                        return;
-                    }
-                    const newId = window.mainPanelVM?.addScenario();
-                    if (newId) {
-                        window.mainPanelVM.updateScenarioName(newId, qnTitle.value.trim() || "Note");
-                        window.mainPanelVM.updateEvidence(newId, qnEditor.innerHTML);
-                        const sc = window.mainPanelVM.activeTab.scenarios.find(s => s.id === newId);
-                        if (sc) { sc.fields = currentFields; globalEvents.publish('scenarios:changed'); }
-                    }
-                }
-                isClosingQn = false;
-            }, 300); // Wait for shrink animation
+            setTimeout(() => { qnBackdrop.style.display = 'none'; saveQuickNoteState(); isClosingQn = false; }, 300);
         };
 
         // Global History hook: Triggered natively if user presses the "Back" button or swipes
@@ -442,7 +464,10 @@ async function bootApp() {
                 qnDone.querySelector('.material-symbols-outlined').textContent = 'check';
                 setTimeout(() => { qnEditor.focus(); moveCursorToEnd(qnEditor); }, 50);
             } else {
-                closeAndSaveQuickNote(false);
+                qnBackdrop.classList.add('qn-read-mode');
+                qnEditor.contentEditable = "false";
+                qnDone.querySelector('.material-symbols-outlined').textContent = 'edit';
+                saveQuickNoteState();
             }
         });
         document.getElementById('qnCloseBtn')?.addEventListener('click', () => closeAndSaveQuickNote(false));

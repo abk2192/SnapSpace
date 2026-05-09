@@ -469,26 +469,20 @@ export class EditorView {
 
         document.getElementById('fpCloseBtn')?.addEventListener('click', () => { document.getElementById('filePreviewBackdrop').style.display = 'none'; this.activeAttachmentNode = null; });
         
-        document.getElementById('fpReadModeBtn')?.addEventListener('click', () => {
-            const backdrop = document.getElementById('filePreviewBackdrop');
-            backdrop.classList.toggle('qn-read-mode');
-            const isRead = backdrop.classList.contains('qn-read-mode');
-            document.getElementById('fpContent').readOnly = isRead;
-            document.getElementById('fpTitleInput').readOnly = isRead;
-            document.getElementById('fpReadModeBtn').innerHTML = `<span class="material-symbols-outlined">${isRead ? 'menu_book' : 'edit'}</span>`;
-            document.getElementById('fpSaveBtn').innerHTML = `<span class="material-symbols-outlined">${isRead ? 'edit' : 'check'}</span>`;
-        });
-
         document.getElementById('fpSaveBtn')?.addEventListener('click', () => {
             const backdrop = document.getElementById('filePreviewBackdrop');
             if (backdrop.classList.contains('qn-read-mode')) {
                 backdrop.classList.remove('qn-read-mode');
                 document.getElementById('fpContent').readOnly = false;
                 document.getElementById('fpTitleInput').readOnly = false;
-                document.getElementById('fpReadModeBtn').innerHTML = '<span class="material-symbols-outlined">edit</span>';
                 document.getElementById('fpSaveBtn').innerHTML = '<span class="material-symbols-outlined">check</span>';
                 setTimeout(() => document.getElementById('fpContent').focus(), 50);
             } else {
+                backdrop.classList.add('qn-read-mode');
+                document.getElementById('fpContent').readOnly = true;
+                document.getElementById('fpTitleInput').readOnly = true;
+                document.getElementById('fpSaveBtn').innerHTML = '<span class="material-symbols-outlined">edit</span>';
+
                 const newContent = document.getElementById('fpContent')?.value || "";
                 const newTitle = document.getElementById('fpTitleInput')?.value || "attachment";
                 if (this.activeAttachmentNode) {
@@ -506,9 +500,6 @@ export class EditorView {
                         if (copyBtn) copyBtn.dataset.copy = reader.result;
                         const ev = this.activeAttachmentNode.closest('.evidence');
                         if (ev) ev.dispatchEvent(new Event('input', { bubbles: true }));
-                        
-                        backdrop.style.display = 'none';
-                        this.activeAttachmentNode = null;
                     };
                     reader.readAsDataURL(blob);
                 }
@@ -626,7 +617,6 @@ export class EditorView {
                 backdrop.classList.add('qn-read-mode');
                 document.getElementById('fpContent').readOnly = true;
                 document.getElementById('fpTitleInput').readOnly = true;
-                document.getElementById('fpReadModeBtn').innerHTML = '<span class="material-symbols-outlined">menu_book</span>';
                 document.getElementById('fpSaveBtn').innerHTML = '<span class="material-symbols-outlined">edit</span>';
 
                 backdrop.style.display = 'flex'; 

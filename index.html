@@ -114,6 +114,22 @@
     </div>
   </div>
 
+  <div class="dlg-backdrop" id="addFieldBackdrop" role="dialog" aria-modal="true" style="z-index: 10050;">
+    <div class="dlg" style="max-width: 400px;">
+      <div class="dlg-head">Add Property Field</div>
+      <div class="dlg-body">
+        <div class="label" style="margin-bottom:6px;">Field Name</div>
+        <input class="input" id="afKeyInput" placeholder="e.g. Environment, Status" style="margin-bottom: 12px;" />
+        <div class="label" style="margin-bottom:6px;">Field Value</div>
+        <input class="input" id="afValInput" placeholder="e.g. Production, Passed" />
+      </div>
+      <div class="dlg-actions">
+        <button class="btn secondary" id="afCancelBtn">Cancel</button>
+        <button class="btn" id="afSaveBtn">Add Field</button>
+      </div>
+    </div>
+  </div>
+
   <div class="dlg-backdrop" id="tplBackdrop" role="dialog" aria-modal="true">
     <div class="dlg" style="max-width: 650px;">
       <div class="dlg-head">
@@ -295,14 +311,11 @@
           <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
               <button class="btn secondary icon-only" id="fpCloseBtn" title="Back / Close" style="border: none; box-shadow: none; background: transparent; margin-left: -8px;"><span class="material-symbols-outlined">arrow_back</span></button>
               <input type="text" id="fpTitleInput" class="qn-title-input" onclick="this.select()" style="flex: 1; min-width: 0;" />
-              <div style="display: flex; gap: 8px; flex-shrink: 0;">
-                  <button class="btn secondary icon-only" id="fpReadModeBtn" title="Read Mode"><span class="material-symbols-outlined">menu_book</span></button>
-              </div>
           </div>
       </div>
       <div class="qn-body">
           <div class="evidence-wrap" style="flex: 1; display: flex; flex-direction: column; min-height: 0; margin-top: 0; margin-bottom: 0;">
-              <textarea id="fpContent" style="margin: 0; padding: 20px; font-family: monospace; font-size: 13px; white-space: pre-wrap; word-wrap: break-word; color: var(--text); background: var(--surface); border: none; outline: none; resize: none; width: 100%; flex: 1;"></textarea>
+              <textarea id="fpContent" style="margin: 0; padding: 20px; padding-bottom: calc(100px + var(--kb-offset, 0px)); font-family: monospace; font-size: 13px; white-space: pre-wrap; word-wrap: break-word; color: var(--text); background: var(--surface); border: none; outline: none; resize: none; width: 100%; flex: 1;"></textarea>
           </div>
       </div>
       <div class="qn-fab-stack" id="fpFabStack">
