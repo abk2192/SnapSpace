@@ -46,7 +46,13 @@
   :root[data-color="cyan"] { --primary: #0891b2; --primary-2: #0e7490; --primary-light: rgba(8,145,178,.12); --grad-1: #0891b2; --grad-2: #22d3ee; }
 
   *{ box-sizing:border-box; }
-  body{ margin:0; font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); transition: background 0.3s ease, color 0.3s ease; min-height: 100vh; }
+  html, body { height: 100%; height: 100dvh; overflow: hidden; margin: 0; padding: 0; }
+  body{ font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); transition: background 0.3s ease, color 0.3s ease; display: flex; flex-direction: column; }
+
+  /* Prevent background scroll when modals are open */
+  body:has(.dlg-backdrop[style*="display: flex"], .dlg-backdrop[style*="display: block"], .command-palette.active-search) .app-content {
+      overflow: hidden;
+  }
 
   /* Icons */
   .material-symbols-outlined { font-size: 18px; vertical-align: middle; line-height: 1; user-select: none; }
@@ -54,7 +60,7 @@
   .action-btn .material-symbols-outlined { margin-right: 0; }
 
   /* ===== App bar ===== */
-  .appbar{ position: sticky; top:0; height: 64px; z-index: 95; border-bottom: 1px solid var(--outline); transition: all 0.3s ease; }
+  .appbar{ position: relative; flex-shrink: 0; top: 0; height: 64px; z-index: 95; border-bottom: 1px solid var(--outline); transition: all 0.3s ease; }
   .appbar.search-active { z-index: 121; }
   .appbar::before {
     content: '';
@@ -142,7 +148,7 @@
   .mobile-close-nav { display: flex; justify-content: space-between; align-items: center; padding: 16px; border-bottom: 1px solid var(--outline-2); margin-bottom: 8px;}
 
   /* ===== App Content Wrapper ===== */
-  .app-content { transition: padding-left 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+  .app-content { flex: 1; overflow-y: auto; overflow-x: hidden; position: relative; display: flex; flex-direction: column; transition: padding-left 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
 
   /* Sidebar Settings Details */
   details.sidebar-settings summary::-webkit-details-marker { display: none; }
@@ -158,8 +164,6 @@
     body.sidebar-show .sidebar-backdrop { display: none; }
     .app-content { padding-left: var(--sidebar-width); }
     body.sidebar-hide .app-content { padding-left: 0; }
-    .app-content .appbar { width: calc(100% + var(--sidebar-width)); margin-left: calc(-1 * var(--sidebar-width)); }
-    body.sidebar-hide .app-content .appbar { width: 100%; margin-left: 0; }
   }
 
   /* Hide Action Pill on Desktop */
@@ -188,7 +192,7 @@
   .search-hl { background: rgba(250, 204, 21, 0.4); font-weight: 700; color: var(--text); border-radius: 2px; padding: 0 2px; }
 
   /* ===== Tabs ===== */
-  .tabsbar{ max-width: 1200px; margin: 0 auto; padding: 2px 16px 0; position: sticky; top: 64px; z-index: 48; background: var(--bg); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .tabsbar{ width: 100%; max-width: 1200px; margin: 0 auto; padding: 2px 16px 0; position: sticky; top: 0; z-index: 48; background: var(--bg); display: flex; align-items: center; justify-content: space-between; gap: 12px; }
   .tabs{ display:flex; gap: 8px; align-items:center; overflow-x:auto; padding-top: 8px; padding-bottom: 6px; scrollbar-width: none; flex: 1; min-width: 0; }
   .tabs::-webkit-scrollbar { display: none; }
   .tab-tools { display: flex; align-items: center; gap: 6px; padding-top: 8px; padding-bottom: 6px; }
@@ -212,7 +216,7 @@
   .tab.plus{ border-style:dashed; color: var(--muted); background: transparent; }
 
   /* ===== Main layout ===== */
-  main{ max-width: 1200px; margin: 0 auto; padding: 14px 16px 28px; }
+  main{ width: 100%; max-width: 1200px; margin: 0 auto; padding: 14px 16px 28px; flex: 1; }
   .panel-head{ display:none; }
   .tab-panel { display: none; }
 
@@ -221,7 +225,7 @@
   details.scenario:has(.scen-more-wrap.active) { z-index: 50; }
   
   /* STICKY SUMMARY */
-  summary{ list-style:none; cursor:pointer; padding: 12px 16px; display:flex; align-items:flex-start; justify-content: space-between; gap: 12px; user-select:none; position: sticky; top: 110px; z-index: 46; background: var(--surface); border-radius: var(--r12); transition: background 0.3s ease; }
+  summary{ list-style:none; cursor:pointer; padding: 12px 16px; display:flex; align-items:flex-start; justify-content: space-between; gap: 12px; user-select:none; position: sticky; top: 52px; z-index: 46; background: var(--surface); border-radius: var(--r12); transition: background 0.3s ease; }
   details[open] > summary { border-bottom: 1px solid var(--outline-2); }
   details[open] > summary { border-radius: var(--r12) var(--r12) 0 0; }
   summary::-webkit-details-marker{ display:none; }
@@ -295,7 +299,7 @@
   .evidence-wrap:focus-within .wysiwyg-toolbar { 
       display: flex; 
       position: sticky; 
-      top: 165px; 
+      top: 110px; 
       z-index: 45; 
       background: var(--surface); 
       padding: 8px; 
@@ -303,9 +307,6 @@
       box-shadow: var(--shadow-2); 
       border: 1px solid var(--outline); 
       margin-bottom: 12px;
-  }
-  @media (max-width: 1100px) {
-      .evidence-wrap:focus-within .wysiwyg-toolbar { top: 75px; }
   }
   .wysiwyg-toolbar .btn { padding: 4px 8px; font-size: 12px; font-weight: 700; border-radius: 6px; transition: all 0.2s ease; }
   .wysiwyg-toolbar .btn.active-format { background: var(--primary-light) !important; color: var(--primary) !important; border-color: var(--primary) !important; }
@@ -409,10 +410,10 @@
     .appbar-inner{ flex-wrap: wrap; padding: 0 12px; gap: 10px; }
     .tab-label { max-width: 120px; }
     .title { min-width: auto; flex: none; margin-bottom: 0; }
-    #workspaceTitleInput { flex: 1 1 50px; min-width: 50px; }
+    #workspaceTitleInput { flex: 1 1 50px; min-width: 50px; padding: 4px 0; }
     .appbar .actions { width: auto; margin-top: 0; justify-content: flex-end; margin-left: auto; }
     main{ padding: 12px 12px 22px; }
-    .tabsbar { top: 0; position: relative; padding-top: 4px; }
+    .tabsbar { top: 0; position: sticky; padding-top: 4px; z-index: 48; }
     summary { top: auto; flex-direction: row; align-items: flex-start; }
     .summary-actions { width: auto; justify-content: flex-end; flex-wrap: nowrap;}
     .panel-head { flex-direction: column; align-items: flex-start; gap: 12px; }
@@ -469,6 +470,34 @@
     .appbar .actions .btn .btn-text { display: inline !important; }
     .appbar .actions .btn .material-symbols-outlined { margin-right: 12px !important; color: var(--muted); font-size: 20px !important; }
     
+    /* Editor Ribbon - Keyboard Toolbar */
+    .evidence-wrap:focus-within .wysiwyg-toolbar {
+        position: fixed !important;
+        top: auto !important;
+        bottom: 0 !important;
+        left: 0;
+        width: 100vw;
+        z-index: 10000;
+        background: var(--surface);
+        border: none;
+        border-top: 1px solid var(--outline);
+        border-radius: 0;
+        margin: 0;
+        padding: 6px 12px;
+        box-shadow: 0 -4px 10px rgba(0,0,0,0.1);
+        display: flex;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        justify-content: flex-start;
+        -webkit-overflow-scrolling: touch;
+    }
+    body:has(.evidence-wrap:focus-within) .mobile-action-pill {
+        display: none !important;
+    }
+    body:has(.evidence-wrap:focus-within) .app-content {
+        padding-bottom: 60px; /* space for the ribbon */
+    }
+
     /* Keep formatting text visible in WYSIWYG toolbar */
     .wysiwyg-toolbar .btn .btn-text { display: none; }
     .wysiwyg-toolbar .btn { font-size: 0 !important; padding: 8px !important; border-radius: 8px !important; }
