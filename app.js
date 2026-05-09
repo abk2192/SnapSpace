@@ -34,8 +34,8 @@ document.querySelectorAll('[data-set-color]').forEach(el => { el.addEventListene
 if (window.visualViewport) {
     const vv = window.visualViewport;
     const updateKeyboardOffset = () => {
-        document.documentElement.style.setProperty('--vv-height', `${vv.height}px`);
-        document.documentElement.style.setProperty('--vv-top', `${vv.offsetTop}px`);
+        const offset = window.innerHeight - vv.height - Math.round(vv.offsetTop);
+        document.documentElement.style.setProperty('--kb-offset', `${Math.max(0, offset)}px`);
     };
     vv.addEventListener('resize', () => {
         updateKeyboardOffset();
