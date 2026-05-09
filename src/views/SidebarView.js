@@ -28,7 +28,7 @@ export class SidebarView {
 
         mainMenuBtn?.addEventListener("click", (e) => {
             e.stopPropagation();
-            if (window.innerWidth >= 1100) document.body.classList.toggle("sidebar-hide");
+            if (window.innerWidth >= 900) document.body.classList.toggle("sidebar-hide");
             else {
                 document.body.classList.toggle("sidebar-show");
                 if(sidebarBackdrop) setTimeout(() => sidebarBackdrop.style.opacity = "1", 10);
@@ -40,7 +40,7 @@ export class SidebarView {
 
         document.querySelectorAll('#sidebarMenu .menu-item:not(#addWorkspaceBtn)').forEach(item => {
             item.addEventListener("click", () => {
-                if(window.innerWidth < 1100) this.closeMobileSidebar();
+                if(window.innerWidth < 900) this.closeMobileSidebar();
             });
         });
 

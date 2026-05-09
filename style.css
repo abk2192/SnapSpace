@@ -157,7 +157,7 @@
   details.sidebar-settings .menu-item:hover, details.sidebar-settings .settings-summary:hover { background: var(--surface); }
 
   /* Desktop Sidebar States */
-  @media (min-width: 1100px) {
+  @media (min-width: 900px) {
     .sidebar { top: 64px; transform: translateX(0); z-index: 40; }
     .mobile-close-nav { display: none !important; }
     body.sidebar-hide .sidebar { transform: translateX(-100%); }
@@ -405,7 +405,7 @@
   .export-scen-label { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; color: var(--text); padding: 2px 0; }
   .export-scen-label input, .export-tab-label input { margin: 0; width: 16px; height: 16px; accent-color: var(--primary); cursor: pointer; }
 
-  @media (max-width: 1100px){
+  @media (max-width: 900px){
     .appbar { height: auto; min-height: 60px; padding: 12px 0;}
     .appbar-inner{ flex-wrap: wrap; padding: 0 12px; gap: 10px; }
     .tab-label { max-width: 120px; }
@@ -470,45 +470,46 @@
     .appbar .actions .btn .btn-text { display: inline !important; }
     .appbar .actions .btn .material-symbols-outlined { margin-right: 12px !important; color: var(--muted); font-size: 20px !important; }
     
-    /* Editor Ribbon - Keyboard Toolbar */
-    .evidence-wrap:focus-within .wysiwyg-toolbar {
-        position: fixed !important;
-        top: auto !important;
-        bottom: var(--kb-offset, 0px) !important;
-        left: 0;
-        width: 100vw;
-        z-index: 10000;
-        background: var(--surface);
-        border: none;
-        border-top: 1px solid var(--outline);
-        border-radius: 0;
-        margin: 0;
-        padding: 6px 12px;
-        box-shadow: 0 -4px 10px rgba(0,0,0,0.1);
-        display: flex;
-        flex-wrap: nowrap;
-        overflow-x: auto;
-        justify-content: flex-start;
-        -webkit-overflow-scrolling: touch;
-    }
-    body:has(.evidence-wrap:focus-within) .mobile-action-pill {
-        display: none !important;
-    }
-    body:has(.evidence-wrap:focus-within) .app-content {
-        padding-bottom: 60px; /* space for the ribbon */
-    }
-
-    /* Keep formatting text visible in WYSIWYG toolbar */
-    .wysiwyg-toolbar .btn .btn-text { display: none; }
-    .wysiwyg-toolbar .btn { font-size: 0 !important; padding: 8px !important; border-radius: 8px !important; }
-    .wysiwyg-toolbar .btn .material-symbols-outlined { margin-right: 0 !important; font-size: 20px !important; }
-
     /* Compare Dialog Mobile Overrides */
     .compare-dlg { width: 100vw !important; height: 100dvh !important; max-height: 100dvh !important; border-radius: 0 !important; }
     .compare-grid { grid-template-columns: 1fr !important; overflow-y: auto !important; }
     .compare-grid > div { min-height: 350px; flex: none; }
   }
 
+  @media (max-width: 768px) and (pointer: coarse) {
+      /* Editor Ribbon - Keyboard Toolbar (Touch Devices Only) */
+      .evidence-wrap:focus-within .wysiwyg-toolbar {
+          position: fixed !important;
+          top: auto !important;
+          bottom: var(--kb-offset, 0px) !important;
+          left: 0;
+          width: 100vw;
+          z-index: 10000;
+          background: var(--surface);
+          border: none;
+          border-top: 1px solid var(--outline);
+          border-radius: 0;
+          margin: 0;
+          padding: 6px 12px;
+          box-shadow: 0 -4px 10px rgba(0,0,0,0.1);
+          display: flex;
+          flex-wrap: nowrap;
+          overflow-x: auto;
+          justify-content: flex-start;
+          -webkit-overflow-scrolling: touch;
+      }
+      body:has(.evidence-wrap:focus-within) .mobile-action-pill {
+          display: none !important;
+      }
+      body:has(.evidence-wrap:focus-within) .app-content {
+          padding-bottom: 60px; /* space for the ribbon */
+      }
+  
+      /* Keep formatting text visible in WYSIWYG toolbar */
+      .wysiwyg-toolbar .btn .btn-text { display: none; }
+      .wysiwyg-toolbar .btn { font-size: 0 !important; padding: 8px !important; border-radius: 8px !important; }
+      .wysiwyg-toolbar .btn .material-symbols-outlined { margin-right: 0 !important; font-size: 20px !important; }
+  }
 
   /* Dialogs */
   .dlg-backdrop{ position: fixed; inset:0; background: rgba(0,0,0,.5); backdrop-filter: blur(4px); display:none; align-items:center; justify-content:center; padding: 16px; z-index: 120; }

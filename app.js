@@ -34,7 +34,7 @@ document.querySelectorAll('[data-set-color]').forEach(el => { el.addEventListene
 if (window.visualViewport) {
     const vv = window.visualViewport;
     const updateKeyboardOffset = () => {
-        const offset = window.innerHeight - vv.height - Math.round(vv.offsetTop);
+        const offset = window.innerHeight - vv.height;
         document.documentElement.style.setProperty('--kb-offset', `${Math.max(0, offset)}px`);
     };
     vv.addEventListener('resize', () => {
@@ -327,7 +327,7 @@ async function bootApp() {
             qnBackdrop.style.display = 'flex';
             void qnBackdrop.offsetWidth; // Force reflow
             qnBackdrop.classList.remove('qn-animating');
-            setTimeout(() => { qnTitle.focus(); qnTitle.select(); }, 50);
+            setTimeout(() => { qnEditor.focus(); moveCursorToEnd(qnEditor); }, 50);
         });
 
         qnAddField?.addEventListener('click', async () => {
