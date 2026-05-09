@@ -66,7 +66,7 @@ class Store {
             loadedState = {
                 activeWorkspaceId: defaultWsId,
                 workspaces: [{
-                    id: defaultWsId, title: "Project 1", activeTabId: defaultTabId,
+                    id: defaultWsId, title: "Project 1", activeTabId: "dashboard",
                     tabs: [{ id: defaultTabId, name: "Tab 1", scenarios: [{ id: uid(), name:`Note ${new Date().toISOString().split('T')[0]} 1`, fields: [], evidenceHtml:"", isOpen: true }] }]
                 }]
             };

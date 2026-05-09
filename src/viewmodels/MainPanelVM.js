@@ -4,6 +4,7 @@ import { uid } from '../utils/dom.js';
 
 export class MainPanelVM {
     get activeWorkspace() { return store.state?.workspaces.find(w => w.id === store.state.activeWorkspaceId); }
+    get workspaces() { return store.state?.workspaces || []; }
     get tabs() { return this.activeWorkspace?.tabs || []; }
     get activeTab() { return this.tabs.find(t => t.id === this.activeWorkspace?.activeTabId); }
 
@@ -75,7 +76,7 @@ export class MainPanelVM {
     }
 
     addScenario() {
-        const tab = this.activeTab; if(!tab) return null;
+        const tab = this.activeTab || this.tabs[0]; if(!tab) return null;
         const newId = uid();
         const defaultName = `Note ${new Date().toISOString().split('T')[0]} ${tab.scenarios.length + 1}`;
         const now = Date.now();

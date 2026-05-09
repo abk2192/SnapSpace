@@ -99,17 +99,6 @@ window.appPrompt = (msg, defaultVal="", title="Input Required") => {
 async function bootApp() {
     document.getElementById("renameTabBtn")?.remove();
 
-    // Wrap title and input into a single unified Appbar component
-    const titleEl = document.querySelector('.title');
-    const wsInput = document.getElementById("workspaceTitleInput");
-    if (titleEl && wsInput && titleEl.parentNode === wsInput.parentNode && !titleEl.closest('.title-group')) {
-        const group = document.createElement('div');
-        group.className = 'title-group';
-        titleEl.parentNode.insertBefore(group, titleEl);
-        group.appendChild(titleEl);
-        group.appendChild(wsInput);
-    }
-
     // Reorder Global Kebab Menu Actions (Only the tools meant for the top bar)
     const actionsContainer = document.querySelector('.appbar .actions');
     if (actionsContainer) {
@@ -309,9 +298,6 @@ async function bootApp() {
     const editorVM = new EditorVM();
     new EditorView(editorVM);
     
-    const activeWs = store.state.workspaces.find(w => w.id === store.state.activeWorkspaceId) || store.state.workspaces[0];
-    const wsTitleInput = document.getElementById("workspaceTitleInput");
-    if(wsTitleInput && activeWs) wsTitleInput.value = activeWs.title || "Project";
 
     /* ========= Quick Note Subsystem ========= */
     function initQuickNote() {

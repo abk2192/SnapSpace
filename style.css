@@ -76,20 +76,20 @@
   .title{ display:flex; align-items:center; gap:10px; flex:none; min-width: 150px; font-weight: 750; font-size: 16px; margin-right: 12px; }
   .title .badge{ width:34px; height:34px; display:grid; place-items:center; border-radius: 12px; background: linear-gradient(135deg, var(--grad-1), var(--grad-2)); color:white; box-shadow: var(--shadow-2); }
   
-  #workspaceTitleInput { flex: 0 1 200px; field-sizing: content; min-width: 100px; background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 4px 8px; font-family: inherit; font-size: 16px; font-weight: 750; color: var(--text); outline: none; text-overflow: ellipsis; transition: all 0.2s ease; }
-  #workspaceTitleInput:hover { background: var(--surface-2); border-color: var(--outline); }
-  #workspaceTitleInput:focus { background: var(--input-bg); border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
-
   /* Unified Title Group Component */
   .title-group { display: flex; align-items: center; background: var(--surface-2); padding: 4px 6px 4px 4px; border-radius: 12px; border: 1px solid transparent; transition: all 0.2s ease; margin-right: auto; max-width: 100%; flex: 0 1 auto; overflow: hidden;}
   .title-group:hover { border-color: var(--outline); background: var(--surface); }
-  .title-group:focus-within { background: var(--input-bg); border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); }
   
   .title-group .title { margin-right: 6px; padding-right: 10px; border-right: 2px solid var(--outline-2); font-size: 15px; min-width: auto; gap: 8px;}
   .title-group .title .badge { width: 30px; height: 30px; border-radius: 8px; margin-right: 0;}
   .title-group .title .badge svg { width: 16px; height: 16px; }
   
-  .title-group #workspaceTitleInput { background: transparent !important; border: none !important; box-shadow: none !important; padding: 4px; font-size: 15px; margin: 0; flex: 1; min-width: 80px; }
+  /* Workspace Switcher */
+  .ws-switcher-group { outline: none; border: 1px solid transparent; overflow: visible; }
+  .ws-switcher-group .ws-dropdown-icon { opacity: 0; transition: opacity 0.2s, transform 0.2s; margin-right: 4px; }
+  .ws-switcher-group:hover .ws-dropdown-icon { opacity: 1; }
+  .ws-switcher-group.active .ws-dropdown-icon { opacity: 1; transform: rotate(180deg); }
+  .ws-switcher-group.active .ws-dropdown-menu { opacity: 1; pointer-events: auto; transform: translateY(0); }
 
   .actions{ display:flex; gap:8px; flex: none; flex-wrap: nowrap; justify-content:flex-end; align-items: center; overflow: visible; scrollbar-width: none; }
   .actions::-webkit-scrollbar { display: none; } /* Hide scrollbar for clean look */
@@ -436,10 +436,9 @@
     /* Mobile Appbar - Keep the Badge, Hide the Text */
     .appbar-inner { padding: 0 12px; gap: 8px; flex-wrap: nowrap; }
     .tab-label { max-width: 90px; }
-    .title-group { padding: 4px; margin-right: auto; flex: 1; min-width: 0; background: transparent; border-color: transparent;}
-    .title-group .title { border-right: none; padding-right: 0; margin-right: 4px; gap: 0; font-size: 0; }
-    .title-group .title .badge { width: 30px; height: 30px; }
-    .title-group #workspaceTitleInput { font-size: 16px; padding: 2px 4px; min-width: 0;}
+    .ws-switcher-group { border: 1px solid var(--outline) !important; padding-right: 8px !important; background: var(--surface); padding: 4px; margin-right: auto; flex: 1; min-width: 0;}
+    .ws-switcher-group .title { display: none; }
+    .ws-switcher-group .ws-dropdown-icon { display: none; }
     
     .search-trigger-btn { display: none !important; }
     
