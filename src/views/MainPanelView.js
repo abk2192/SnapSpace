@@ -51,6 +51,16 @@ export class MainPanelView {
             }
         });
 
+        document.addEventListener('click', e => {
+            const calDay = e.target.closest('.cal-day');
+            if (calDay) { this.vm.setDashboardDateFilter(calDay.dataset.date); this.renderTabs(); this.renderPanel(); return; }
+            
+            if (e.target.closest('#clearDashFilterBtn')) {
+                this.vm.setDashboardDateFilter(null);
+                this.renderTabs(); this.renderPanel(); return;
+            }
+        });
+
         const resetBtn = document.getElementById("resetBtn");
         resetBtn?.addEventListener("click", () => this.vm.resetProject());
 
@@ -304,6 +314,49 @@ export class MainPanelView {
         const tabs = this.vm.tabs;
         const activeTabId = this.vm.activeTab?.id || (this.vm.activeWorkspace?.activeTabId === "dashboard" ? "dashboard" : null);
 
+        const calWrap = document.getElementById("dashCalendarWrap");
+        if (activeTabId === "dashboard") {
+            calWrap.style.display = "block";
+            
+            const now = new Date(); const year = now.getFullYear(); const month = now.getMonth(); 
+            const todayStr = `${year}-${String(month+1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            const firstDay = new Date(year, month, 1).getDay(); const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const monthName = now.toLocaleString('default', { month: 'long' });
+            
+            const daysWithNotes = new Set();
+            this.vm.tabs.forEach(t => {
+                t.scenarios.forEach(sc => {
+                    if (sc.createdAt || sc.modifiedAt) {
+                        const d = new Date(sc.createdAt || sc.modifiedAt);
+                        daysWithNotes.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+                    }
+                });
+            });
+
+            let daysHtml = ''; const dayNames = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+            dayNames.forEach(d => daysHtml += `<div style="font-weight: 700; color: var(--muted); padding: 4px 0; font-size: 11px; text-align: center;">${d}</div>`);
+            for (let i = 0; i < firstDay; i++) { daysHtml += `<div></div>`; }
+            for (let i = 1; i <= daysInMonth; i++) {
+                const dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                const isToday = dateStr === todayStr; const isSelected = this.vm.dashboardDateFilter === dateStr; const hasNotes = daysWithNotes.has(dateStr);
+                
+                let classes = "cal-day";
+                if (isToday) classes += " today";
+                if (isSelected) classes += " selected";
+                if (hasNotes && !isSelected) classes += " has-notes";
+                daysHtml += `<div class="${classes}" data-date="${dateStr}">${i}</div>`;
+            }
+
+            calWrap.innerHTML = `
+                <div style="max-width: 400px; margin: 0 auto; padding: 12px 16px;">
+                    <div style="font-weight: 800; font-size: 15px; margin-bottom: 12px; color: var(--text); display: flex; align-items: center; justify-content: space-between; padding: 0 8px;">
+                        <span>${monthName} ${year}</span>
+                        <span class="material-symbols-outlined" style="color: var(--primary); font-size: 20px;">calendar_month</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; gap: 4px 0;">${daysHtml}</div>
+                </div>`;
+        } else { calWrap.style.display = "none"; }
+
         // Dashboard Tab
         const dashBtn = document.createElement("button");
         dashBtn.className = "tab" + (activeTabId === "dashboard" ? " active" : "");
@@ -403,34 +456,6 @@ export class MainPanelView {
         if (activeTabId === "dashboard") {
             const wrap = document.createElement("div"); wrap.className = "tab-panel"; wrap.style.display = "block";
             
-            const gridWrap = document.createElement("div");
-            gridWrap.style.display = "grid"; gridWrap.style.gap = "16px";
-            gridWrap.style.gridTemplateColumns = window.innerWidth >= 900 ? "1fr 320px" : "1fr";
-            const mainCol = document.createElement("div"); const sideCol = document.createElement("div");
-            
-            // Calendar Component
-            const now = new Date(); const year = now.getFullYear(); const month = now.getMonth(); const today = now.getDate();
-            const firstDay = new Date(year, month, 1).getDay(); const daysInMonth = new Date(year, month + 1, 0).getDate();
-            const monthName = now.toLocaleString('default', { month: 'long' });
-            let daysHtml = ''; const dayNames = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
-            dayNames.forEach(d => daysHtml += `<div style="font-weight: bold; color: var(--muted); padding: 4px 0; font-size: 11px;">${d}</div>`);
-            for (let i = 0; i < firstDay; i++) { daysHtml += `<div></div>`; }
-            for (let i = 1; i <= daysInMonth; i++) {
-                if (i === today) { daysHtml += `<div style="display: flex; align-items: center; justify-content: center;"><span style="background: var(--primary); color: white; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; border-radius: 50%; box-shadow: 0 2px 8px var(--primary-light); font-weight: bold;">${i}</span></div>`; } 
-                else { daysHtml += `<div style="display: flex; align-items: center; justify-content: center; width: 26px; height: 26px; margin: 0 auto; color: var(--text);">${i}</div>`; }
-            }
-            sideCol.innerHTML = `
-                <div style="background: var(--surface); border: 1px solid var(--outline-2); border-radius: var(--r12); padding: 16px; margin-bottom: 16px; box-shadow: var(--shadow);">
-                    <div style="font-weight: 800; font-size: 15px; margin-bottom: 12px; color: var(--text); display: flex; align-items: center; justify-content: space-between;">
-                        <span>${monthName} ${year}</span>
-                        <span class="material-symbols-outlined" style="color: var(--primary);">calendar_month</span>
-                    </div>
-                    <div style="display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; gap: 4px; font-size: 12px;">
-                        ${daysHtml}
-                    </div>
-                </div>
-            `;
-
             let allScenarios = [];
             this.vm.tabs.forEach(t => {
                 t.scenarios.forEach(sc => {
@@ -438,24 +463,29 @@ export class MainPanelView {
                 });
             });
             
-            // Sort descending by modifiedAt
-            allScenarios.sort((a, b) => (b.modifiedAt || 0) - (a.modifiedAt || 0));
-            const limit = window.innerWidth <= 768 ? 5 : 20;
-            const recent = allScenarios.slice(0, limit); 
-            
-            if (recent.length === 0) {
-                mainCol.innerHTML = '<div style="padding: 32px; text-align: center; color: var(--muted); border: 1px dashed var(--outline); border-radius: var(--r12);">No notes yet. Create one to see it on your dashboard!</div>';
-            } else {
-                const header = document.createElement("div");
-                header.innerHTML = `<div style="font-weight: 800; font-size: 16px; margin-bottom: 12px; color: var(--text);">Recent Notes</div>`;
-                mainCol.appendChild(header);
-                recent.forEach((sc, idx) => { mainCol.appendChild(this.renderScenarioCard(sc, idx, true)); });
+            if (this.vm.dashboardDateFilter) {
+                allScenarios = allScenarios.filter(sc => {
+                    const d = new Date(sc.createdAt || sc.modifiedAt || Date.now());
+                    const dStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                    return dStr === this.vm.dashboardDateFilter;
+                });
             }
 
-            if (window.innerWidth >= 900) { gridWrap.appendChild(mainCol); gridWrap.appendChild(sideCol); } 
-            else { gridWrap.appendChild(sideCol); gridWrap.appendChild(mainCol); }
+            // Sort descending by modifiedAt
+            allScenarios.sort((a, b) => (b.modifiedAt || 0) - (a.modifiedAt || 0));
+            const recent = allScenarios.slice(0, 5); 
             
-            wrap.appendChild(gridWrap); this.panelEl.appendChild(wrap);
+            if (recent.length === 0) {
+                wrap.innerHTML = `<div style="padding: 32px; text-align: center; color: var(--muted); border: 1px dashed var(--outline); border-radius: var(--r12); margin-top: 16px;">${this.vm.dashboardDateFilter ? 'No notes found for this date.' : 'No notes yet. Create one to see it on your dashboard!'}</div>`;
+            } else {
+                const header = document.createElement("div");
+                const filterText = this.vm.dashboardDateFilter ? `Notes from ${this.vm.dashboardDateFilter}` : 'Recent Notes';
+                header.innerHTML = `<div style="font-weight: 800; font-size: 16px; margin: 16px 0 12px; color: var(--text); display: flex; justify-content: space-between; align-items: center;"><span>${filterText}</span>${this.vm.dashboardDateFilter ? `<button class="btn secondary icon-only" id="clearDashFilterBtn" style="padding: 4px; height: 24px; width: 24px; min-height: 0;" title="Clear Filter"><span class="material-symbols-outlined" style="font-size: 16px;">close</span></button>` : ''}</div>`;
+                wrap.appendChild(header);
+                recent.forEach((sc, idx) => { wrap.appendChild(this.renderScenarioCard(sc, idx, true)); });
+            }
+
+            this.panelEl.appendChild(wrap);
             const pMeta = document.getElementById("panelMeta"); if (pMeta) pMeta.style.display = "block";
             return;
         }

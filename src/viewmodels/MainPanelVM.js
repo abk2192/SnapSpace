@@ -3,6 +3,8 @@ import { globalEvents } from '../core/PubSub.js';
 import { uid } from '../utils/dom.js';
 
 export class MainPanelVM {
+    dashboardDateFilter = null;
+
     get activeWorkspace() { return store.state?.workspaces.find(w => w.id === store.state.activeWorkspaceId); }
     get workspaces() { return store.state?.workspaces || []; }
     get tabs() { return this.activeWorkspace?.tabs || []; }
@@ -32,6 +34,12 @@ export class MainPanelVM {
             globalEvents.publish('tabs:changed');
             globalEvents.publish('scenarios:changed');
         }
+    }
+
+    setDashboardDateFilter(dateStr) {
+        if (this.dashboardDateFilter === dateStr) this.dashboardDateFilter = null;
+        else this.dashboardDateFilter = dateStr;
+        globalEvents.publish('scenarios:changed');
     }
 
     addTab() {

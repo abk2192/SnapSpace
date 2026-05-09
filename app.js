@@ -139,8 +139,8 @@ async function bootApp() {
     if (expandAllBtn) expandAllBtn.style.display = 'none';
     if (collapseAllBtn) collapseAllBtn.style.display = 'none';
     
-    const tabsbar = document.querySelector('.tabsbar');
-    if (tabsbar && !tabsbar.querySelector('.tab-tools')) {
+    const tabsbarInner = document.querySelector('.tabsbar-inner');
+    if (tabsbarInner && !tabsbarInner.querySelector('.tab-tools')) {
         const tabTools = document.createElement('div');
         tabTools.className = 'tab-tools';
         
@@ -151,7 +151,7 @@ async function bootApp() {
         toggleAllBtn.title = "Collapse All";
         
         tabTools.appendChild(toggleAllBtn);
-        tabsbar.appendChild(tabTools);
+        tabsbarInner.appendChild(tabTools);
     }
     
     // Ensure all buttons in header/panel actions have icons and titles for mobile icon-only mode
