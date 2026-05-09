@@ -370,12 +370,15 @@ async function bootApp() {
             void qnBackdrop.offsetWidth; // Force reflow
             qnBackdrop.classList.remove('qn-animating');
             
+            // Push browser state to handle native back gestures perfectly
+            history.pushState({ qnOpen: true }, "");
+
             if (!sid) {
                 setTimeout(() => { qnEditor.focus(); moveCursorToEnd(qnEditor); }, 50);
             }
         };
 
-        qnBtn?.addEventListener('click', () => window.openQuickNote(null));
+        qnBtn?.addEventListener('click', (e) => { e.preventDefault(); window.openQuickNote(null); });
         
         const toggleReadMode = () => {
             qnBackdrop.classList.toggle('qn-read-mode');
@@ -392,7 +395,13 @@ async function bootApp() {
             currentFields.push({ id: uid(), key: key, val: val || "" }); renderQnTags();
         });
 
-        qnDone?.addEventListener('click', () => {
+        let isClosingQn = false;
+        const closeAndSaveQuickNote = (fromPopState = false) => {
+            if (isClosingQn || qnBackdrop.style.display === 'none') return;
+            isClosingQn = true;
+
+            if (!fromPopState) history.back();
+
             qnBackdrop.classList.add('qn-animating');
             setTimeout(() => {
                 qnBackdrop.style.display = 'none';
@@ -403,6 +412,13 @@ async function bootApp() {
                     for (const t of window.mainPanelVM.tabs) { targetSc = t.scenarios.find(s => s.id === editingScenarioId); if (targetSc) break; }
                     if (targetSc) { targetSc.fields = currentFields; targetSc.modifiedAt = Date.now(); globalEvents.publish('scenarios:changed'); }
                 } else {
+                    const isEmptyContent = !qnEditor.textContent.trim() && !qnEditor.querySelector('img') && !qnEditor.querySelector('input[type="checkbox"]');
+                    const isDefaultTitle = qnTitle.value.startsWith('Note ');
+                    if (isDefaultTitle && isEmptyContent && currentFields.length === 0) {
+                        // Discard untouched empty notes silently
+                        isClosingQn = false;
+                        return;
+                    }
                     const newId = window.mainPanelVM?.addScenario();
                     if (newId) {
                         window.mainPanelVM.updateScenarioName(newId, qnTitle.value.trim() || "Note");
@@ -411,8 +427,19 @@ async function bootApp() {
                         if (sc) { sc.fields = currentFields; globalEvents.publish('scenarios:changed'); }
                     }
                 }
+                isClosingQn = false;
             }, 300); // Wait for shrink animation
+        };
+
+        // Global History hook: Triggered natively if user presses the "Back" button or swipes
+        window.addEventListener('popstate', () => {
+            if (qnBackdrop.style.display === 'flex' && !isClosingQn) {
+                closeAndSaveQuickNote(true);
+            }
         });
+
+        qnDone?.addEventListener('click', () => closeAndSaveQuickNote(false));
+        document.getElementById('qnCloseBtn')?.addEventListener('click', () => closeAndSaveQuickNote(false));
     }
     initQuickNote();
 }

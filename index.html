@@ -381,20 +381,21 @@
   <div class="qn-backdrop qn-animating" id="qnBackdrop">
       <div class="qn-header">
           <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px;">
+              <button class="btn secondary icon-only" id="qnCloseBtn" title="Back / Close" style="border: none; box-shadow: none; background: transparent; margin-left: -8px;"><span class="material-symbols-outlined">arrow_back</span></button>
               <input type="text" id="qnTitle" class="qn-title-input" onclick="this.select()" style="flex: 1; min-width: 0;" />
               <div style="display: flex; gap: 8px; flex-shrink: 0;">
                   <button class="btn secondary icon-only" id="qnReadModeBtn" title="Read Mode"><span class="material-symbols-outlined">menu_book</span></button>
                   <button class="btn secondary icon-only" id="qnAddFieldBtn" title="Add Field"><span class="material-symbols-outlined">sell</span></button>
-                  <button class="btn icon-only" id="qnDoneBtn" title="Save Note" style="background: linear-gradient(135deg, var(--grad-1), var(--grad-2)); border: none; box-shadow: 0 4px 10px var(--primary-light);"><span class="material-symbols-outlined" style="color: #fff;">check</span></button>
               </div>
           </div>
-          <div id="qnTags" class="qn-tags"></div>
+          <div id="qnTags" class="qn-tags" style="padding-left: 38px;"></div>
       </div>
       <div class="qn-body">
           <div class="evidence-wrap" style="flex: 1; display: flex; flex-direction: column; min-height: 0; margin-top: 0; margin-bottom: 0;">
               <div class="evidence" id="qnEditor" contenteditable="true" style="flex: 1; overflow-y: auto; margin-top: 0; min-height: 100px;"></div>
           </div>
       </div>
+      <button class="qn-float-btn qn-done-btn" id="qnDoneBtn" title="Save Note"><span class="material-symbols-outlined">check</span></button>
   </div>
 
   <script type="module" src="app.js"></script>

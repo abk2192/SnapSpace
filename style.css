@@ -555,11 +555,19 @@
   .qn-title-input { font-size: 24px; font-weight: 800; border: none; background: transparent; color: var(--text); outline: none; width: 100%; font-family: inherit; }
   .qn-tags { display: flex; flex-wrap: wrap; gap: 6px; padding: 0; margin-top: 4px; }
   .qn-body { flex: 1; display: flex; flex-direction: column; padding: 0; min-height: 0; position: relative; background: var(--surface-2); }
-  .qn-body .evidence-wrap { flex: 1; display: flex; flex-direction: column; margin: 0; padding-bottom: var(--kb-offset, 0px); }
+  .qn-body .evidence-wrap { flex: 1; display: flex; flex-direction: column; margin: 0; padding-bottom: calc(80px + var(--kb-offset, 0px)); }
   #qnEditor { flex: 1; margin: 0; border-radius: 0; border: none; padding: 20px; background: var(--surface); box-shadow: none; outline: none; }
   .qn-body .evidence-wrap:focus-within .wysiwyg-toolbar { position: sticky; top: 0; z-index: 50; }
   
+  /* Quick Note FAB */
+  .qn-float-btn { position: fixed; right: 24px; bottom: calc(24px + var(--kb-offset, 0px)); width: 56px; height: 56px; border-radius: 50%; border: none; display: grid; place-items: center; cursor: pointer; box-shadow: 0 6px 16px rgba(0,0,0,0.15); z-index: 10002; transition: bottom 0.2s ease, transform 0.2s; }
+  .qn-float-btn:hover { filter: brightness(1.1); }
+  .qn-done-btn { background: linear-gradient(135deg, var(--grad-1), var(--grad-2)); color: white; }
+  .qn-done-btn .material-symbols-outlined { font-size: 28px; }
+  .qn-done-btn:active { transform: scale(0.9); }
+
   /* Read Mode inside Quick Note */
   .qn-backdrop.qn-read-mode #qnEditor { user-select: text; }
   .qn-backdrop.qn-read-mode .wysiwyg-toolbar { display: none !important; }
   .qn-backdrop.qn-read-mode .qn-title-input { pointer-events: none; }
+  .qn-backdrop.qn-read-mode .qn-float-btn { display: none !important; }
