@@ -343,9 +343,8 @@ async function bootApp() {
             
             qnBackdrop.classList.remove('qn-read-mode');
             qnEditor.contentEditable = "true";
-            [document.getElementById('qnReadModeBtn'), document.getElementById('qnReadModeDesktopBtn')].forEach(btn => {
-                if (btn) btn.querySelector('.material-symbols-outlined').textContent = 'menu_book';
-            });
+            const readBtn = document.getElementById('qnReadModeBtn');
+            if (readBtn) readBtn.querySelector('.material-symbols-outlined').textContent = 'menu_book';
 
             if (sid) {
                 editingScenarioId = sid;
@@ -377,19 +376,15 @@ async function bootApp() {
         };
 
         qnBtn?.addEventListener('click', () => window.openQuickNote(null));
-        document.getElementById('qnDonePillBtn')?.addEventListener('click', () => qnDone.click());
-        document.getElementById('qnAddTagPillBtn')?.addEventListener('click', () => qnAddField.click());
         
         const toggleReadMode = () => {
             qnBackdrop.classList.toggle('qn-read-mode');
             const isRead = qnBackdrop.classList.contains('qn-read-mode');
             qnEditor.contentEditable = !isRead;
-            [document.getElementById('qnReadModeBtn'), document.getElementById('qnReadModeDesktopBtn')].forEach(btn => {
-                if (btn) btn.querySelector('.material-symbols-outlined').textContent = isRead ? 'edit' : 'menu_book';
-            });
+            const readBtn = document.getElementById('qnReadModeBtn');
+            if (readBtn) readBtn.querySelector('.material-symbols-outlined').textContent = isRead ? 'edit' : 'menu_book';
         };
         document.getElementById('qnReadModeBtn')?.addEventListener('click', toggleReadMode);
-        document.getElementById('qnReadModeDesktopBtn')?.addEventListener('click', toggleReadMode);
 
         qnAddField?.addEventListener('click', async () => {
             const key = await window.appPrompt("Enter field name:"); if (!key) return;

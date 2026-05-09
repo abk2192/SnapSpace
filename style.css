@@ -311,6 +311,11 @@
   .wysiwyg-toolbar .btn { padding: 4px 8px; font-size: 12px; font-weight: 700; border-radius: 6px; transition: all 0.2s ease; }
   .wysiwyg-toolbar .btn.active-format { background: var(--primary-light) !important; color: var(--primary) !important; border-color: var(--primary) !important; }
 
+  /* Hide Keyboard Dismiss Button on Desktop */
+  @media (min-width: 769px) {
+      .wysiwyg-toolbar .btn[data-cmd="closeKeyboard"] { display: none !important; }
+  }
+
   /* Table inside WYSIWYG */
   .evidence-table { width: 100%; border-collapse: collapse; margin: 8px 0; border: 1px solid var(--outline-2); font-size: 13px; }
   .evidence-table td, .evidence-table th { border: 1px solid var(--outline-2); padding: 8px; min-width: 50px; }
@@ -490,10 +495,10 @@
           border-top: 1px solid var(--outline);
           border-radius: 0;
           margin: 0;
-          padding: 6px 12px;
+          padding: 6px 0 6px 12px !important;
           box-shadow: 0 -4px 10px rgba(0,0,0,0.1);
           display: flex;
-          flex-wrap: nowrap;
+          flex-wrap: nowrap !important;
           overflow-x: auto;
           justify-content: flex-start;
           -webkit-overflow-scrolling: touch;
@@ -509,6 +514,20 @@
       .wysiwyg-toolbar .btn .btn-text { display: none; }
       .wysiwyg-toolbar .btn { font-size: 0 !important; padding: 8px !important; border-radius: 8px !important; }
       .wysiwyg-toolbar .btn .material-symbols-outlined { margin-right: 0 !important; font-size: 20px !important; }
+
+      /* Sticky Dismiss Keyboard Button */
+      .wysiwyg-toolbar .btn[data-cmd="closeKeyboard"] {
+          display: inline-flex !important;
+          position: sticky;
+          right: 0;
+          background: var(--surface) !important;
+          border-radius: 0 !important;
+          border-left: 1px solid var(--outline-2) !important;
+          margin: -6px 0 -6px auto !important;
+          padding: 12px 16px !important;
+          box-shadow: -4px 0 10px rgba(0,0,0,0.05);
+          z-index: 10;
+      }
   }
 
   /* Dialogs */
@@ -533,26 +552,12 @@
   .qn-backdrop { position: fixed; inset: 0; background: var(--surface-2); z-index: 10001; display: none; flex-direction: column; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); transform-origin: top center; opacity: 1; }
   .qn-backdrop.qn-animating { transform: scale(0.9) translateY(-20px); opacity: 0; pointer-events: none; }
   .qn-header { background: var(--surface); border-bottom: 1px solid var(--outline); padding: max(24px, env(safe-area-inset-top)) 20px 16px; box-shadow: var(--shadow-2); display: flex; flex-direction: column; gap: 12px; z-index: 10; }
-  .qn-title-input { font-size: 26px; font-weight: 800; border: none; background: transparent; color: var(--text); outline: none; width: 100%; font-family: inherit; }
+  .qn-title-input { font-size: 24px; font-weight: 800; border: none; background: transparent; color: var(--text); outline: none; width: 100%; font-family: inherit; }
   .qn-tags { display: flex; flex-wrap: wrap; gap: 6px; padding: 0; margin-top: 4px; }
   .qn-body { flex: 1; display: flex; flex-direction: column; padding: 0; min-height: 0; position: relative; background: var(--surface-2); }
-  .qn-body .evidence-wrap { flex: 1; display: flex; flex-direction: column; margin: 0; padding-bottom: calc(24px + var(--kb-offset, 0px)); }
+  .qn-body .evidence-wrap { flex: 1; display: flex; flex-direction: column; margin: 0; padding-bottom: var(--kb-offset, 0px); }
   #qnEditor { flex: 1; margin: 0; border-radius: 0; border: none; padding: 20px; background: var(--surface); box-shadow: none; outline: none; }
   .qn-body .evidence-wrap:focus-within .wysiwyg-toolbar { position: sticky; top: 0; z-index: 50; }
-  .qn-float-actions { position: fixed; right: 24px; bottom: calc(24px + var(--kb-offset, 0px)); display: flex; flex-direction: column; gap: 16px; z-index: 10002; transition: bottom 0.2s ease; }
-  .qn-float-btn { width: 56px; height: 56px; border-radius: 50%; border: none; display: grid; place-items: center; cursor: pointer; box-shadow: 0 6px 16px rgba(0,0,0,0.15); background: var(--surface); color: var(--text); transition: transform 0.2s; }
-  .qn-float-btn:hover { background: var(--surface-2); }
-  .qn-float-btn:active { transform: scale(0.9); }
-  .qn-done-btn { background: linear-gradient(135deg, var(--grad-1), var(--grad-2)); color: white; }
-  .qn-done-btn .material-symbols-outlined { font-size: 28px; }
-  
-  /* Quick Note Mobile Pill */
-  .qn-mobile-pill { display: none; }
-  @media (max-width: 768px) {
-      .qn-float-actions { display: none !important; }
-      .qn-mobile-pill { display: flex; position: fixed; bottom: calc(24px + var(--kb-offset, 0px)); left: 50%; transform: translateX(-50%); background: var(--surface); border: 1px solid var(--outline); border-radius: 999px; padding: 0 24px; justify-content: space-between; box-shadow: var(--shadow-2); z-index: 10002; align-items: center; height: 56px; width: 240px; transition: bottom 0.2s ease; }
-      .qn-body .evidence-wrap { padding-bottom: calc(100px + var(--kb-offset, 0px)); }
-  }
   
   /* Read Mode inside Quick Note */
   .qn-backdrop.qn-read-mode #qnEditor { user-select: text; }

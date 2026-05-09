@@ -48,6 +48,12 @@ export class EditorView {
             if (cmdBtn) {
                 e.preventDefault(); const cmd = cmdBtn.dataset.cmd; let val = cmdBtn.dataset.val || null;
                 
+                if (cmd === 'closeKeyboard') {
+                    const activeEl = document.activeElement;
+                    if (activeEl && typeof activeEl.blur === 'function') activeEl.blur();
+                    return;
+                }
+
                 if (cmd === 'createLink') {
                     val = await window.appPrompt("Enter the URL:"); if (!val) return;
                     if (!/^https?:\/\//i.test(val)) val = 'https://' + val;
