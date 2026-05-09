@@ -366,7 +366,7 @@
     </div>
   </div>
 
-  <div class="dlg-backdrop" id="appSysDialog" role="dialog" aria-modal="true" style="z-index: 10005;">
+  <div class="dlg-backdrop" id="appSysDialog" role="dialog" aria-modal="true" style="z-index: 10050;">
     <div class="dlg" style="max-width: 400px;">
       <div class="dlg-head" id="appSysTitle">Notification</div>
       <div class="dlg-body" id="appSysMsg" style="font-size: 14px; line-height: 1.5; margin-bottom: 8px;"></div>
@@ -381,16 +381,22 @@
   <div class="qn-backdrop qn-animating" id="qnBackdrop">
       <div class="qn-header">
           <input type="text" id="qnTitle" class="qn-title-input" onclick="this.select()" />
+          <div id="qnTags" class="qn-tags"></div>
       </div>
-      <div id="qnTags" class="qn-tags"></div>
       <div class="qn-body">
-          <div class="evidence-wrap" style="flex: 1; display: flex; flex-direction: column; min-height: 0; margin-top: 16px; margin-bottom: 80px;">
+          <div class="evidence-wrap" style="flex: 1; display: flex; flex-direction: column; min-height: 0; margin-top: 0; margin-bottom: 0;">
               <div class="evidence" id="qnEditor" contenteditable="true" style="flex: 1; overflow-y: auto; margin-top: 0; min-height: 100px;"></div>
           </div>
       </div>
       <div class="qn-float-actions">
+          <button class="qn-float-btn" id="qnReadModeDesktopBtn" title="Toggle Read Mode"><span class="material-symbols-outlined">menu_book</span></button>
           <button class="qn-float-btn" id="qnAddFieldBtn" title="Add Field"><span class="material-symbols-outlined">sell</span></button>
           <button class="qn-float-btn qn-done-btn" id="qnDoneBtn" title="Save Note"><span class="material-symbols-outlined">check</span></button>
+      </div>
+      <div class="mobile-action-pill qn-mobile-pill">
+         <button class="pill-btn" id="qnReadModeBtn" title="Read Mode"><span class="material-symbols-outlined">menu_book</span></button>
+         <button class="pill-btn pill-add" id="qnDonePillBtn"><span class="material-symbols-outlined">check</span></button>
+         <button class="pill-btn" id="qnAddTagPillBtn" title="Add Tag"><span class="material-symbols-outlined">sell</span></button>
       </div>
   </div>
 

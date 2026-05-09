@@ -225,6 +225,25 @@ async function bootApp() {
         });
     }
 
+    // Intercept clicks and focus to prevent inline editing and open Quick Note modal instead
+    document.addEventListener('click', (e) => {
+        const ev = e.target.closest('.scenario .evidence');
+        if (ev && !ev.closest('#qnBackdrop')) {
+            if (e.target.closest('input[type="checkbox"], a, .copy-att, .editor-checkbox')) return;
+            e.preventDefault();
+            const sid = ev.dataset.evidence || ev.closest('details.scenario')?.dataset?.id;
+            if (sid) window.openQuickNote(sid);
+        }
+    });
+
+    document.addEventListener('focusin', (e) => {
+        if (e.target.classList && e.target.classList.contains('evidence') && !e.target.closest('#qnBackdrop')) {
+            e.target.blur();
+            const sid = e.target.dataset.evidence || e.target.closest('details.scenario')?.dataset?.id;
+            if (sid) window.openQuickNote(sid);
+        }
+    });
+
     // Load the reactive proxy state
     await store.init();
     
@@ -305,15 +324,13 @@ async function bootApp() {
         const qnAddField = document.getElementById('qnAddFieldBtn');
         
         let currentFields = [];
+        let editingScenarioId = null;
         const renderQnTags = () => { qnTags.innerHTML = currentFields.map(f => `<span class="tag"><b>${escapeHtml(f.key)}:</b> ${escapeHtml(f.val)}</span>`).join(""); };
 
-        qnBtn?.addEventListener('click', () => {
+        window.openQuickNote = (sid = null) => {
             const tab = window.mainPanelVM?.activeTab;
-            if(!tab) { window.appAlert("Please select or create a project/tab first."); return; }
+            if(!tab && !sid) { window.appAlert("Please select or create a project/tab first."); return; }
             
-            currentFields = []; renderQnTags(); qnEditor.innerHTML = '';
-            const dateStr = new Date().toISOString().split('T')[0];
-            qnTitle.value = `Note ${dateStr} ${tab.scenarios.length + 1}`;
             
             let qnToolbar = qnBackdrop.querySelector('.wysiwyg-toolbar');
             if (!qnToolbar) {
@@ -324,11 +341,55 @@ async function bootApp() {
                 }
             }
             
+            qnBackdrop.classList.remove('qn-read-mode');
+            qnEditor.contentEditable = "true";
+            [document.getElementById('qnReadModeBtn'), document.getElementById('qnReadModeDesktopBtn')].forEach(btn => {
+                if (btn) btn.querySelector('.material-symbols-outlined').textContent = 'menu_book';
+            });
+
+            if (sid) {
+                editingScenarioId = sid;
+                let sc = null;
+                for (const t of window.mainPanelVM.tabs) {
+                    sc = t.scenarios.find(s => s.id === sid);
+                    if (sc) break;
+                }
+                if (!sc) return;
+                qnTitle.value = sc.name || "";
+                qnEditor.innerHTML = sc.evidenceHtml || "";
+                currentFields = JSON.parse(JSON.stringify(sc.fields || []));
+            } else {
+                editingScenarioId = null;
+                currentFields = []; 
+                qnEditor.innerHTML = '';
+                const dateStr = new Date().toISOString().split('T')[0];
+                qnTitle.value = `Note ${dateStr} ${tab.scenarios.length + 1}`;
+            }
+            
+            renderQnTags();
             qnBackdrop.style.display = 'flex';
             void qnBackdrop.offsetWidth; // Force reflow
             qnBackdrop.classList.remove('qn-animating');
-            setTimeout(() => { qnEditor.focus(); moveCursorToEnd(qnEditor); }, 50);
-        });
+            
+            if (!sid) {
+                setTimeout(() => { qnEditor.focus(); moveCursorToEnd(qnEditor); }, 50);
+            }
+        };
+
+        qnBtn?.addEventListener('click', () => window.openQuickNote(null));
+        document.getElementById('qnDonePillBtn')?.addEventListener('click', () => qnDone.click());
+        document.getElementById('qnAddTagPillBtn')?.addEventListener('click', () => qnAddField.click());
+        
+        const toggleReadMode = () => {
+            qnBackdrop.classList.toggle('qn-read-mode');
+            const isRead = qnBackdrop.classList.contains('qn-read-mode');
+            qnEditor.contentEditable = !isRead;
+            [document.getElementById('qnReadModeBtn'), document.getElementById('qnReadModeDesktopBtn')].forEach(btn => {
+                if (btn) btn.querySelector('.material-symbols-outlined').textContent = isRead ? 'edit' : 'menu_book';
+            });
+        };
+        document.getElementById('qnReadModeBtn')?.addEventListener('click', toggleReadMode);
+        document.getElementById('qnReadModeDesktopBtn')?.addEventListener('click', toggleReadMode);
 
         qnAddField?.addEventListener('click', async () => {
             const key = await window.appPrompt("Enter field name:"); if (!key) return;
@@ -340,12 +401,20 @@ async function bootApp() {
             qnBackdrop.classList.add('qn-animating');
             setTimeout(() => {
                 qnBackdrop.style.display = 'none';
-                const newId = window.mainPanelVM?.addScenario();
-                if (newId) {
-                    window.mainPanelVM.updateScenarioName(newId, qnTitle.value.trim() || "Note");
-                    window.mainPanelVM.updateEvidence(newId, qnEditor.innerHTML);
-                    const sc = window.mainPanelVM.activeTab.scenarios.find(s => s.id === newId);
-                    if (sc) { sc.fields = currentFields; globalEvents.publish('scenarios:changed'); }
+                if (editingScenarioId) {
+                    window.mainPanelVM.updateScenarioName(editingScenarioId, qnTitle.value.trim() || "Note");
+                    window.mainPanelVM.updateEvidence(editingScenarioId, qnEditor.innerHTML);
+                    let targetSc = null;
+                    for (const t of window.mainPanelVM.tabs) { targetSc = t.scenarios.find(s => s.id === editingScenarioId); if (targetSc) break; }
+                    if (targetSc) { targetSc.fields = currentFields; targetSc.modifiedAt = Date.now(); globalEvents.publish('scenarios:changed'); }
+                } else {
+                    const newId = window.mainPanelVM?.addScenario();
+                    if (newId) {
+                        window.mainPanelVM.updateScenarioName(newId, qnTitle.value.trim() || "Note");
+                        window.mainPanelVM.updateEvidence(newId, qnEditor.innerHTML);
+                        const sc = window.mainPanelVM.activeTab.scenarios.find(s => s.id === newId);
+                        if (sc) { sc.fields = currentFields; globalEvents.publish('scenarios:changed'); }
+                    }
                 }
             }, 300); // Wait for shrink animation
         });
