@@ -32,12 +32,18 @@ document.querySelectorAll('[data-set-color]').forEach(el => { el.addEventListene
 
 /* ========= Viewport / Keyboard Offset Engine ========= */
 if (window.visualViewport) {
+    const vv = window.visualViewport;
     const updateKeyboardOffset = () => {
-        const offset = window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop;
-        document.documentElement.style.setProperty('--keyboard-offset', `${Math.max(0, offset)}px`);
+        document.documentElement.style.setProperty('--vv-height', `${vv.height}px`);
+        document.documentElement.style.setProperty('--vv-top', `${vv.offsetTop}px`);
     };
-    window.visualViewport.addEventListener('resize', updateKeyboardOffset);
-    window.visualViewport.addEventListener('scroll', updateKeyboardOffset);
+    vv.addEventListener('resize', () => {
+        updateKeyboardOffset();
+        if (document.activeElement && document.activeElement.tagName !== 'BODY') {
+            setTimeout(() => document.activeElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 100);
+        }
+    });
+    vv.addEventListener('scroll', updateKeyboardOffset);
     updateKeyboardOffset();
 }
 
