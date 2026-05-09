@@ -67,7 +67,7 @@ class Store {
                 activeWorkspaceId: defaultWsId,
                 workspaces: [{
                     id: defaultWsId, title: "Project 1", activeTabId: defaultTabId,
-                    tabs: [{ id: defaultTabId, name: "Tab 1", scenarios: [{ id: uid(), name:"Item 1", fields: [], evidenceHtml:"", isOpen: true }] }]
+                    tabs: [{ id: defaultTabId, name: "Tab 1", scenarios: [{ id: uid(), name:`Note ${new Date().toISOString().split('T')[0]} 1`, fields: [], evidenceHtml:"", isOpen: true }] }]
                 }]
             };
         }

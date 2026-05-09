@@ -151,7 +151,8 @@ async function bootApp() {
         'expandAllBtn': 'unfold_more',
         'collapseAllBtn': 'unfold_less',
         'resetBtn': 'restart_alt',
-        'addScenarioBtn': 'add'
+        'addScenarioBtn': 'add',
+        'quickNoteBtn': 'add'
     };
     
     document.querySelectorAll('.appbar .actions .btn, .tab-tools .btn').forEach(btn => {
@@ -190,7 +191,7 @@ async function bootApp() {
         mobilePill.className = "mobile-action-pill";
         mobilePill.innerHTML = `
             <button class="pill-btn" id="pillSearchBtn" title="Search"><span class="material-symbols-outlined">search</span></button>
-            <button class="pill-btn pill-add" id="pillAddBtn"><span class="material-symbols-outlined">add</span> <span class="pill-text">Add Item</span></button>
+            <button class="pill-btn pill-add" id="pillAddBtn"><span class="material-symbols-outlined">add</span> <span class="pill-text">Add Note</span></button>
             <button class="pill-btn pill-add" id="pillUnlockBtn" style="display: none;"><span class="material-symbols-outlined">lock</span></button>
             <button class="pill-btn" id="pillMoreBtn" title="More Actions"><span class="material-symbols-outlined">apps</span></button>
         `;
@@ -200,7 +201,7 @@ async function bootApp() {
             document.querySelector('.search-trigger-btn')?.click();
         });
         document.getElementById("pillAddBtn").addEventListener("click", () => {
-            document.getElementById("addScenarioBtn")?.click();
+            document.getElementById("quickNoteBtn")?.click();
         });
         document.getElementById("pillUnlockBtn").addEventListener("click", () => {
             document.getElementById("toggleEditBtn")?.click();
@@ -239,7 +240,7 @@ async function bootApp() {
         } else if (cmdOrCtrl && e.key.toLowerCase() === 'o') {
             e.preventDefault(); document.getElementById('importBtn')?.click();
         } else if (e.altKey && e.key.toLowerCase() === 'n') {
-            e.preventDefault(); document.getElementById('addScenarioBtn')?.click();
+            e.preventDefault(); document.getElementById('quickNoteBtn')?.click();
         } else if (e.altKey && e.key.toLowerCase() === 't') {
             e.preventDefault(); document.querySelector('.tab.plus')?.click();
         } else if (e.altKey && e.key.toLowerCase() === 'r') {
@@ -292,6 +293,64 @@ async function bootApp() {
     const activeWs = store.state.workspaces.find(w => w.id === store.state.activeWorkspaceId) || store.state.workspaces[0];
     const wsTitleInput = document.getElementById("workspaceTitleInput");
     if(wsTitleInput && activeWs) wsTitleInput.value = activeWs.title || "Project";
+
+    /* ========= Quick Note Subsystem ========= */
+    function initQuickNote() {
+        const qnBtn = document.getElementById('quickNoteBtn');
+        const qnBackdrop = document.getElementById('qnBackdrop');
+        const qnTitle = document.getElementById('qnTitle');
+        const qnEditor = document.getElementById('qnEditor');
+        const qnTags = document.getElementById('qnTags');
+        const qnDone = document.getElementById('qnDoneBtn');
+        const qnAddField = document.getElementById('qnAddFieldBtn');
+        
+        let currentFields = [];
+        const renderQnTags = () => { qnTags.innerHTML = currentFields.map(f => `<span class="tag"><b>${escapeHtml(f.key)}:</b> ${escapeHtml(f.val)}</span>`).join(""); };
+
+        qnBtn?.addEventListener('click', () => {
+            const tab = window.mainPanelVM?.activeTab;
+            if(!tab) { window.appAlert("Please select or create a project/tab first."); return; }
+            
+            currentFields = []; renderQnTags(); qnEditor.innerHTML = '';
+            const dateStr = new Date().toISOString().split('T')[0];
+            qnTitle.value = `Note ${dateStr} ${tab.scenarios.length + 1}`;
+            
+            let qnToolbar = qnBackdrop.querySelector('.wysiwyg-toolbar');
+            if (!qnToolbar) {
+                const existingToolbar = document.querySelector('.wysiwyg-toolbar');
+                if (existingToolbar) {
+                    qnToolbar = existingToolbar.cloneNode(true);
+                    qnEditor.parentNode.insertBefore(qnToolbar, qnEditor);
+                }
+            }
+            
+            qnBackdrop.style.display = 'flex';
+            void qnBackdrop.offsetWidth; // Force reflow
+            qnBackdrop.classList.remove('qn-animating');
+            setTimeout(() => { qnTitle.focus(); qnTitle.select(); }, 50);
+        });
+
+        qnAddField?.addEventListener('click', async () => {
+            const key = await window.appPrompt("Enter field name:"); if (!key) return;
+            const val = await window.appPrompt(`Enter value for "${key}":`);
+            currentFields.push({ id: uid(), key: key, val: val || "" }); renderQnTags();
+        });
+
+        qnDone?.addEventListener('click', () => {
+            qnBackdrop.classList.add('qn-animating');
+            setTimeout(() => {
+                qnBackdrop.style.display = 'none';
+                const newId = window.mainPanelVM?.addScenario();
+                if (newId) {
+                    window.mainPanelVM.updateScenarioName(newId, qnTitle.value.trim() || "Note");
+                    window.mainPanelVM.updateEvidence(newId, qnEditor.innerHTML);
+                    const sc = window.mainPanelVM.activeTab.scenarios.find(s => s.id === newId);
+                    if (sc) { sc.fields = currentFields; globalEvents.publish('scenarios:changed'); }
+                }
+            }, 300); // Wait for shrink animation
+        });
+    }
+    initQuickNote();
 }
 
 /* Initial render */

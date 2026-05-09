@@ -73,8 +73,9 @@
         <button class="btn secondary" id="toggleEditBtn" title="Lock (Read-Only Mode)"><span class="material-symbols-outlined">lock_open</span> <span class="btn-text">Read-Only Mode</span></button>
         <button class="btn secondary" id="importBtn"><span class="material-symbols-outlined">upload</span> Import</button>
         <input type="file" id="importInput" accept=".html" hidden />
-        <button class="btn danger" id="resetBtn" title="Clear all tabs and items"><span class="material-symbols-outlined">delete_sweep</span> Reset</button>
-        <button class="btn" id="addScenarioBtn"><span class="material-symbols-outlined">add</span> Add Item</button>
+        <button class="btn danger" id="resetBtn" title="Clear all tabs and notes"><span class="material-symbols-outlined">delete_sweep</span> Reset</button>
+        <button class="btn" id="addScenarioBtn" style="display:none;">Add Note</button>
+        <button class="btn" id="quickNoteBtn"><span class="material-symbols-outlined">add</span> Add Note</button>
         <button class="btn" id="exportHtmlBtn"><span class="material-symbols-outlined">download</span> Export Project</button>
       </div>
     </div>
@@ -114,7 +115,7 @@
   <div class="dlg-backdrop" id="tplBackdrop" role="dialog" aria-modal="true">
     <div class="dlg" style="max-width: 650px;">
       <div class="dlg-head">
-        <span style="display:flex; align-items:center; gap:8px;"><span class="material-symbols-outlined">bookmarks</span> Item Templates</span>
+        <span style="display:flex; align-items:center; gap:8px;"><span class="material-symbols-outlined">bookmarks</span> Note Templates</span>
         <div style="display:flex; gap:8px;">
           <button class="btn secondary" id="tplImportTrigger" style="padding: 6px 10px; font-size:12px;"><span class="material-symbols-outlined">upload</span> Import JSON</button>
           <input type="file" id="tplImportFile" accept=".json" hidden />
@@ -134,7 +135,7 @@
   <div class="dlg-backdrop" id="moveBackdrop" role="dialog" aria-modal="true">
     <div class="dlg" style="max-width: 400px;">
       <div class="dlg-head">
-        <span style="display:flex; align-items:center; gap:8px;"><span class="material-symbols-outlined">move_item</span> Move Item</span>
+        <span style="display:flex; align-items:center; gap:8px;"><span class="material-symbols-outlined">move_item</span> Move Note</span>
       </div>
       <div class="dlg-body">
         <div class="label" style="margin-bottom:6px;">Destination Project & Tab</div>
@@ -142,7 +143,7 @@
       </div>
       <div class="dlg-actions">
         <button class="btn secondary" id="moveCancelBtn">Cancel</button>
-        <button class="btn" id="moveConfirmBtn">Move Item</button>
+        <button class="btn" id="moveConfirmBtn">Move Note</button>
       </div>
     </div>
   </div>
@@ -150,7 +151,7 @@
   <div class="dlg-backdrop" id="compareBackdrop" role="dialog">
     <div class="dlg compare-dlg">
       <div class="dlg-head" style="display:flex; justify-content:space-between; align-items:center;">
-        <span style="display:flex; align-items:center; gap:8px;"><span class="material-symbols-outlined">compare_arrows</span> Compare Items</span>
+        <span style="display:flex; align-items:center; gap:8px;"><span class="material-symbols-outlined">compare_arrows</span> Compare Notes</span>
         <div style="display:flex; align-items:center; gap: 16px;">
           <label style="font-size: 13px; font-weight: 600; cursor: pointer; display:flex; align-items:center; gap:6px; color: var(--text);">
             <input type="checkbox" id="compSync" checked> Sync Scroll
@@ -187,7 +188,7 @@
         <div class="label" style="margin-bottom: 6px;">Export Filename</div>
         <input class="input" id="exportFilenameInput" value="SnapSpace_Export.html" style="margin-bottom: 16px;" />
         
-        <div class="label" style="margin-bottom: 8px;">Select specific items to export:</div>
+        <div class="label" style="margin-bottom: 8px;">Select specific notes to export:</div>
         <div id="exportChecklist" style="background: var(--surface-2); padding: 16px; border-radius: 8px; border: 1px solid var(--outline-2); max-height: 40vh; overflow-y: auto;"></div>
       </div>
       <div class="dlg-actions">
@@ -201,13 +202,13 @@
     <div class="dlg" style="max-width: 500px;">
       <div class="dlg-head"><span style="display:flex; align-items:center; gap:8px;"><span class="material-symbols-outlined">upload</span> Import Options</span></div>
       <div class="dlg-body">
-        <div class="label" style="margin-bottom: 12px; font-size: 14px;" id="importDetails">Found X tabs and Y items. How would you like to load them?</div>
+        <div class="label" style="margin-bottom: 12px; font-size: 14px;" id="importDetails">Found X tabs and Y notes. How would you like to load them?</div>
         
         <label class="export-tab-label" style="border: 1px solid var(--outline-2); padding: 12px; border-radius: 8px; transition: border-color 0.2s ease; margin-bottom: 8px; display: block; cursor: pointer;">
           <input type="radio" name="importMode" value="new_project" checked style="float: left; margin-right: 12px;">
           <div>
             <div style="font-weight:700;">Import as New Project</div>
-            <div style="font-size:12px; color:var(--muted); font-weight:400;">Creates a brand new project and loads the imported items there.</div>
+            <div style="font-size:12px; color:var(--muted); font-weight:400;">Creates a brand new project and loads the imported notes there.</div>
           </div>
         </label>
 
@@ -223,7 +224,7 @@
           <input type="radio" name="importMode" value="merge" style="float: left; margin-right: 12px;">
           <div>
             <div style="font-weight:700;">Merge into Active Tab</div>
-            <div style="font-size:12px; color:var(--muted); font-weight:400;">Pours all imported items directly into your currently open tab.</div>
+            <div style="font-size:12px; color:var(--muted); font-weight:400;">Pours all imported notes directly into your currently open tab.</div>
           </div>
         </label>
 
@@ -317,16 +318,16 @@
           <li><code>Ctrl + K</code> : Search all projects</li>
           <li><code>Ctrl + S</code> : Export project</li>
           <li><code>Ctrl + O</code> : Import project</li>
-          <li><code>Alt + N</code> : Add new item</li>
+          <li><code>Alt + N</code> : Add new note</li>
           <li><code>Alt + T</code> : Add new tab</li>
           <li><code>Alt + R</code> : Rename tab</li>
-          <li><code>Alt + F</code> : Add new field to current item</li>
+          <li><code>Alt + F</code> : Add new field to current note</li>
           <li><code>Alt + H</code> : Open Help & Shortcuts</li>
         </ul>
         <div class="label">Tips</div>
         <ul style="margin-top: 4px; padding-left: 20px;">
-          <li><b>Expand/Collapse:</b> Use the Expand All / Collapse All buttons in the header. Safely double-click or drag-highlight tags without opening the item.</li>
-          <li><b>Drag & Drop:</b> Reorder projects, tabs, and items by dragging them.</li>
+          <li><b>Expand/Collapse:</b> Use the Expand All / Collapse All buttons in the header. Safely double-click or drag-highlight tags without opening the note.</li>
+          <li><b>Drag & Drop:</b> Reorder projects, tabs, and notes by dragging them.</li>
           <li><b>Images:</b> Paste screenshots directly into the Notes area (Ctrl+V). Double-click to zoom.</li>
           <li><b>Cross-Project Move:</b> Click the Move icon on any item to send it to another project.</li>
         </ul>
@@ -374,6 +375,23 @@
         <button class="btn" id="appSysOk">OK</button>
       </div>
     </div>
+  </div>
+
+  <!-- Quick Note Overlay -->
+  <div class="qn-backdrop qn-animating" id="qnBackdrop">
+      <div class="qn-header">
+          <input type="text" id="qnTitle" class="qn-title-input" onclick="this.select()" />
+      </div>
+      <div id="qnTags" class="qn-tags"></div>
+      <div class="qn-body">
+          <div class="evidence-wrap" style="flex: 1; display: flex; flex-direction: column; min-height: 0; margin-top: 16px; padding-bottom: 140px;">
+              <div class="evidence" id="qnEditor" contenteditable="true" style="flex: 1; overflow-y: auto; margin-top: 0; min-height: 100px;"></div>
+          </div>
+      </div>
+      <div class="qn-float-actions">
+          <button class="qn-float-btn" id="qnAddFieldBtn" title="Add Field"><span class="material-symbols-outlined">sell</span></button>
+          <button class="qn-float-btn qn-done-btn" id="qnDoneBtn" title="Save Note"><span class="material-symbols-outlined">check</span></button>
+      </div>
   </div>
 
   <script type="module" src="app.js"></script>

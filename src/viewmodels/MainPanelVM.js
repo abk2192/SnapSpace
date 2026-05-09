@@ -12,9 +12,9 @@ export class MainPanelVM {
     }
 
     async resetProject() {
-        if(this.activeWorkspace && await window.appConfirm("Are you sure you want to reset the CURRENT project? This will delete all tabs and items inside it.")) {
+        if(this.activeWorkspace && await window.appConfirm("Are you sure you want to reset the CURRENT project? This will delete all tabs and notes inside it.")) {
             const now = Date.now();
-            this.activeWorkspace.tabs = [{ id: uid(), name: "Tab 1", scenarios: [{ id: uid(), name:"Item 1", fields: [], evidenceHtml:"", isOpen: true, createdAt: now, modifiedAt: now }] }];
+            this.activeWorkspace.tabs = [{ id: uid(), name: "Tab 1", scenarios: [{ id: uid(), name:`Note ${new Date().toISOString().split('T')[0]} 1`, fields: [], evidenceHtml:"", isOpen: true, createdAt: now, modifiedAt: now }] }];
             this.activeWorkspace.activeTabId = this.activeWorkspace.tabs[0].id;
             globalEvents.publish('tabs:changed');
             globalEvents.publish('scenarios:changed');
@@ -35,7 +35,7 @@ export class MainPanelVM {
         const id = uid(); 
         const newScenId = uid();
         const now = Date.now();
-        this.activeWorkspace.tabs.push({ id, name, scenarios: [{ id: newScenId, name:"Item 1", fields: [], evidenceHtml:"", isOpen: true, createdAt: now, modifiedAt: now }] }); 
+        this.activeWorkspace.tabs.push({ id, name, scenarios: [{ id: newScenId, name:`Note ${new Date().toISOString().split('T')[0]} 1`, fields: [], evidenceHtml:"", isOpen: true, createdAt: now, modifiedAt: now }] }); 
         this.activeWorkspace.activeTabId = id; 
         globalEvents.publish('tabs:changed');
         globalEvents.publish('scenarios:changed');
@@ -46,7 +46,7 @@ export class MainPanelVM {
         if (!this.activeWorkspace) return;
         const idx = this.tabs.findIndex(t => t.id === id); 
         if (idx < 0) return;
-        if(await window.appConfirm("Are you sure you want to delete this tab and all its items?")) {
+        if(await window.appConfirm("Are you sure you want to delete this tab and all its notes?")) {
             this.activeWorkspace.tabs.splice(idx, 1);
             if (this.activeWorkspace.activeTabId === id) { 
                 this.activeWorkspace.activeTabId = this.tabs[Math.max(0, idx-1)]?.id || null; 
@@ -77,7 +77,7 @@ export class MainPanelVM {
     addScenario() {
         const tab = this.activeTab; if(!tab) return null;
         const newId = uid();
-        const defaultName = `Item ${tab.scenarios.length + 1}`;
+        const defaultName = `Note ${new Date().toISOString().split('T')[0]} ${tab.scenarios.length + 1}`;
         const now = Date.now();
         tab.scenarios.unshift({ id: newId, name: defaultName, fields: [], evidenceHtml:"", isOpen: true, createdAt: now, modifiedAt: now });
         globalEvents.publish('scenarios:changed');
@@ -134,7 +134,7 @@ export class MainPanelVM {
 
     async deleteScenario(id) {
         const tab = this.activeTab; if(!tab) return;
-        if(await window.appConfirm("Are you sure you want to delete this item?")) { 
+        if(await window.appConfirm("Are you sure you want to delete this note?")) { 
             tab.scenarios = tab.scenarios.filter(s => s.id !== id); 
             globalEvents.publish('scenarios:changed'); 
         }

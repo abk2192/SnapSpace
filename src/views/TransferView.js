@@ -73,7 +73,7 @@ export class TransferView {
                             const tCount = this.pendingImportData.tabs.length;
                             const sCount = this.pendingImportData.tabs.reduce((sum, t) => sum + t.scenarios.length, 0);
                             const detailsEl = document.getElementById("importDetails"); 
-                            if(detailsEl) detailsEl.textContent = `Found ${tCount} tab(s) and ${sCount} item(s). How would you like to load them?`;
+                            if(detailsEl) detailsEl.textContent = `Found ${tCount} tab(s) and ${sCount} note(s). How would you like to load them?`;
                             if(importBackdrop) importBackdrop.style.display = "flex";
                         } else window.appAlert("Invalid export format.");
                     } else window.appAlert("No data found in this HTML file.");
@@ -112,7 +112,7 @@ export class TransferView {
                 tab.scenarios.forEach((sc, sIdx) => {
                     const sLabel = document.createElement("label"); sLabel.className = "export-scen-label";
                     const sCheck = document.createElement("input"); sCheck.type = "checkbox"; sCheck.checked = true; sCheck.dataset.tabId = tab.id; sCheck.dataset.scenId = sc.id;
-                    sLabel.appendChild(sCheck); sLabel.appendChild(document.createTextNode((sc.name || "").trim() ? `${sIdx+1}. ${(sc.name || "").trim()}` : `Item ${sIdx+1}`)); sList.appendChild(sLabel);
+                    sLabel.appendChild(sCheck); sLabel.appendChild(document.createTextNode((sc.name || "").trim() ? `${sIdx+1}. ${(sc.name || "").trim()}` : `Note ${sIdx+1}`)); sList.appendChild(sLabel);
                 });
 
                 tCheck.addEventListener("change", (e) => { sList.querySelectorAll('input[type="checkbox"]').forEach(c => c.checked = e.target.checked); });
@@ -147,7 +147,7 @@ export class TransferView {
                     }
                 }
             });
-            if (filteredState.tabs.length === 0) { window.appAlert("Please select at least one item to export."); return; }
+            if (filteredState.tabs.length === 0) { window.appAlert("Please select at least one note to export."); return; }
             filteredState.activeTabId = filteredState.tabs[0].id;
             if(exportBackdrop) exportBackdrop.style.display = "none";
             
@@ -237,7 +237,7 @@ export class TransferView {
       }).join("");
       const panelEl = document.getElementById("panel"); const activeTab = filteredTabs.find(t => t.id === activeTabId); 
       if(!activeTab) { panelEl.innerHTML = ""; return; }
-      if(activeTab.scenarios.length === 0 && searchQuery) { panelEl.innerHTML = '<div style="padding: 32px; text-align: center; color: var(--muted);">No matching items in this tab.</div>'; return; }
+      if(activeTab.scenarios.length === 0 && searchQuery) { panelEl.innerHTML = '<div style="padding: 32px; text-align: center; color: var(--muted);">No matching notes in this tab.</div>'; return; }
       
       panelEl.innerHTML = activeTab.scenarios.map((sc, idx) => {
         const validFields = (sc.fields || []).filter(f => f.key.trim() || f.val.trim());
@@ -245,7 +245,7 @@ export class TransferView {
         const fieldsHtml = validFields.map(f => \`<div class="field-row" style="margin-bottom: 8px; display: flex; gap: 8px;"><input class="input" value="\${escapeAttr(f.key)}" readonly style="width: 30%; background: transparent; border-color: var(--outline-2); font-weight: 700; user-select: text;" /><input class="input" value="\${escapeAttr(f.val)}" readonly style="flex: 1; background: var(--surface-2); border-color: var(--outline-2); user-select: text;" /></div>\`).join("");
         const fieldsSection = fieldsHtml ? \`<div class="label" style="margin-bottom: 8px;"><span class="material-symbols-outlined" style="font-size: 14px;">tune</span> Properties</div><div class="field-list" style="margin-bottom: 16px;">\${fieldsHtml}</div>\` : '';
         const isOpenAttr = (searchQuery || sc.isOpen !== false) ? 'open' : '';
-        return \`<details class="scenario" \${isOpenAttr}><summary><div class="summary-content"><div style="display:flex; align-items:center; gap:6px; width: 100%;"><input class="header-name-input" value="\${escapeAttr(sc.name||"")}" placeholder="Item \${idx+1}" readonly style="padding-left: 0;" /></div>\${tagsHtml ? \`<div class="summary-tags">\${tagsHtml}</div>\` : ''}</div><div class="summary-actions"><div class="chev"><span class="material-symbols-outlined">expand_more</span></div></div></summary><div class="card-body">\${fieldsSection}<div class="evidence-wrap" style="margin-top: 0;"><div class="label" style="margin-bottom: 6px;"><span class="material-symbols-outlined" style="font-size: 14px;">image</span> Notes & Media</div><div class="evidence">\${sc.evidenceHtml}</div></div></div></details>\`;
+        return \`<details class="scenario" \${isOpenAttr}><summary><div class="summary-content"><div style="display:flex; align-items:center; gap:6px; width: 100%;"><input class="header-name-input" value="\${escapeAttr(sc.name||"")}" placeholder="Note \${idx+1}" readonly style="padding-left: 0;" /></div>\${tagsHtml ? \`<div class="summary-tags">\${tagsHtml}</div>\` : ''}</div><div class="summary-actions"><div class="chev"><span class="material-symbols-outlined">expand_more</span></div></div></summary><div class="card-body">\${fieldsSection}<div class="evidence-wrap" style="margin-top: 0;"><div class="label" style="margin-bottom: 6px;"><span class="material-symbols-outlined" style="font-size: 14px;">image</span> Notes & Media</div><div class="evidence">\${sc.evidenceHtml}</div></div></div></details>\`;
       }).join("");
     }
     let imgClickTimerExport = null;

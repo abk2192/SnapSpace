@@ -16,7 +16,7 @@ export class SidebarVM {
         const newTabId = uid();
         const newWs = {
             id: newId, title: "New Project", activeTabId: newTabId,
-            tabs: [{ id: newTabId, name: "Tab 1", scenarios: [{ id: uid(), name:"Item 1", fields: [], evidenceHtml:"", isOpen: true }] }]
+            tabs: [{ id: newTabId, name: "Tab 1", scenarios: [{ id: uid(), name:`Note ${new Date().toISOString().split('T')[0]} 1`, fields: [], evidenceHtml:"", isOpen: true }] }]
         };
         store.state.workspaces.push(newWs);
         this.setActiveWorkspace(newId);
