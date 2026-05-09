@@ -347,6 +347,7 @@
   .tbl-col-controls .tbl-divider { width: 12px; height: 1px; margin: 3px 0; }
 
   .evidence{ border: 1px dashed var(--outline-2); background: var(--evidence-bg); color: var(--text); border-radius: var(--r12); padding: 12px; min-height: 130px; outline:none; line-height: 1.5; transition: all 0.3s ease; }
+  .scenario .evidence { max-height: 40vh; overflow-y: auto; overscroll-behavior: contain; }
   .evidence ul, .evidence ol { padding-left: 24px; margin: 8px 0; }
   .evidence li { margin-bottom: 4px; }
   .evidence:focus{ border-color: var(--primary); box-shadow: 0 0 0 4px var(--primary-light); background: var(--input-bg); }
@@ -560,7 +561,11 @@
   .qn-body .evidence-wrap:focus-within .wysiwyg-toolbar { position: sticky; top: 0; z-index: 50; }
   
   /* Quick Note FAB */
-  .qn-float-btn { position: fixed; right: 24px; bottom: calc(24px + var(--kb-offset, 0px)); width: 56px; height: 56px; border-radius: 50%; border: none; display: grid; place-items: center; cursor: pointer; box-shadow: 0 6px 16px rgba(0,0,0,0.15); z-index: 10002; transition: bottom 0.2s ease, transform 0.2s; }
+  .qn-fab-stack { position: fixed; right: 24px; bottom: calc(24px + var(--kb-offset, 0px)); display: flex; flex-direction: column; gap: 16px; align-items: center; z-index: 10002; transition: bottom 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+  .qn-body:has(.evidence-wrap:focus-within) ~ .qn-fab-stack { bottom: calc(72px + var(--kb-offset, 0px)); }
+  .qn-float-btn { width: 56px; height: 56px; border-radius: 50%; border: none; display: grid; place-items: center; cursor: pointer; box-shadow: 0 6px 16px rgba(0,0,0,0.15); transition: transform 0.2s, filter 0.2s; }
+  .qn-float-btn.secondary-fab { width: 44px; height: 44px; background: var(--surface); color: var(--text); border: 1px solid var(--outline-2); box-shadow: var(--shadow-2); }
+  .qn-float-btn.secondary-fab .material-symbols-outlined { font-size: 20px; }
   .qn-float-btn:hover { filter: brightness(1.1); }
   .qn-done-btn { background: linear-gradient(135deg, var(--grad-1), var(--grad-2)); color: white; }
   .qn-done-btn .material-symbols-outlined { font-size: 28px; }
@@ -570,4 +575,3 @@
   .qn-backdrop.qn-read-mode #qnEditor { user-select: text; }
   .qn-backdrop.qn-read-mode .wysiwyg-toolbar { display: none !important; }
   .qn-backdrop.qn-read-mode .qn-title-input { pointer-events: none; }
-  .qn-backdrop.qn-read-mode .qn-float-btn { display: none !important; }

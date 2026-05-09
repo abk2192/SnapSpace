@@ -120,7 +120,13 @@ export class MainPanelView {
         });
 
         document.body.addEventListener("toggle", (e) => {
-            if (e.target.matches("details.scenario") && e.target.isConnected) this.vm.updateScenarioOpenState(e.target.dataset.sid, e.target.open);
+            if (e.target.matches("details.scenario") && e.target.isConnected) {
+                this.vm.updateScenarioOpenState(e.target.dataset.sid, e.target.open);
+                if (e.target.open) {
+                    // Scroll into view centering it, leaving one item above and below
+                    setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
+                }
+            }
         }, true);
 
         document.body.addEventListener("focusout", (e) => {

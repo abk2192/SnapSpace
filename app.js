@@ -341,10 +341,6 @@ async function bootApp() {
                 }
             }
             
-            qnBackdrop.classList.remove('qn-read-mode');
-            qnEditor.contentEditable = "true";
-            const readBtn = document.getElementById('qnReadModeBtn');
-            if (readBtn) readBtn.querySelector('.material-symbols-outlined').textContent = 'menu_book';
 
             if (sid) {
                 editingScenarioId = sid;
@@ -357,12 +353,22 @@ async function bootApp() {
                 qnTitle.value = sc.name || "";
                 qnEditor.innerHTML = sc.evidenceHtml || "";
                 currentFields = JSON.parse(JSON.stringify(sc.fields || []));
+                
+                // Open existing note in read-only mode by default
+                qnBackdrop.classList.add('qn-read-mode');
+                qnEditor.contentEditable = "false";
+                qnDone.querySelector('.material-symbols-outlined').textContent = 'edit';
             } else {
                 editingScenarioId = null;
                 currentFields = []; 
                 qnEditor.innerHTML = '';
                 const dateStr = new Date().toISOString().split('T')[0];
                 qnTitle.value = `Note ${dateStr} ${tab.scenarios.length + 1}`;
+                
+                // Open new note directly in edit mode
+                qnBackdrop.classList.remove('qn-read-mode');
+                qnEditor.contentEditable = "true";
+                qnDone.querySelector('.material-symbols-outlined').textContent = 'check';
             }
             
             renderQnTags();
@@ -379,15 +385,20 @@ async function bootApp() {
         };
 
         qnBtn?.addEventListener('click', (e) => { e.preventDefault(); window.openQuickNote(null); });
-        
-        const toggleReadMode = () => {
-            qnBackdrop.classList.toggle('qn-read-mode');
-            const isRead = qnBackdrop.classList.contains('qn-read-mode');
-            qnEditor.contentEditable = !isRead;
-            const readBtn = document.getElementById('qnReadModeBtn');
-            if (readBtn) readBtn.querySelector('.material-symbols-outlined').textContent = isRead ? 'edit' : 'menu_book';
-        };
-        document.getElementById('qnReadModeBtn')?.addEventListener('click', toggleReadMode);
+
+        qnEditor.addEventListener('keyup', (e) => {
+            // Keep cursor vertically scrolled into view on Enter
+            if (e.key === 'Enter') {
+                const sel = window.getSelection();
+                if (sel && sel.anchorNode) {
+                    let el = sel.anchorNode;
+                    if (el.nodeType === 3) el = el.parentElement;
+                    if (el && typeof el.scrollIntoView === 'function') {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                }
+            }
+        });
 
         qnAddField?.addEventListener('click', async () => {
             const key = await window.appPrompt("Enter field name:"); if (!key) return;
@@ -438,7 +449,16 @@ async function bootApp() {
             }
         });
 
-        qnDone?.addEventListener('click', () => closeAndSaveQuickNote(false));
+        qnDone?.addEventListener('click', () => {
+            if (qnBackdrop.classList.contains('qn-read-mode')) {
+                qnBackdrop.classList.remove('qn-read-mode');
+                qnEditor.contentEditable = "true";
+                qnDone.querySelector('.material-symbols-outlined').textContent = 'check';
+                setTimeout(() => { qnEditor.focus(); moveCursorToEnd(qnEditor); }, 50);
+            } else {
+                closeAndSaveQuickNote(false);
+            }
+        });
         document.getElementById('qnCloseBtn')?.addEventListener('click', () => closeAndSaveQuickNote(false));
     }
     initQuickNote();
