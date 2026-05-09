@@ -170,17 +170,30 @@ export class EditorView {
             if (img) { clearTimeout(this.imgClickTimer); const el = document.getElementById("imgPreviewEl"); if(el) el.src = img.src; document.getElementById("imgPreviewBackdrop").style.display = "flex"; window.getSelection().removeAllRanges(); }
         });
 
-        let checkboxTouchMoved = false;
-        document.addEventListener("touchstart", (e) => { if (e.target.type === 'checkbox' && e.target.classList.contains('editor-checkbox')) checkboxTouchMoved = false; }, { passive: true });
-        document.addEventListener("touchmove", (e) => { if (e.target.type === 'checkbox' && e.target.classList.contains('editor-checkbox')) checkboxTouchMoved = true; }, { passive: true });
+        let tapMoved = false;
+        document.addEventListener("touchstart", () => { tapMoved = false; }, { passive: true });
+        document.addEventListener("touchmove", () => { tapMoved = true; }, { passive: true });
         document.addEventListener("touchend", (e) => {
+            if (tapMoved) return;
+            
             if (e.target.type === 'checkbox' && e.target.classList.contains('editor-checkbox')) {
-                if (!checkboxTouchMoved) {
-                    if (e.cancelable) e.preventDefault();
-                    const activeEl = document.activeElement;
-                    if (activeEl && typeof activeEl.blur === 'function') activeEl.blur();
-                    e.target.checked = !e.target.checked;
-                    e.target.dispatchEvent(new Event('change', { bubbles: true }));
+                if (e.cancelable) e.preventDefault();
+                const activeEl = document.activeElement;
+                if (activeEl && typeof activeEl.blur === 'function') activeEl.blur();
+                e.target.checked = !e.target.checked;
+                e.target.dispatchEvent(new Event('change', { bubbles: true }));
+                return;
+            }
+
+            if (document.body.classList.contains("readonly")) {
+                const block = e.target.closest('.evidence div, .evidence p, .evidence li');
+                if (block && e.target.tagName !== 'INPUT' && e.target.tagName !== 'A' && e.target.tagName !== 'IMG' && !e.target.closest('summary') && !e.target.closest('.copy-att')) {
+                    const cb = block.querySelector('.editor-checkbox');
+                    if (cb && (block.firstElementChild === cb || block.firstChild === cb || cb.parentNode === block)) {
+                        if (e.cancelable) e.preventDefault();
+                        cb.checked = !cb.checked;
+                        cb.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
                 }
             }
         }, { passive: false });

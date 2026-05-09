@@ -299,17 +299,26 @@ export class TransferView {
       const img = e.target.closest(".evidence img");
       if (img){ let backdrop = document.getElementById("imgPreviewBackdropExport"); if (!backdrop) { backdrop = document.createElement("div"); backdrop.id = "imgPreviewBackdropExport"; backdrop.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;cursor:zoom-out;"; const imgEl = document.createElement("img"); imgEl.id = "imgPreviewElExport"; imgEl.style.cssText = "max-width:90vw;max-height:90vh;border-radius:8px;box-shadow:var(--shadow);background:var(--surface);"; backdrop.appendChild(imgEl); document.body.appendChild(backdrop); backdrop.onclick = () => backdrop.style.display = "none"; } document.getElementById("imgPreviewElExport").src = img.src; backdrop.style.display = "flex"; window.getSelection().removeAllRanges(); }
     });
-    let checkboxTouchMoved = false;
-    document.addEventListener("touchstart", (e) => { if (e.target.type === 'checkbox' && e.target.classList.contains('editor-checkbox')) checkboxTouchMoved = false; }, { passive: true });
-    document.addEventListener("touchmove", (e) => { if (e.target.type === 'checkbox' && e.target.classList.contains('editor-checkbox')) checkboxTouchMoved = true; }, { passive: true });
+    let tapMoved = false;
+    document.addEventListener("touchstart", () => { tapMoved = false; }, { passive: true });
+    document.addEventListener("touchmove", () => { tapMoved = true; }, { passive: true });
     document.addEventListener("touchend", (e) => {
+      if (tapMoved) return;
       if (e.target.type === 'checkbox' && e.target.classList.contains('editor-checkbox')) {
-        if (!checkboxTouchMoved) {
-          if (e.cancelable) e.preventDefault();
-          if (document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur();
-          e.target.checked = !e.target.checked;
-          e.target.dispatchEvent(new Event('change', { bubbles: true }));
-        }
+        if (e.cancelable) e.preventDefault();
+        if (document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur();
+        e.target.checked = !e.target.checked;
+        e.target.dispatchEvent(new Event('change', { bubbles: true }));
+        return;
+      }
+      const block = e.target.closest('.evidence div, .evidence p, .evidence li');
+      if (block && e.target.tagName !== 'INPUT' && e.target.tagName !== 'A' && e.target.tagName !== 'IMG' && !e.target.closest('summary') && !e.target.closest('.copy-att')) {
+          const cb = block.querySelector('.editor-checkbox');
+          if (cb && (block.firstElementChild === cb || block.firstChild === cb || cb.parentNode === block)) {
+              if (e.cancelable) e.preventDefault();
+              cb.checked = !cb.checked;
+              cb.dispatchEvent(new Event('change', { bubbles: true }));
+          }
       }
     }, { passive: false });
     document.addEventListener("mousedown", (e) => { if (e.target.type === 'checkbox' && e.target.classList.contains('editor-checkbox')) { if (document.activeElement && typeof document.activeElement.blur === 'function') document.activeElement.blur(); } });
