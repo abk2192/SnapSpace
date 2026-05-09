@@ -437,7 +437,7 @@
     .appbar-inner { padding: 0 12px; gap: 8px; flex-wrap: nowrap; }
     .tab-label { max-width: 90px; }
     .ws-switcher-group { border: 1px solid var(--outline) !important; padding-right: 8px !important; background: var(--surface); padding: 4px; margin-right: auto; flex: 1; min-width: 0;}
-    .ws-switcher-group .title { display: none; }
+    .ws-switcher-group .title { margin-right: 4px; padding-right: 4px; border-right: none; }
     .ws-switcher-group .ws-dropdown-icon { display: none; }
     
     .search-trigger-btn { display: none !important; }

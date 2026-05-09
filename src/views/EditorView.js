@@ -469,25 +469,49 @@ export class EditorView {
 
         document.getElementById('fpCloseBtn')?.addEventListener('click', () => { document.getElementById('filePreviewBackdrop').style.display = 'none'; this.activeAttachmentNode = null; });
         
+        document.getElementById('fpReadModeBtn')?.addEventListener('click', () => {
+            const backdrop = document.getElementById('filePreviewBackdrop');
+            backdrop.classList.toggle('qn-read-mode');
+            const isRead = backdrop.classList.contains('qn-read-mode');
+            document.getElementById('fpContent').readOnly = isRead;
+            document.getElementById('fpTitleInput').readOnly = isRead;
+            document.getElementById('fpReadModeBtn').innerHTML = `<span class="material-symbols-outlined">${isRead ? 'menu_book' : 'edit'}</span>`;
+            document.getElementById('fpSaveBtn').innerHTML = `<span class="material-symbols-outlined">${isRead ? 'edit' : 'check'}</span>`;
+        });
+
         document.getElementById('fpSaveBtn')?.addEventListener('click', () => {
-            const newContent = document.getElementById('fpContent')?.value || "";
-            if (this.activeAttachmentNode) {
-                const blob = new Blob([newContent], { type: 'text/plain' });
-                const reader = new FileReader();
-                reader.onload = () => {
-                    this.activeAttachmentNode.dataset.dataurl = reader.result;
-                    this.activeAttachmentNode.href = reader.result;
-                    const copyBtn = this.activeAttachmentNode.parentElement.querySelector('.copy-att');
-                    if (copyBtn) copyBtn.dataset.copy = reader.result;
-                    const ev = this.activeAttachmentNode.closest('.evidence');
-                    if (ev) ev.dispatchEvent(new Event('input', { bubbles: true }));
-                    
-                    const btn = document.getElementById('fpSaveBtn');
-                    const origHtml = btn.innerHTML;
-                    btn.innerHTML = '<span class="material-symbols-outlined">check</span> Saved';
-                    setTimeout(() => { btn.innerHTML = origHtml; }, 1500);
-                };
-                reader.readAsDataURL(blob);
+            const backdrop = document.getElementById('filePreviewBackdrop');
+            if (backdrop.classList.contains('qn-read-mode')) {
+                backdrop.classList.remove('qn-read-mode');
+                document.getElementById('fpContent').readOnly = false;
+                document.getElementById('fpTitleInput').readOnly = false;
+                document.getElementById('fpReadModeBtn').innerHTML = '<span class="material-symbols-outlined">edit</span>';
+                document.getElementById('fpSaveBtn').innerHTML = '<span class="material-symbols-outlined">check</span>';
+                setTimeout(() => document.getElementById('fpContent').focus(), 50);
+            } else {
+                const newContent = document.getElementById('fpContent')?.value || "";
+                const newTitle = document.getElementById('fpTitleInput')?.value || "attachment";
+                if (this.activeAttachmentNode) {
+                    const blob = new Blob([newContent], { type: 'text/plain' });
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                        this.activeAttachmentNode.dataset.dataurl = reader.result;
+                        this.activeAttachmentNode.href = reader.result;
+                        this.activeAttachmentNode.dataset.name = newTitle;
+                        this.activeAttachmentNode.download = newTitle;
+                        const temp = document.createElement('div'); temp.textContent = newTitle;
+                        this.activeAttachmentNode.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px;">attachment</span> ${temp.innerHTML}`;
+                        
+                        const copyBtn = this.activeAttachmentNode.parentElement.querySelector('.copy-att');
+                        if (copyBtn) copyBtn.dataset.copy = reader.result;
+                        const ev = this.activeAttachmentNode.closest('.evidence');
+                        if (ev) ev.dispatchEvent(new Event('input', { bubbles: true }));
+                        
+                        backdrop.style.display = 'none';
+                        this.activeAttachmentNode = null;
+                    };
+                    reader.readAsDataURL(blob);
+                }
             }
         });
 
@@ -495,9 +519,8 @@ export class EditorView {
             try {
                 await navigator.clipboard.writeText(document.getElementById('fpContent')?.value || "");
                 const btn = document.getElementById('fpCopyBtn');
-                const orig = btn.innerHTML;
-                btn.innerHTML = '<span class="material-symbols-outlined">check_circle</span> Copied!';
-                setTimeout(() => { btn.innerHTML = orig; }, 1500);
+                btn.innerHTML = '<span class="material-symbols-outlined">check_circle</span>';
+                setTimeout(() => { btn.innerHTML = '<span class="material-symbols-outlined">content_copy</span>'; }, 1500);
             } catch(err) { window.appAlert("Failed to copy text."); }
         });
         
@@ -596,10 +619,17 @@ export class EditorView {
             const r = new FileReader(); 
             r.onload = (re) => { 
                 this.activeAttachmentNode = a;
-                document.getElementById('fpTitle').textContent = name; 
+                document.getElementById('fpTitleInput').value = name; 
                 document.getElementById('fpContent').value = re.target.result;
-                document.getElementById('fpContent').readOnly = document.body.classList.contains("readonly");
-                document.getElementById('filePreviewBackdrop').style.display = 'flex'; 
+                
+                const backdrop = document.getElementById('filePreviewBackdrop');
+                backdrop.classList.add('qn-read-mode');
+                document.getElementById('fpContent').readOnly = true;
+                document.getElementById('fpTitleInput').readOnly = true;
+                document.getElementById('fpReadModeBtn').innerHTML = '<span class="material-symbols-outlined">menu_book</span>';
+                document.getElementById('fpSaveBtn').innerHTML = '<span class="material-symbols-outlined">edit</span>';
+
+                backdrop.style.display = 'flex'; 
             }; 
             r.readAsText(blob); 
             return; 

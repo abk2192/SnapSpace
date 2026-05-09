@@ -185,14 +185,19 @@ export class MainPanelView {
             
             if (Math.abs(xDiff) > Math.abs(yDiff) && Math.abs(xDiff) > 80) { // 80px horizontal swipe threshold
                 const tabs = this.vm.tabs;
-                if (!tabs || tabs.length <= 1) return;
-                const activeId = this.vm.activeTab?.id;
-                const currentIndex = tabs.findIndex(t => t.id === activeId);
+                if (!tabs || tabs.length === 0) return;
+                const activeId = this.vm.activeWorkspace?.activeTabId;
+                let currentIndex = tabs.findIndex(t => t.id === activeId);
+                if (activeId === "dashboard") currentIndex = -1;
                 
                 if (xDiff > 0) { // Swiped left -> Next tab
                     if (currentIndex < tabs.length - 1) this.vm.setActiveTab(tabs[currentIndex + 1].id);
                 } else { // Swiped right -> Previous tab
-                    if (currentIndex > 0) this.vm.setActiveTab(tabs[currentIndex - 1].id);
+                    if (currentIndex === 0) {
+                        this.vm.setActiveTab("dashboard");
+                    } else if (currentIndex > 0) {
+                        this.vm.setActiveTab(tabs[currentIndex - 1].id);
+                    }
                 }
             }
         }, {passive: true});
@@ -306,7 +311,7 @@ export class MainPanelView {
                 <span class="tab-label">Dashboard</span>
             </span>
         `;
-        dashBtn.addEventListener("click", () => { this.vm.activeWorkspace.activeTabId = "dashboard"; this.renderTabs(); this.renderPanel(); });
+        dashBtn.addEventListener("click", () => { this.vm.setActiveTab("dashboard"); });
         this.tabsEl.appendChild(dashBtn);
 
         tabs.forEach((tab, index) => {
@@ -453,11 +458,14 @@ export class MainPanelView {
         let dashSnippet = "";
         if (isDashboard) {
             dashBadge = `<span class="tag" style="background: var(--primary-light); color: var(--primary); border: none; margin-right: 4px;">${escapeHtml(sc._tabName || "")}</span>`;
-            if (sc.evidenceHtml) {
-                const rawText = sc.evidenceHtml.replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
-                if (rawText) {
-                    dashSnippet = `<div class="summary-sub" style="margin-top: 6px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; font-size: 12px; color: var(--muted);">${escapeHtml(rawText)}</div>`;
-                }
+        }
+
+        if (sc.evidenceHtml) {
+            let html = sc.evidenceHtml.replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>/gi, '\n').replace(/<\/div>/gi, '\n').replace(/<li>/gi, '• ').replace(/<\/li>/gi, '\n');
+            let rawText = html.replace(/<[^>]*>?/gm, '').replace(/&nbsp;/gi, ' ').replace(/&amp;/gi, '&').replace(/&lt;/gi, '<').replace(/&gt;/gi, '>').replace(/&quot;/gi, '"').replace(/&#39;/gi, "'").trim();
+            rawText = rawText.replace(/\n\s*\n/g, '\n'); // Remove extra blank lines
+            if (rawText) {
+                dashSnippet = `<div class="summary-sub" style="margin-top: 6px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-wrap; font-size: 12px; color: var(--muted);">${escapeHtml(rawText)}</div>`;
             }
         }
 

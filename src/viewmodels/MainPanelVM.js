@@ -25,6 +25,10 @@ export class MainPanelVM {
     setActiveTab(id) {
         if (this.activeWorkspace) {
             this.activeWorkspace.activeTabId = id;
+            if (id !== "dashboard") {
+                const tab = this.activeWorkspace.tabs.find(t => t.id === id);
+                if (tab) tab.scenarios.forEach(sc => sc.isOpen = false);
+            }
             globalEvents.publish('tabs:changed');
             globalEvents.publish('scenarios:changed');
         }
