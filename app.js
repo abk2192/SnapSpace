@@ -338,7 +338,7 @@ async function bootApp() {
         const renderQnTags = () => { qnTags.innerHTML = currentFields.map(f => `<span class="tag"><b>${escapeHtml(f.key)}:</b> ${escapeHtml(f.val)}</span>`).join(""); };
 
         window.openQuickNote = (sid = null) => {
-            const tab = window.mainPanelVM?.activeTab;
+            const tab = window.mainPanelVM?.activeTab || window.mainPanelVM?.tabs[0];
             if(!tab && !sid) { window.appAlert("Please select or create a project/tab first."); return; }
             
             
@@ -372,7 +372,7 @@ async function bootApp() {
                 editingScenarioId = null;
                 currentFields = []; 
                 qnEditor.innerHTML = '';
-                const dateStr = new Date().toISOString().split('T')[0];
+                const dateStr = window.mainPanelVM?.dashboardDateFilter || new Date().toISOString().split('T')[0];
                 qnTitle.value = `Note ${dateStr} ${tab.scenarios.length + 1}`;
                 
                 // Open new note directly in edit mode

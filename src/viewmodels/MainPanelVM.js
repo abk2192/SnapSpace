@@ -4,11 +4,24 @@ import { uid } from '../utils/dom.js';
 
 export class MainPanelVM {
     dashboardDateFilter = null;
+    viewMode = 'dashboard'; // 'dashboard' or 'maximized'
 
     get activeWorkspace() { return store.state?.workspaces.find(w => w.id === store.state.activeWorkspaceId); }
     get workspaces() { return store.state?.workspaces || []; }
     get tabs() { return this.activeWorkspace?.tabs || []; }
     get activeTab() { return this.tabs.find(t => t.id === this.activeWorkspace?.activeTabId); }
+
+    get calendarMonth() { return this._calMonth !== undefined ? this._calMonth : new Date().getMonth(); }
+    get calendarYear() { return this._calYear !== undefined ? this._calYear : new Date().getFullYear(); }
+
+    changeCalendarMonth(offset) {
+        let m = this.calendarMonth + offset;
+        let y = this.calendarYear;
+        if (m < 0) { m = 11; y--; } else if (m > 11) { m = 0; y++; }
+        this._calMonth = m; this._calYear = y;
+        globalEvents.publish('tabs:changed');
+        globalEvents.publish('scenarios:changed');
+    }
 
     updateProjectTitle(title) {
         if (this.activeWorkspace) { this.activeWorkspace.title = title; globalEvents.publish('workspaces:changed'); }
@@ -24,10 +37,11 @@ export class MainPanelVM {
         }
     }
 
-    setActiveTab(id) {
+    setActiveTab(id, mode = 'dashboard') {
         if (this.activeWorkspace) {
             this.activeWorkspace.activeTabId = id;
-            if (id !== "dashboard") {
+            this.viewMode = mode;
+            if (id !== "dashboard" && mode === 'maximized') {
                 const tab = this.activeWorkspace.tabs.find(t => t.id === id);
                 if (tab) tab.scenarios.forEach(sc => sc.isOpen = false);
             }
@@ -48,7 +62,8 @@ export class MainPanelVM {
         const id = uid(); 
         const newScenId = uid();
         const now = Date.now();
-        this.activeWorkspace.tabs.push({ id, name, scenarios: [{ id: newScenId, name:`Note ${new Date().toISOString().split('T')[0]} 1`, fields: [], evidenceHtml:"", isOpen: true, createdAt: now, modifiedAt: now }] }); 
+        const dateStr = this.dashboardDateFilter || new Date().toISOString().split('T')[0];
+        this.activeWorkspace.tabs.push({ id, name, scenarios: [{ id: newScenId, name:`Note ${dateStr} 1`, noteDate: dateStr, fields: [], evidenceHtml:"", isOpen: true, createdAt: now, modifiedAt: now }] }); 
         this.activeWorkspace.activeTabId = id; 
         globalEvents.publish('tabs:changed');
         globalEvents.publish('scenarios:changed');
@@ -90,9 +105,10 @@ export class MainPanelVM {
     addScenario() {
         const tab = this.activeTab || this.tabs[0]; if(!tab) return null;
         const newId = uid();
-        const defaultName = `Note ${new Date().toISOString().split('T')[0]} ${tab.scenarios.length + 1}`;
+        const dateStr = this.dashboardDateFilter || new Date().toISOString().split('T')[0];
+        const defaultName = `Note ${dateStr} ${tab.scenarios.length + 1}`;
         const now = Date.now();
-        tab.scenarios.unshift({ id: newId, name: defaultName, fields: [], evidenceHtml:"", isOpen: true, createdAt: now, modifiedAt: now });
+        tab.scenarios.unshift({ id: newId, name: defaultName, noteDate: dateStr, fields: [], evidenceHtml:"", isOpen: true, createdAt: now, modifiedAt: now });
         globalEvents.publish('scenarios:changed');
         return newId;
     }

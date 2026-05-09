@@ -59,6 +59,9 @@ export class MainPanelView {
                 this.vm.setDashboardDateFilter(null);
                 this.renderTabs(); this.renderPanel(); return;
             }
+            
+            if (e.target.closest('#calPrevBtn')) { this.vm.changeCalendarMonth(-1); return; }
+            if (e.target.closest('#calNextBtn')) { this.vm.changeCalendarMonth(1); return; }
         });
 
         const resetBtn = document.getElementById("resetBtn");
@@ -197,19 +200,17 @@ export class MainPanelView {
             const yDiff = touchStartY - touchEndY;
             
             if (Math.abs(xDiff) > Math.abs(yDiff) && Math.abs(xDiff) > 80) { // 80px horizontal swipe threshold
-                const tabs = this.vm.tabs;
+                const tabs = [{id: "dashboard"}, ...this.vm.tabs];
                 if (!tabs || tabs.length === 0) return;
                 const activeId = this.vm.activeWorkspace?.activeTabId;
                 let currentIndex = tabs.findIndex(t => t.id === activeId);
-                if (activeId === "dashboard") currentIndex = -1;
+                if (currentIndex === -1) currentIndex = 0;
                 
                 if (xDiff > 0) { // Swiped left -> Next tab
-                    if (currentIndex < tabs.length - 1) this.vm.setActiveTab(tabs[currentIndex + 1].id);
+                    if (currentIndex < tabs.length - 1) this.vm.setActiveTab(tabs[currentIndex + 1].id, 'dashboard');
                 } else { // Swiped right -> Previous tab
-                    if (currentIndex === 0) {
-                        this.vm.setActiveTab("dashboard");
-                    } else if (currentIndex > 0) {
-                        this.vm.setActiveTab(tabs[currentIndex - 1].id);
+                    if (currentIndex > 0) {
+                        this.vm.setActiveTab(tabs[currentIndex - 1].id, 'dashboard');
                     }
                 }
             }
@@ -315,21 +316,24 @@ export class MainPanelView {
         const activeTabId = this.vm.activeTab?.id || (this.vm.activeWorkspace?.activeTabId === "dashboard" ? "dashboard" : null);
 
         const calWrap = document.getElementById("dashCalendarWrap");
-        if (activeTabId === "dashboard") {
+        if (this.vm.viewMode === "dashboard") {
             calWrap.style.display = "block";
             
-            const now = new Date(); const year = now.getFullYear(); const month = now.getMonth(); 
+            const year = this.vm.calendarYear; const month = this.vm.calendarMonth; 
+            const now = new Date();
             const todayStr = `${year}-${String(month+1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
             const firstDay = new Date(year, month, 1).getDay(); const daysInMonth = new Date(year, month + 1, 0).getDate();
-            const monthName = now.toLocaleString('default', { month: 'long' });
+            const monthName = new Date(year, month, 1).toLocaleString('default', { month: 'long' });
             
             const daysWithNotes = new Set();
             this.vm.tabs.forEach(t => {
                 t.scenarios.forEach(sc => {
-                    if (sc.createdAt || sc.modifiedAt) {
-                        const d = new Date(sc.createdAt || sc.modifiedAt);
-                        daysWithNotes.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+                    let dStr = sc.noteDate;
+                    if (!dStr) {
+                        const d = new Date(sc.createdAt || sc.modifiedAt || Date.now());
+                        dStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
                     }
+                    daysWithNotes.add(dStr);
                 });
             });
 
@@ -338,9 +342,11 @@ export class MainPanelView {
             for (let i = 0; i < firstDay; i++) { daysHtml += `<div></div>`; }
             for (let i = 1; i <= daysInMonth; i++) {
                 const dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                const isSunday = new Date(year, month, i).getDay() === 0;
                 const isToday = dateStr === todayStr; const isSelected = this.vm.dashboardDateFilter === dateStr; const hasNotes = daysWithNotes.has(dateStr);
                 
                 let classes = "cal-day";
+                if (isSunday) classes += " sunday";
                 if (isToday) classes += " today";
                 if (isSelected) classes += " selected";
                 if (hasNotes && !isSelected) classes += " has-notes";
@@ -348,10 +354,11 @@ export class MainPanelView {
             }
 
             calWrap.innerHTML = `
-                <div style="max-width: 400px; margin: 0 auto; padding: 12px 16px;">
-                    <div style="font-weight: 800; font-size: 15px; margin-bottom: 12px; color: var(--text); display: flex; align-items: center; justify-content: space-between; padding: 0 8px;">
+                <div style="max-width: 400px; width: 100%; margin: 0 auto; padding: 12px 16px; overflow: hidden; box-sizing: border-box;">
+                    <div style="font-weight: 800; font-size: 15px; margin-bottom: 12px; color: var(--text); display: flex; align-items: center; justify-content: space-between;">
+                        <button class="btn secondary icon-only" id="calPrevBtn" style="padding: 4px; height: 28px; width: 28px; min-height: 0;"><span class="material-symbols-outlined">chevron_left</span></button>
                         <span>${monthName} ${year}</span>
-                        <span class="material-symbols-outlined" style="color: var(--primary); font-size: 20px;">calendar_month</span>
+                        <button class="btn secondary icon-only" id="calNextBtn" style="padding: 4px; height: 28px; width: 28px; min-height: 0;"><span class="material-symbols-outlined">chevron_right</span></button>
                     </div>
                     <div style="display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; gap: 4px 0;">${daysHtml}</div>
                 </div>`;
@@ -367,7 +374,7 @@ export class MainPanelView {
                 <span class="tab-label">Dashboard</span>
             </span>
         `;
-        dashBtn.addEventListener("click", () => { this.vm.setActiveTab("dashboard"); });
+        dashBtn.addEventListener("click", () => { this.vm.setActiveTab("dashboard", 'dashboard'); });
         this.tabsEl.appendChild(dashBtn);
 
         tabs.forEach((tab, index) => {
@@ -405,7 +412,7 @@ export class MainPanelView {
                     }, 100);
                     return;
                 }
-                this.vm.setActiveTab(tab.id);
+                this.vm.setActiveTab(tab.id, 'dashboard');
             });
             this.tabsEl.appendChild(btn);
         });
@@ -453,20 +460,24 @@ export class MainPanelView {
         this.panelEl.innerHTML = "";
         
         const activeTabId = this.vm.activeWorkspace?.activeTabId;
-        if (activeTabId === "dashboard") {
+        if (this.vm.viewMode === "dashboard") {
             const wrap = document.createElement("div"); wrap.className = "tab-panel"; wrap.style.display = "block";
             
             let allScenarios = [];
-            this.vm.tabs.forEach(t => {
-                t.scenarios.forEach(sc => {
-                    allScenarios.push({ ...sc, _tabId: t.id, _tabName: t.name });
-                });
-            });
+            if (activeTabId === "dashboard") {
+                this.vm.tabs.forEach(t => t.scenarios.forEach(sc => allScenarios.push({ ...sc, _tabId: t.id, _tabName: t.name })));
+            } else {
+                const currentTab = this.vm.tabs.find(t => t.id === activeTabId);
+                if (currentTab) currentTab.scenarios.forEach(sc => allScenarios.push({ ...sc, _tabId: currentTab.id, _tabName: currentTab.name }));
+            }
             
             if (this.vm.dashboardDateFilter) {
                 allScenarios = allScenarios.filter(sc => {
-                    const d = new Date(sc.createdAt || sc.modifiedAt || Date.now());
-                    const dStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                    let dStr = sc.noteDate;
+                    if (!dStr) {
+                        const d = new Date(sc.createdAt || sc.modifiedAt || Date.now());
+                        dStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                    }
                     return dStr === this.vm.dashboardDateFilter;
                 });
             }
@@ -490,14 +501,13 @@ export class MainPanelView {
             return;
         }
 
-        const tabs = this.vm.tabs;
-
-        tabs.forEach(tab => {
+        const currentTab = this.vm.tabs.find(t => t.id === activeTabId);
+        if (currentTab) {
             const wrap = document.createElement("div"); wrap.className = "tab-panel";
-            if (tab.id === activeTabId) wrap.style.display = "block";
-            tab.scenarios.forEach((sc, idx) => { wrap.appendChild(this.renderScenarioCard(sc, idx)); });
+            wrap.style.display = "block";
+            currentTab.scenarios.forEach((sc, idx) => { wrap.appendChild(this.renderScenarioCard(sc, idx)); });
             this.panelEl.appendChild(wrap);
-        });
+        }
         
         const pMeta = document.getElementById("panelMeta"); if (pMeta) pMeta.style.display = "none";
 
@@ -548,10 +558,10 @@ export class MainPanelView {
 
         if (isDashboard) {
             d.addEventListener('click', (e) => {
-                if (e.target.closest('.dash-badge-link')) { e.preventDefault(); e.stopPropagation(); this.vm.setActiveTab(sc._tabId); return; }
+                if (e.target.closest('.dash-badge-link')) { e.preventDefault(); e.stopPropagation(); this.vm.setActiveTab(sc._tabId, 'dashboard'); return; }
                 if (e.target.closest('summary')) {
                     e.preventDefault(); e.stopPropagation();
-                    this.vm.setActiveTab(sc._tabId);
+                    this.vm.setActiveTab(sc._tabId, 'maximized');
                     setTimeout(() => {
                         const targetCard = document.querySelector(`details.scenario[data-sid="${sc.id}"]`);
                         if (targetCard) { targetCard.open = true; targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
