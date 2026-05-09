@@ -26,7 +26,8 @@ export class TransferView {
                 const blob = new Blob([JSON.stringify(this.vm.fullState, null, 2)], { type: 'application/json' });
                 const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url;
                 a.download = `SnapSpace_Backup_${new Date().toISOString().slice(0, 10)}.json`;
-                document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); return;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); 
+                window.appAlert("Workspace backed up successfully!", "Backup Complete"); return;
             }
             if (e.target.closest('#restoreBtn')) {
                 let fileInput = document.getElementById('restoreFileInput');
@@ -162,6 +163,7 @@ export class TransferView {
             
             exportConfirmBtn.innerHTML = prevText;
             exportConfirmBtn.disabled = false;
+            window.appAlert("Project exported successfully!", "Export Complete");
         });
     }
 
@@ -287,7 +289,7 @@ export class TransferView {
            let fpBackdrop = document.getElementById("fpBackdropExport");
            if (!fpBackdrop) {
               fpBackdrop = document.createElement("div"); fpBackdrop.id = "fpBackdropExport"; fpBackdrop.style.cssText = "position:fixed;inset:0;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;"; fpBackdrop.innerHTML = '<div style="background:var(--surface);width:min(800px, 100%);max-height:90vh;display:flex;flex-direction:column;border-radius:18px;box-shadow:var(--shadow);overflow:hidden;"><div style="padding:14px 16px;border-bottom:1px solid var(--outline-2);display:flex;justify-content:space-between;align-items:center;font-weight:bold;color:var(--text);"><span id="fpTitleExport" style="word-break:break-all;"></span><div><button id="fpCopyExport" style="margin-right:8px;padding:6px 12px;cursor:pointer;border-radius:999px;border:1px solid var(--outline);background:var(--surface);color:var(--text);font-weight:600;"><span class="material-symbols-outlined">content_copy</span> Copy Text</button><button id="fpDlExport" style="margin-right:8px;padding:6px 12px;cursor:pointer;border-radius:999px;border:1px solid transparent;background:var(--primary);color:#fff;font-weight:600;"><span class="material-symbols-outlined">download</span> Download</button><button id="fpCloseExport" style="padding:6px 12px;cursor:pointer;border-radius:999px;border:1px solid var(--outline);background:var(--surface);color:var(--text);font-weight:600;">Close</button></div></div><div style="flex:1;display:flex;flex-direction:column;background:var(--input-bg);"><textarea id="fpContentExport" readonly style="margin:0;padding:16px;font-family:monospace;font-size:13px;white-space:pre-wrap;word-wrap:break-word;color:var(--text);background:transparent;border:none;outline:none;resize:vertical;min-height:50vh;width:100%;"></textarea></div></div>'; document.body.appendChild(fpBackdrop); document.getElementById("fpCloseExport").onclick = () => fpBackdrop.style.display = "none"; fpBackdrop.onclick = (ev) => { if(ev.target === fpBackdrop) fpBackdrop.style.display = "none"; };
-              document.getElementById("fpCopyExport").onclick = async () => { try { await navigator.clipboard.writeText(document.getElementById("fpContentExport").value); const btn = document.getElementById("fpCopyExport"); const orig = btn.innerHTML; btn.innerHTML = '<span class="material-symbols-outlined">check_circle</span> Copied!'; setTimeout(() => { btn.innerHTML = orig; }, 1500); } catch(err) { alert("Failed to copy text."); } };
+              document.getElementById("fpCopyExport").onclick = async () => { try { await navigator.clipboard.writeText(document.getElementById("fpContentExport").value); const btn = document.getElementById("fpCopyExport"); const orig = btn.innerHTML; btn.innerHTML = '<span class="material-symbols-outlined">check_circle</span> Copied!'; setTimeout(() => { btn.innerHTML = orig; }, 1500); } catch(err) { const btn = document.getElementById("fpCopyExport"); const orig = btn.innerHTML; btn.innerHTML = '<span class="material-symbols-outlined">error</span> Failed'; setTimeout(() => { btn.innerHTML = orig; }, 1500); } };
            }
            document.getElementById("fpTitleExport").textContent = name; document.getElementById("fpContentExport").value = re.target.result;
            document.getElementById("fpDlExport").onclick = () => { const url = URL.createObjectURL(blob); const tmp = document.createElement("a"); tmp.href = url; tmp.download = name; document.body.appendChild(tmp); tmp.click(); setTimeout(() => { tmp.remove(); URL.revokeObjectURL(url); }, 500); }; fpBackdrop.style.display = "flex";

@@ -32,7 +32,7 @@ export const dialogService = {
                 }
                 const orig = fpCopyBtn.innerHTML; fpCopyBtn.innerHTML = `<span class="material-symbols-outlined">check_circle</span> Copied!`;
                 setTimeout(() => { fpCopyBtn.innerHTML = orig; }, 1500);
-            } catch(err) { alert("Failed to copy text."); }
+            } catch(err) { window.appAlert("Failed to copy text."); }
         });
 
         // 4. Image Lightbox
