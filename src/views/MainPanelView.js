@@ -215,10 +215,14 @@ export class MainPanelView {
                 if (currentIndex === -1) currentIndex = 0;
                 
                 if (xDiff > 0) { // Swiped left -> Next tab
-                    if (currentIndex < tabs.length - 1) this.vm.setActiveTab(tabs[currentIndex + 1].id, this.vm.viewMode);
+                    if (currentIndex < tabs.length - 1) {
+                        const targetId = tabs[currentIndex + 1].id;
+                        this.vm.setActiveTab(targetId, targetId === 'dashboard' ? 'dashboard' : this.vm.viewMode);
+                    }
                 } else { // Swiped right -> Previous tab
                     if (currentIndex > 0) {
-                        this.vm.setActiveTab(tabs[currentIndex - 1].id, this.vm.viewMode);
+                        const targetId = tabs[currentIndex - 1].id;
+                        this.vm.setActiveTab(targetId, targetId === 'dashboard' ? 'dashboard' : this.vm.viewMode);
                     }
                 }
             }
@@ -329,6 +333,7 @@ export class MainPanelView {
 
     renderTabs() {
         if(!this.tabsEl) return;
+        const savedScrollLeft = this.tabsEl.scrollLeft;
         this.tabsEl.innerHTML = "";
         const tabs = this.vm.tabs;
         const activeTabId = this.vm.activeTab?.id || (this.vm.activeWorkspace?.activeTabId === "dashboard" ? "dashboard" : null);
@@ -452,6 +457,8 @@ export class MainPanelView {
             }, 50);
         });
         this.tabsEl.appendChild(plus);
+
+        this.tabsEl.scrollLeft = savedScrollLeft;
 
         // Ensure active tab and surrounding tabs remain visible on swipe/click
         setTimeout(() => {

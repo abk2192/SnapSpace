@@ -100,7 +100,7 @@
   .appbar .actions .btn .material-symbols-outlined { color: var(--muted); }
 
   .btn{ display: inline-flex; align-items: center; justify-content: center; appearance:none; border: 1px solid transparent; background: var(--primary); color:#fff; padding: 9px 12px; border-radius: 999px; cursor:pointer; font-weight: 650; font-size: 13px; box-shadow: 0 4px 10px var(--primary-light); transition: all .15s ease; user-select:none; white-space:nowrap; flex-shrink: 0; }
-  .btn:hover{ background: var(--primary-2); }
+  .btn:hover{ background: var(--primary-when 2); }
   .btn:active{ transform: translateY(1px); box-shadow: none; }
   .btn.secondary{ background: var(--surface); color: var(--text); border-color: var(--outline); box-shadow:none; }
   .btn.secondary:hover{ background: var(--surface-2); }
@@ -413,8 +413,8 @@
   body.readonly #workspaceTitleInput { pointer-events: none; }
 
   /* Read-Only Checklist Tapping */
-  body.readonly .evidence div:has(> .editor-checkbox), body.readonly .evidence p:has(> .editor-checkbox), body.readonly .evidence li:has(> .editor-checkbox) { cursor: pointer; border-radius: 6px; padding: 2px; margin-left: -2px; }
-  @media (hover: hover) { body.readonly .evidence div:has(> .editor-checkbox):hover, body.readonly .evidence p:has(> .editor-checkbox):hover, body.readonly .evidence li:has(> .editor-checkbox):hover { background: var(--surface-2); } }
+  body.readonly .evidence div:has(> .editor-checkbox), body.readonly .evidence p:has(> .editor-checkbox), body.readonly .evidence li:has(> .editor-checkbox), .qn-read-mode .evidence div:has(> .editor-checkbox), .qn-read-mode .evidence p:has(> .editor-checkbox), .qn-read-mode .evidence li:has(> .editor-checkbox) { cursor: pointer; border-radius: 6px; padding: 2px; margin-left: -2px; }
+  @media (hover: hover) { body.readonly .evidence div:has(> .editor-checkbox):hover, body.readonly .evidence p:has(> .editor-checkbox):hover, body.readonly .evidence li:has(> .editor-checkbox):hover, .qn-read-mode .evidence div:has(> .editor-checkbox):hover, .qn-read-mode .evidence p:has(> .editor-checkbox):hover, .qn-read-mode .evidence li:has(> .editor-checkbox):hover { background: var(--surface-2); } }
 
   /* Export UI Indentation CSS */
   .export-tab-group { margin-bottom: 16px; }
@@ -582,8 +582,10 @@
   .qn-done-btn .material-symbols-outlined { font-size: 28px; }
   .qn-done-btn:active { transform: scale(0.9); }
   
-  /* Fade FAB when typing to reveal text underneath */
-  .qn-body:has(#qnEditor:focus) ~ .qn-fab-stack { transform: translateY(150%); opacity: 0; pointer-events: none; transition: transform 0.3s ease, opacity 0.3s ease; }
+  /* Make FAB translucent when typing to reveal text underneath */
+  body.keyboard-up .qn-fab-stack { opacity: 0.35; transition: opacity 0.3s ease; }
+  body.keyboard-up .qn-fab-stack #qnReadModeBtn { display: none; }
+  .qn-fab-stack:hover, .qn-fab-stack:focus-within, .qn-fab-stack:active { opacity: 1 !important; }
 
   /* Dashboard Calendar */
   .cal-day { box-sizing: border-box; aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; border-radius: 50%; cursor: pointer; transition: all 0.2s; position: relative; margin: 0 auto; width: 32px; height: 32px; color: var(--text); font-size: 13px; font-weight: 600; }
@@ -598,3 +600,4 @@
   .qn-backdrop.qn-read-mode #qnEditor { user-select: text; }
   .qn-backdrop.qn-read-mode .wysiwyg-toolbar { display: none !important; }
   .qn-backdrop.qn-read-mode .qn-title-input { pointer-events: none; }
+  .qn-backdrop.qn-read-mode #qnReadModeBtn { display: none !important; }

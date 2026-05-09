@@ -31,7 +31,7 @@ export class EditorView {
 
         // Core Editor Command Executor
         document.addEventListener("click", async (e) => {
-            if (document.body.classList.contains("readonly")) {
+            if (document.body.classList.contains("readonly") || e.target.closest('.qn-read-mode')) {
                 const block = e.target.closest('.evidence div, .evidence p, .evidence li');
                 if (block && e.target.tagName !== 'INPUT' && e.target.tagName !== 'A' && e.target.tagName !== 'IMG' && !e.target.closest('summary') && !e.target.closest('.copy-att')) {
                     const cb = block.querySelector('.editor-checkbox');
@@ -191,7 +191,7 @@ export class EditorView {
                 return;
             }
 
-            if (document.body.classList.contains("readonly")) {
+            if (document.body.classList.contains("readonly") || e.target.closest('.qn-read-mode')) {
                 const block = e.target.closest('.evidence div, .evidence p, .evidence li');
                 if (block && e.target.tagName !== 'INPUT' && e.target.tagName !== 'A' && e.target.tagName !== 'IMG' && !e.target.closest('summary') && !e.target.closest('.copy-att')) {
                     const cb = block.querySelector('.editor-checkbox');

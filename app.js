@@ -36,6 +36,11 @@ if (window.visualViewport) {
     const updateKeyboardOffset = () => {
         const offset = window.innerHeight - vv.height;
         document.documentElement.style.setProperty('--kb-offset', `${Math.max(0, offset)}px`);
+        if (offset > 100) {
+            document.body.classList.add('keyboard-up');
+        } else {
+            document.body.classList.remove('keyboard-up');
+        }
     };
     vv.addEventListener('resize', () => {
         updateKeyboardOffset();
@@ -477,6 +482,15 @@ async function bootApp() {
             qnBackdrop.classList.add('qn-animating');
             setTimeout(() => { qnBackdrop.style.display = 'none'; saveQuickNoteState(); isClosingQn = false; }, 300);
         };
+        
+        document.getElementById('qnReadModeBtn')?.addEventListener('click', () => {
+            if (!qnBackdrop.classList.contains('qn-read-mode')) {
+                qnBackdrop.classList.add('qn-read-mode');
+                qnEditor.contentEditable = "false";
+                qnDone.querySelector('.material-symbols-outlined').textContent = 'edit';
+                saveQuickNoteState();
+            }
+        });
 
         // Global History hook: Triggered natively if user presses the "Back" button or swipes
         window.addEventListener('popstate', () => {
