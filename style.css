@@ -148,7 +148,7 @@
   .mobile-close-nav { display: flex; justify-content: space-between; align-items: center; padding: 16px; border-bottom: 1px solid var(--outline-2); margin-bottom: 8px;}
 
   /* ===== App Content Wrapper ===== */
-  .app-content { flex: 1; overflow-y: auto; overflow-x: hidden; position: relative; display: flex; flex-direction: column; transition: padding-left 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+  .app-content { flex: 1; overflow: hidden; position: relative; display: flex; flex-direction: column; transition: padding-left 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
 
   /* Sidebar Settings Details */
   details.sidebar-settings summary::-webkit-details-marker { display: none; }
@@ -217,7 +217,7 @@
   .tab.plus{ border-style:dashed; color: var(--muted); background: transparent; }
 
   /* ===== Main layout ===== */
-  main{ width: 100%; max-width: 1200px; margin: 0 auto; padding: 14px 16px 28px; flex: 1; }
+  main{ width: 100%; max-width: 1200px; margin: 0 auto; padding: 14px 16px 28px; flex: 1; overflow-y: auto; overflow-x: hidden; }
   .panel-head{ display:none; }
   .tab-panel { display: none; }
 
@@ -313,11 +313,6 @@
   }
   .wysiwyg-toolbar .btn { padding: 4px 8px; font-size: 12px; font-weight: 700; border-radius: 6px; transition: all 0.2s ease; }
   .wysiwyg-toolbar .btn.active-format { background: var(--primary-light) !important; color: var(--primary) !important; border-color: var(--primary) !important; }
-
-  /* Hide Keyboard Dismiss Button on Desktop */
-  @media (min-width: 769px) {
-      .wysiwyg-toolbar .btn[data-cmd="closeKeyboard"] { display: none !important; }
-  }
 
   /* Table inside WYSIWYG */
   .evidence-table { width: 100%; border-collapse: collapse; margin: 8px 0; border: 1px solid var(--outline-2); font-size: 13px; }
@@ -574,8 +569,7 @@
   .qn-done-btn:active { transform: scale(0.9); }
   
   /* Fade FAB when typing to reveal text underneath */
-  .qn-body:has(#qnEditor:focus) ~ .qn-fab-stack { opacity: 0.25; transition: opacity 0.3s ease; }
-  .qn-fab-stack:hover { opacity: 1 !important; }
+  .qn-body:has(#qnEditor:focus) ~ .qn-fab-stack { transform: translateY(150%); opacity: 0; pointer-events: none; transition: transform 0.3s ease, opacity 0.3s ease; }
 
   /* Dashboard Calendar */
   .cal-day { box-sizing: border-box; aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; border-radius: 50%; cursor: pointer; transition: all 0.2s; position: relative; margin: 0 auto; width: 32px; height: 32px; color: var(--text); font-size: 13px; font-weight: 600; }

@@ -121,6 +121,38 @@ window.appDualPrompt = () => {
 };
 
 async function bootApp() {
+    // Setup history for double-back exit and view state navigation
+    history.replaceState({ page: 'root' }, "");
+    history.pushState({ page: 'app' }, "");
+    let lastBackPress = 0;
+
+    window.addEventListener('popstate', (e) => {
+        const qnBackdrop = document.getElementById('qnBackdrop');
+        if (qnBackdrop && qnBackdrop.style.display === 'flex') { history.pushState({ page: 'app' }, ""); return; }
+        
+        const cfBackdrop = document.getElementById('cfBackdrop');
+        const filePreviewBackdrop = document.getElementById('filePreviewBackdrop');
+        if ((cfBackdrop && cfBackdrop.style.display === 'flex') || (filePreviewBackdrop && filePreviewBackdrop.style.display === 'flex')) {
+            if (cfBackdrop) cfBackdrop.style.display = 'none';
+            if (filePreviewBackdrop) filePreviewBackdrop.style.display = 'none';
+            history.pushState({ page: 'app' }, "");
+            return;
+        }
+
+        if (window.mainPanelVM && window.mainPanelVM.viewMode === 'maximized') {
+            window.mainPanelVM.setActiveTab(window.mainPanelVM.activeWorkspace?.activeTabId, 'dashboard');
+            history.pushState({ page: 'app' }, "");
+        } else {
+            const now = Date.now();
+            if (now - lastBackPress < 2000) { history.back(); } 
+            else {
+                lastBackPress = now;
+                window.appAlert("Press back again to exit.", "Exit");
+                history.pushState({ page: 'app' }, "");
+            }
+        }
+    });
+
     document.getElementById("renameTabBtn")?.remove();
 
     // Reorder Global Kebab Menu Actions (Only the tools meant for the top bar)
@@ -205,7 +237,6 @@ async function bootApp() {
         mobilePill.innerHTML = `
             <button class="pill-btn" id="pillSearchBtn" title="Search"><span class="material-symbols-outlined">search</span></button>
             <button class="pill-btn pill-add" id="pillAddBtn"><span class="material-symbols-outlined">add</span> <span class="pill-text">Add Note</span></button>
-            <button class="pill-btn pill-add" id="pillUnlockBtn" style="display: none;"><span class="material-symbols-outlined">lock</span></button>
             <button class="pill-btn" id="pillMoreBtn" title="More Actions"><span class="material-symbols-outlined">apps</span></button>
         `;
         document.body.appendChild(mobilePill);
@@ -215,9 +246,6 @@ async function bootApp() {
         });
         document.getElementById("pillAddBtn").addEventListener("click", () => {
             document.getElementById("quickNoteBtn")?.click();
-        });
-        document.getElementById("pillUnlockBtn").addEventListener("click", () => {
-            document.getElementById("toggleEditBtn")?.click();
         });
         document.getElementById("pillMoreBtn").addEventListener("click", (e) => {
             e.stopPropagation();
@@ -364,10 +392,10 @@ async function bootApp() {
                 qnEditor.innerHTML = sc.evidenceHtml || "";
                 currentFields = JSON.parse(JSON.stringify(sc.fields || []));
                 
-                // Open existing note in read-only mode by default
-                qnBackdrop.classList.add('qn-read-mode');
-                qnEditor.contentEditable = "false";
-                qnDone.querySelector('.material-symbols-outlined').textContent = 'edit';
+                // Open existing note in edit mode
+                qnBackdrop.classList.remove('qn-read-mode');
+                qnEditor.contentEditable = "true";
+                qnDone.querySelector('.material-symbols-outlined').textContent = 'check';
             } else {
                 editingScenarioId = null;
                 currentFields = []; 

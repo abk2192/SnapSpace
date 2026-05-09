@@ -64,6 +64,19 @@ export class MainPanelView {
             if (e.target.closest('#calNextBtn')) { this.vm.changeCalendarMonth(1); return; }
         });
 
+        document.addEventListener('change', e => {
+            if (e.target.id === 'calDatePicker') {
+                const date = new Date(e.target.value);
+                if (!isNaN(date)) {
+                    const parts = e.target.value.split('-');
+                    this.vm._calYear = parseInt(parts[0]);
+                    this.vm._calMonth = parseInt(parts[1]) - 1;
+                    this.vm.setDashboardDateFilter(e.target.value);
+                    this.renderTabs(); this.renderPanel();
+                }
+            }
+        });
+
         const resetBtn = document.getElementById("resetBtn");
         resetBtn?.addEventListener("click", () => this.vm.resetProject());
 
@@ -83,15 +96,6 @@ export class MainPanelView {
                         } 
                     }, 50);
                 }
-            }
-
-            const toggleEditBtn = e.target.closest("#toggleEditBtn");
-            if (toggleEditBtn) {
-                document.body.classList.toggle("readonly");
-                const isLocked = document.body.classList.contains("readonly");
-                toggleEditBtn.innerHTML = `<span class="material-symbols-outlined">${isLocked ? 'lock' : 'lock_open'}</span> <span class="btn-text">${isLocked ? 'Unlock Mode' : 'Read-Only Mode'}</span>`;
-                toggleEditBtn.title = isLocked ? "Unlock (Edit Mode)" : "Lock (Read-Only Mode)";
-                document.querySelectorAll('.evidence').forEach(el => el.setAttribute('contenteditable', isLocked ? 'false' : 'true'));
             }
 
             const toggleAllBtn = e.target.closest("#toggleAllBtn");
@@ -207,10 +211,10 @@ export class MainPanelView {
                 if (currentIndex === -1) currentIndex = 0;
                 
                 if (xDiff > 0) { // Swiped left -> Next tab
-                    if (currentIndex < tabs.length - 1) this.vm.setActiveTab(tabs[currentIndex + 1].id, 'dashboard');
+                    if (currentIndex < tabs.length - 1) this.vm.setActiveTab(tabs[currentIndex + 1].id, this.vm.viewMode);
                 } else { // Swiped right -> Previous tab
                     if (currentIndex > 0) {
-                        this.vm.setActiveTab(tabs[currentIndex - 1].id, 'dashboard');
+                        this.vm.setActiveTab(tabs[currentIndex - 1].id, this.vm.viewMode);
                     }
                 }
             }
@@ -357,7 +361,10 @@ export class MainPanelView {
                 <div style="max-width: 400px; width: 100%; margin: 0 auto; padding: 12px 16px; overflow: hidden; box-sizing: border-box;">
                     <div style="font-weight: 800; font-size: 15px; margin-bottom: 12px; color: var(--text); display: flex; align-items: center; justify-content: space-between;">
                         <button class="btn secondary icon-only" id="calPrevBtn" style="padding: 4px; height: 28px; width: 28px; min-height: 0;"><span class="material-symbols-outlined">chevron_left</span></button>
-                        <span>${monthName} ${year}</span>
+                        <label style="position: relative; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                            <span>${monthName} ${year}</span>
+                            <input type="date" id="calDatePicker" style="position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; left: 0; top: 0;" />
+                        </label>
                         <button class="btn secondary icon-only" id="calNextBtn" style="padding: 4px; height: 28px; width: 28px; min-height: 0;"><span class="material-symbols-outlined">chevron_right</span></button>
                     </div>
                     <div style="display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; gap: 4px 0;">${daysHtml}</div>
@@ -401,7 +408,7 @@ export class MainPanelView {
             btn.addEventListener("click", (e) => {
                 const close = e.target.closest("[data-close-tab]");
                 if (close){ e.stopPropagation(); this.vm.deleteTab(close.getAttribute("data-close-tab")); return; }
-                if (tab.id === activeTabId) {
+                if (tab.id === activeTabId && this.vm.viewMode === 'maximized') {
                     e.stopPropagation();
                     dialogService.prompt("Rename tab", tab.name, "Give this tab a short name.").then((val) => {
                         if (val !== undefined && val !== null) this.vm.renameTab(tab.id, val);
@@ -510,6 +517,9 @@ export class MainPanelView {
         }
         
         const pMeta = document.getElementById("panelMeta"); if (pMeta) pMeta.style.display = "none";
+        
+        const panelHeadActions = document.querySelector('.panel-head > div:nth-child(2)');
+        if (panelHeadActions) panelHeadActions.style.display = this.vm.viewMode === "dashboard" ? "none" : "flex";
 
         const active = this.vm.activeTab; const toggleAllBtn = document.getElementById('toggleAllBtn');
         if (toggleAllBtn && active) {
