@@ -164,11 +164,20 @@ export class SearchView {
     }
 
     selectResult(wsId, tabId, scId) {
-        store.state.activeWorkspaceId = wsId;
-        const ws = store.state.workspaces.find(w => w.id === wsId);
-        if(ws) ws.activeTabId = tabId;
+        if (store.state.activeWorkspaceId !== wsId) {
+            store.state.activeWorkspaceId = wsId;
+            globalEvents.publish('workspaces:changed');
+            globalEvents.publish('workspace:selected');
+        }
         
-        globalEvents.publish('workspaces:changed'); globalEvents.publish('workspace:selected'); globalEvents.publish('tabs:changed'); globalEvents.publish('scenarios:changed');
+        if (window.mainPanelVM) {
+            window.mainPanelVM.setActiveTab(tabId, 'maximized');
+        } else {
+            const ws = store.state.workspaces.find(w => w.id === wsId);
+            if(ws) ws.activeTabId = tabId;
+            globalEvents.publish('tabs:changed'); 
+            globalEvents.publish('scenarios:changed');
+        }
         this.close();
         
         setTimeout(() => {
