@@ -5,11 +5,18 @@ import { uid } from '../utils/dom.js';
 export class MainPanelVM {
     dashboardDateFilter = null;
     viewMode = 'dashboard'; // 'dashboard' or 'maximized'
+    temporarySearchTab = null;
+    _tempActiveTabId = null;
 
     get activeWorkspace() { return store.state?.workspaces.find(w => w.id === store.state.activeWorkspaceId); }
     get workspaces() { return store.state?.workspaces || []; }
-    get tabs() { return this.activeWorkspace?.tabs || []; }
-    get activeTab() { return this.tabs.find(t => t.id === this.activeWorkspace?.activeTabId); }
+    get tabs() { 
+        const realTabs = this.activeWorkspace?.tabs || []; 
+        if (this.temporarySearchTab) return [...realTabs, this.temporarySearchTab];
+        return realTabs;
+    }
+    get activeTabId() { return this._tempActiveTabId || this.activeWorkspace?.activeTabId; }
+    get activeTab() { return this.tabs.find(t => t.id === this.activeTabId); }
 
     get calendarMonth() { return this._calMonth !== undefined ? this._calMonth : new Date().getMonth(); }
     get calendarYear() { return this._calYear !== undefined ? this._calYear : new Date().getFullYear(); }
@@ -38,6 +45,14 @@ export class MainPanelVM {
     }
 
     setActiveTab(id, mode = 'dashboard') {
+        if (id === 'search_results') {
+            this._tempActiveTabId = id;
+            this.viewMode = mode;
+            globalEvents.publish('tabs:changed');
+            globalEvents.publish('scenarios:changed');
+            return;
+        }
+        this._tempActiveTabId = null;
         if (this.activeWorkspace) {
             this.activeWorkspace.activeTabId = id;
             this.viewMode = mode;
@@ -45,6 +60,42 @@ export class MainPanelVM {
                 const tab = this.activeWorkspace.tabs.find(t => t.id === id);
                 if (tab) tab.scenarios.forEach(sc => sc.isOpen = false);
             }
+            globalEvents.publish('tabs:changed');
+            globalEvents.publish('scenarios:changed');
+        }
+    }
+
+    setTemporarySearchTab(query, results) {
+        const scenarios = results.map((r, idx) => {
+            let sc = null;
+            const ws = this.workspaces.find(w => w.id === r.wsId);
+            if (ws) {
+                const t = ws.tabs.find(t => t.id === r.tabId);
+                if (t) sc = t.scenarios.find(s => s.id === r.scId);
+            }
+            if (sc) return { ...sc, _wsId: r.wsId, _tabId: r.tabId, _tabName: r.tabName, _wsTitle: r.wsTitle };
+            return null;
+        }).filter(Boolean);
+
+        this.temporarySearchTab = {
+            id: 'search_results',
+            name: `Search: ${query}`,
+            isTemporary: true,
+            scenarios: scenarios
+        };
+        this.setActiveTab('search_results', 'maximized');
+    }
+
+    closeTemporarySearchTab() {
+        this.temporarySearchTab = null;
+        if (this._tempActiveTabId === 'search_results') {
+            this._tempActiveTabId = null;
+            if (this.activeWorkspace && this.activeWorkspace.tabs.length > 0 && this.activeWorkspace.activeTabId !== 'dashboard') {
+                this.setActiveTab(this.activeWorkspace.activeTabId, 'maximized');
+            } else {
+                this.setActiveTab('dashboard', 'dashboard');
+            }
+        } else {
             globalEvents.publish('tabs:changed');
             globalEvents.publish('scenarios:changed');
         }
@@ -103,8 +154,16 @@ export class MainPanelVM {
         }
     }
 
+    _findRealScenario(sid) {
+        for (const t of this.workspaces.flatMap(w => w.tabs)) {
+            const sc = t.scenarios.find(s => s.id === sid);
+            if (sc) return sc;
+        }
+        return null;
+    }
+
     addScenario() {
-        const tab = this.activeTab || this.tabs[0]; if(!tab) return null;
+        let tab = this.activeTab; if(!tab || tab.isTemporary) tab = this.activeWorkspace?.tabs[0]; if(!tab) return null;
         const newId = uid();
         const dateStr = this.dashboardDateFilter || new Date().toISOString().split('T')[0];
         const defaultName = `Note ${dateStr} ${tab.scenarios.length + 1}`;
@@ -115,7 +174,7 @@ export class MainPanelVM {
     }
 
     reorderScenarios(fromIdx, toIdx) {
-        const tab = this.activeTab; if(!tab) return;
+        const tab = this.activeTab; if(!tab || tab.isTemporary) return;
         if (!isNaN(fromIdx) && fromIdx !== toIdx) {
             const moved = tab.scenarios.splice(fromIdx, 1)[0];
             tab.scenarios.splice(toIdx, 0, moved);
@@ -124,29 +183,30 @@ export class MainPanelVM {
     }
     
     toggleAllScenarios() {
-        const tab = this.activeTab; if(!tab) return;
+        const tab = this.activeTab; if(!tab || tab.isTemporary) return;
         const anyOpen = tab.scenarios.some(sc => sc.isOpen !== false);
         tab.scenarios.forEach(sc => sc.isOpen = !anyOpen);
         globalEvents.publish('scenarios:changed');
     }
     
     duplicateScenario(id) {
-        const tab = this.activeTab; if(!tab) return;
-        const idx = tab.scenarios.findIndex(s => s.id === id);
-        if (idx >= 0) {
-            const sc = tab.scenarios[idx];
-            const clone = JSON.parse(JSON.stringify(sc));
-            clone.id = uid(); clone.name = (clone.name || "Untitled") + " (Copy)";
-            clone.fields.forEach(f => f.id = uid());
-            const now = Date.now(); clone.createdAt = now; clone.modifiedAt = now;
-            tab.scenarios.splice(idx + 1, 0, clone);
-            globalEvents.publish('scenarios:changed');
+        for (const t of this.workspaces.flatMap(w => w.tabs)) {
+            const idx = t.scenarios.findIndex(s => s.id === id);
+            if (idx >= 0) {
+                const sc = t.scenarios[idx];
+                const clone = JSON.parse(JSON.stringify(sc));
+                clone.id = uid(); clone.name = (clone.name || "Untitled") + " (Copy)";
+                clone.fields.forEach(f => f.id = uid());
+                const now = Date.now(); clone.createdAt = now; clone.modifiedAt = now;
+                t.scenarios.splice(idx + 1, 0, clone);
+                globalEvents.publish('scenarios:changed');
+                return;
+            }
         }
     }
     
     addField(id, key, val) {
-        const tab = this.activeTab; if(!tab) return;
-        const sc = tab.scenarios.find(s => s.id === id);
+        const sc = this._findRealScenario(id);
         if (sc) {
             sc.fields.push({ id: uid(), key: key || "", val: val || "" });
             globalEvents.publish('scenarios:changed');
@@ -154,8 +214,7 @@ export class MainPanelVM {
     }
     
     deleteField(scenarioId, fieldId) {
-        const tab = this.activeTab; if(!tab) return;
-        const sc = tab.scenarios.find(s => s.id === scenarioId);
+        const sc = this._findRealScenario(scenarioId);
         if (sc) {
             sc.fields = sc.fields.filter(f => f.id !== fieldId);
             globalEvents.publish('scenarios:changed');
@@ -163,37 +222,40 @@ export class MainPanelVM {
     }
 
     async deleteScenario(id) {
-        const tab = this.activeTab; if(!tab) return;
         if(await window.appConfirm("Are you sure you want to delete this note?")) { 
-            tab.scenarios = tab.scenarios.filter(s => s.id !== id); 
-            globalEvents.publish('scenarios:changed'); 
+            for (const t of this.workspaces.flatMap(w => w.tabs)) {
+                const idx = t.scenarios.findIndex(s => s.id === id);
+                if (idx !== -1) {
+                    t.scenarios.splice(idx, 1);
+                    globalEvents.publish('scenarios:changed'); 
+                    return;
+                }
+            }
         }
     }
 
     updateScenarioName(sid, name) {
-        const tab = this.activeTab; if(!tab) return;
-        const sc = tab.scenarios.find(s => s.id === sid);
+        const sc = this._findRealScenario(sid);
         if (sc) { sc.name = name; sc.modifiedAt = Date.now(); }
     }
 
     updateScenarioOpenState(sid, isOpen) {
-        const tab = this.activeTab; if(!tab) return;
-        const sc = tab.scenarios.find(s => s.id === sid);
+        const sc = this._findRealScenario(sid);
         if (sc) sc.isOpen = isOpen; 
     }
 
     updateFieldKey(sid, fid, key) {
-        const tab = this.activeTab; if(!tab) return; const sc = tab.scenarios.find(s => s.id === sid);
+        const sc = this._findRealScenario(sid);
         if (sc) { const f = sc.fields.find(f => f.id === fid); if(f) { f.key = key; sc.modifiedAt = Date.now(); globalEvents.publish('tags:updated'); } }
     }
 
     updateFieldVal(sid, fid, val) {
-        const tab = this.activeTab; if(!tab) return; const sc = tab.scenarios.find(s => s.id === sid);
+        const sc = this._findRealScenario(sid);
         if (sc) { const f = sc.fields.find(f => f.id === fid); if(f) { f.val = val; sc.modifiedAt = Date.now(); globalEvents.publish('tags:updated'); } }
     }
 
     updateEvidence(sid, html) {
-        const tab = this.activeTab; if(!tab) return; const sc = tab.scenarios.find(s => s.id === sid);
+        const sc = this._findRealScenario(sid);
         if (sc) { sc.evidenceHtml = html; sc.modifiedAt = Date.now(); }
     }
 }

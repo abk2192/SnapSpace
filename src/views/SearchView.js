@@ -106,8 +106,13 @@ export class SearchView {
                         results[prevIndex].scrollIntoView({ block: 'nearest' });
                     } else if (e.key === "Enter") {
                         e.preventDefault();
-                        const selected = currentIndex >= 0 ? results[currentIndex] : results[0];
-                        if (selected) this.selectResult(selected.dataset.ws, selected.dataset.tab, selected.dataset.sc);
+                        if (window.mainPanelVM) {
+                            window.mainPanelVM.setTemporarySearchTab(this.searchInput.value.trim(), this.vm.search(this.searchInput.value.trim()));
+                            this.close();
+                        } else {
+                            const selected = currentIndex >= 0 ? results[currentIndex] : results[0];
+                            if (selected) this.selectResult(selected.dataset.ws, selected.dataset.tab, selected.dataset.sc);
+                        }
                     }
                 }
             }
