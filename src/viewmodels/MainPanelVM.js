@@ -53,6 +53,7 @@ export class MainPanelVM {
     setDashboardDateFilter(dateStr) {
         if (this.dashboardDateFilter === dateStr) this.dashboardDateFilter = null;
         else this.dashboardDateFilter = dateStr;
+        globalEvents.publish('tabs:changed');
         globalEvents.publish('scenarios:changed');
     }
 
