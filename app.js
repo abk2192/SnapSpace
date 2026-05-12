@@ -160,16 +160,6 @@ async function bootApp() {
 
     document.getElementById("renameTabBtn")?.remove();
 
-    // Reorder Global Kebab Menu Actions (Only the tools meant for the top bar)
-    const actionsContainer = document.querySelector('.appbar .actions');
-    if (actionsContainer) {
-        const btnOrder = ['importBtn', 'exportHtmlBtn', 'resetBtn'];
-        btnOrder.forEach(id => {
-            const btn = document.getElementById(id);
-            if (btn) actionsContainer.appendChild(btn);
-        });
-    }
-
     // Create a single Toggle Expand/Collapse button for space saving
     const expandAllBtn = document.getElementById('expandAllBtn');
     const collapseAllBtn = document.getElementById('collapseAllBtn');
@@ -254,20 +244,7 @@ async function bootApp() {
         });
         document.getElementById("pillMoreBtn").addEventListener("click", (e) => {
             e.stopPropagation();
-            document.body.classList.toggle("show-mobile-actions");
-        });
-
-        // This listener is now responsible for closing the mobile menu when clicking outside
-        document.addEventListener('click', e => {
-            if (document.body.classList.contains("show-mobile-actions")) {
-                const actions = document.querySelector('.appbar .actions');
-                const mobileMoreBtn = document.getElementById("pillMoreBtn");
-                const clickedActionBtn = e.target.closest('.appbar .actions .btn');
-                // Close if click is on an action, or if click is outside the menu AND not on the toggle button
-                if (clickedActionBtn || (actions && !actions.contains(e.target) && !mobileMoreBtn.contains(e.target) && e.target !== mobileMoreBtn)) {
-                    document.body.classList.remove("show-mobile-actions");
-                }
-            }
+            document.getElementById("mainMenuBtn")?.click();
         });
     }
 

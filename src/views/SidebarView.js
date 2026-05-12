@@ -1,5 +1,6 @@
 import { escapeHtml } from '../utils/dom.js';
 import { globalEvents } from '../core/PubSub.js';
+import { dialogService } from '../services/DialogService.js';
 
 export class SidebarView {
     constructor(vm) {
@@ -67,6 +68,30 @@ export class SidebarView {
                 localStorage.setItem('snapspace_sidebar_width', document.documentElement.style.getPropertyValue('--sidebar-width'));
             }
         });
+
+        // Delegated click handler for workspace list items
+        this.listEl?.addEventListener("click", (e) => {
+            const wsItem = e.target.closest(".ws-item");
+            if (!wsItem) return;
+            
+            const wsId = wsItem.dataset.wsId;
+            
+            const del = e.target.closest("[data-del-ws]");
+            if (del) { e.stopPropagation(); this.vm.deleteWorkspace(wsId); return; }
+
+            const edit = e.target.closest("[data-edit-ws]");
+            if (edit) {
+                e.stopPropagation();
+                const wsTitle = wsItem.dataset.wsTitle || "Project";
+                dialogService.prompt("Rename Project", wsTitle, "Enter new project name:").then((val) => {
+                    if (val !== null && val !== undefined && val.trim() !== "") this.vm.updateProjectTitle(wsId, val);
+                });
+                return;
+            }
+            
+            this.vm.setActiveWorkspace(wsId);
+            if (window.innerWidth < 900) this.closeMobileSidebar();
+        });
     }
 
     closeMobileSidebar() {
@@ -84,10 +109,13 @@ export class SidebarView {
         this.vm.workspaces.forEach((ws) => {
             const btn = document.createElement("button");
             btn.className = "menu-item ws-item" + (ws.id === this.vm.activeId ? " active-ws" : "");
+            btn.dataset.wsId = ws.id;
+            btn.dataset.wsTitle = ws.title || 'Untitled';
             
             btn.innerHTML = `
                <span class="material-symbols-outlined" style="font-size:18px;">workspaces</span> 
                <span class="ws-name">${escapeHtml(ws.title || 'Untitled')}</span>
+               <span class="material-symbols-outlined ws-edit" data-edit-ws="${ws.id}" title="Rename Project" style="margin-left: auto;">edit</span>
                ${this.vm.workspaces.length > 1 ? `<span class="material-symbols-outlined ws-del" data-del-ws="${ws.id}" title="Delete Project">delete</span>` : ''}
             `;
             
@@ -98,11 +126,6 @@ export class SidebarView {
             btn.ondragleave = () => { btn.classList.remove('drag-over-ws'); };
             btn.ondrop = (e) => { e.preventDefault(); btn.classList.remove('drag-over-ws'); this.vm.reorderWorkspaces(this.draggedWsId, ws.id); };
 
-            btn.addEventListener("click", (e) => {
-                const del = e.target.closest("[data-del-ws]");
-                if (del) { e.stopPropagation(); this.vm.deleteWorkspace(ws.id); return; }
-                this.vm.setActiveWorkspace(ws.id);
-            });
             this.listEl.appendChild(btn);
         });
     }

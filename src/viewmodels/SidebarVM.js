@@ -52,4 +52,12 @@ export class SidebarVM {
             }
         }
     }
+
+    updateProjectTitle(id, title) {
+        const ws = this.workspaces.find(w => w.id === id);
+        if (ws) {
+            ws.title = title;
+            globalEvents.publish('workspaces:changed');
+        }
+    }
 }

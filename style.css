@@ -84,12 +84,6 @@
   .title-group .title .badge { width: 30px; height: 30px; border-radius: 8px; margin-right: 0;}
   .title-group .title .badge svg { width: 16px; height: 16px; }
   
-  /* Workspace Switcher */
-  .ws-switcher-group { outline: none; border: 1px solid transparent; overflow: visible; }
-  .ws-switcher-group .ws-dropdown-icon { opacity: 0; transition: opacity 0.2s, transform 0.2s; margin-right: 4px; }
-  .ws-switcher-group:hover .ws-dropdown-icon { opacity: 1; }
-  .ws-switcher-group.active .ws-dropdown-icon { opacity: 1; transform: rotate(180deg); }
-  .ws-switcher-group.active .ws-dropdown-menu { opacity: 1; pointer-events: auto; transform: translateY(0); }
 
   .actions{ display:flex; gap:8px; flex: none; flex-wrap: nowrap; justify-content:flex-end; align-items: center; overflow: visible; scrollbar-width: none; }
   .actions::-webkit-scrollbar { display: none; } /* Hide scrollbar for clean look */
@@ -141,6 +135,9 @@
   .ws-item.active-ws .material-symbols-outlined { color: var(--primary); }
   .ws-item .ws-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .ws-del { opacity: 0.6; transition: opacity 0.2s; color: var(--muted); } /* Default visibility for touch */
+  .ws-edit { opacity: 0.6; transition: opacity 0.2s; color: var(--muted); cursor: pointer; padding: 2px; }
+  .ws-item:hover .ws-edit { opacity: 1; }
+  .ws-edit:hover { color: var(--primary); }
   .ws-item:hover .ws-del { opacity: 1; } /* Full opacity on hover */
   .ws-del:hover { color: var(--danger); }
   .ws-item.drag-over-ws { border: 2px dashed var(--primary); background: var(--surface-2); }
@@ -459,9 +456,6 @@
     /* Mobile Appbar - Keep the Badge, Hide the Text */
     .appbar-inner { padding: 0 12px; gap: 8px; flex-wrap: nowrap; }
     .tab-label { max-width: 90px; }
-    .ws-switcher-group { border: 1px solid var(--outline) !important; padding-right: 8px !important; background: var(--surface); padding: 4px; margin-right: auto; flex: 1; min-width: 0;}
-    .ws-switcher-group .title { margin-right: 4px; padding-right: 4px; border-right: none; }
-    .ws-switcher-group .ws-dropdown-icon { display: none; }
     
     .search-trigger-btn { display: none !important; }
     
@@ -474,29 +468,6 @@
     .pill-btn.pill-add .material-symbols-outlined { font-size: 32px; }
     .pill-btn.pill-add .pill-text { display: none; }
     .pill-btn.pill-add:hover, .pill-btn.pill-add:active { transform: translate(-50%, calc(-50% - 2px)); box-shadow: 0 8px 20px var(--primary-light), 0 0 0 6px var(--bg); }
-    
-    /* The Actions Bottom Sheet (Pop-up from Pill) */
-    .appbar .actions {
-        position: fixed; bottom: 84px; left: 50%; transform: translateX(-50%) scale(0.95);
-        background: var(--surface); border: 1px solid var(--outline); border-radius: 16px;
-        padding: 0; box-shadow: var(--shadow-2); flex-direction: column; width: 220px; overflow: hidden;
-        opacity: 0; pointer-events: none; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); z-index: 99;
-        transform-origin: bottom center; margin: 0; gap: 0 !important;
-    }
-    body.show-mobile-actions .appbar .actions { opacity: 1; pointer-events: auto; transform: translateX(-50%) scale(1); }
-    
-    .appbar .actions #addScenarioBtn { display: none !important; }
-    .appbar .actions .btn {
-        width: 100%; justify-content: flex-start; padding: 14px 20px !important;
-        border-radius: 0 !important; border: none !important; border-bottom: 1px solid var(--outline-2) !important; 
-        background: transparent !important; color: var(--text) !important;
-        box-shadow: none !important; font-size: 15px !important; font-weight: 500; margin: 0;
-    }
-    .appbar .actions .btn:last-of-type { border-bottom: none !important; }
-    .appbar .actions > :not(.btn) { display: none !important; }
-    .appbar .actions .btn:hover, .appbar .actions .btn:active { background: var(--surface-2) !important; }
-    .appbar .actions .btn .btn-text { display: inline !important; }
-    .appbar .actions .btn .material-symbols-outlined { margin-right: 12px !important; color: var(--muted); font-size: 20px !important; }
     
     /* Compare Dialog Mobile Overrides */
     .compare-dlg { width: 100vw !important; height: 100dvh !important; max-height: 100dvh !important; border-radius: 0 !important; }

@@ -11,6 +11,25 @@ const STATE_KEY = "test_recorder_tabs_v18";
 class DatabaseService {
     constructor() {
         this.dbInstance = null;
+        this.searchWorker = null;
+        this.workerCallbacks = new Map();
+        this._initWorker();
+    }
+
+    _initWorker() {
+        try {
+            this.searchWorker = new Worker('./src/workers/searchWorker.js');
+            this.searchWorker.onmessage = (e) => {
+                const { id, success, data, error } = e.data;
+                const cb = this.workerCallbacks.get(id);
+                if (cb) {
+                    if (success) cb.resolve(data); else cb.reject(new Error(error));
+                    this.workerCallbacks.delete(id);
+                }
+            };
+        } catch (e) {
+            console.warn("[DB] Search Worker init failed:", e);
+        }
     }
 
     async init() {
@@ -88,6 +107,75 @@ class DatabaseService {
             console.error("Failed to load state from DB:", err);
             return null;
         }
+    }
+
+    // ==========================================
+    // PHASE 2: Data Controllers & Omnisearch 
+    // ==========================================
+    
+    async queryItems(queryStr, projectId = null) {
+        if (!this.searchWorker) {
+            console.warn("Search Worker not active. Falling back to empty array.");
+            return [];
+        }
+        return new Promise((resolve, reject) => {
+            const id = Date.now().toString() + Math.random().toString(36).substr(2, 5);
+            this.workerCallbacks.set(id, { resolve, reject });
+            this.searchWorker.postMessage({ id, action: 'query', payload: { queryStr, projectId } });
+        });
+    }
+
+    async linkItems(sourceId, targetId) {
+        const db = await this.init();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction('items', 'readwrite');
+            const store = tx.objectStore('items');
+            
+            tx.oncomplete = () => resolve(true);
+            tx.onerror = (e) => reject(e.target.error);
+
+            store.get(sourceId).onsuccess = (e) => {
+                const sItem = e.target.result;
+                if (!sItem) return;
+                
+                store.get(targetId).onsuccess = (e2) => {
+                    const tItem = e2.target.result;
+                    if (!tItem) return;
+                    
+                    if (!sItem.linkedTo) sItem.linkedTo = [];
+                    if (!tItem.linkedFrom) tItem.linkedFrom = [];
+                    
+                    if (!sItem.linkedTo.includes(targetId)) sItem.linkedTo.push(targetId);
+                    if (!tItem.linkedFrom.includes(sourceId)) tItem.linkedFrom.push(sourceId);
+                    
+                    sItem.modifiedAt = Date.now();
+                    tItem.modifiedAt = Date.now();
+                    
+                    store.put(sItem); store.put(tItem);
+                };
+            };
+        });
+    }
+
+    async unlinkItems(sourceId, targetId) {
+        const db = await this.init();
+        return new Promise((resolve, reject) => {
+            const tx = db.transaction('items', 'readwrite');
+            const store = tx.objectStore('items');
+            
+            tx.oncomplete = () => resolve(true);
+            tx.onerror = (e) => reject(e.target.error);
+
+            store.get(sourceId).onsuccess = (e) => {
+                const sItem = e.target.result;
+                if (sItem && sItem.linkedTo) { sItem.linkedTo = sItem.linkedTo.filter(id => id !== targetId); sItem.modifiedAt = Date.now(); store.put(sItem); }
+            };
+            
+            store.get(targetId).onsuccess = (e) => {
+                const tItem = e.target.result;
+                if (tItem && tItem.linkedFrom) { tItem.linkedFrom = tItem.linkedFrom.filter(id => id !== sourceId); tItem.modifiedAt = Date.now(); store.put(tItem); }
+            };
+        });
     }
 
     // ==========================================
@@ -170,7 +258,6 @@ class DatabaseService {
             tx.onerror = (e) => reject(new Error("Migration failed: " + e.target.error));
         });
     }
-}
 }
 
 export const dbService = new DatabaseService();

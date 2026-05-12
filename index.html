@@ -34,6 +34,9 @@
            <span class="material-symbols-outlined settings-chev" style="transition: transform 0.2s; color: var(--muted);">expand_more</span>
          </summary>
          <div class="sidebar-settings-content" style="padding-left: 28px; display: flex; flex-direction: column; gap: 4px; margin-top: 6px;">
+            <button class="menu-item" id="importBtn" style="padding: 8px 12px; font-size: 13px;"><span class="material-symbols-outlined" style="font-size: 18px;">upload</span> Import</button>
+            <button class="menu-item" id="exportHtmlBtn" style="padding: 8px 12px; font-size: 13px;"><span class="material-symbols-outlined" style="font-size: 18px;">download</span> Export Project</button>
+            <button class="menu-item" id="resetBtn" style="padding: 8px 12px; font-size: 13px; color: var(--danger);"><span class="material-symbols-outlined" style="font-size: 18px; color: var(--danger);">delete_sweep</span> Reset Project</button>
             <button class="menu-item" id="compareBtn" style="padding: 8px 12px; font-size: 13px;"><span class="material-symbols-outlined" style="font-size: 18px;">compare_arrows</span> Compare Mode</button>
             <button class="menu-item" id="tplOpenBtn" style="padding: 8px 12px; font-size: 13px;"><span class="material-symbols-outlined" style="font-size: 18px;">bookmarks</span> Templates</button>
             <button class="menu-item" id="themeBtn" style="padding: 8px 12px; font-size: 13px;"><span class="material-symbols-outlined" style="font-size: 18px;">palette</span> Theme Settings</button>
@@ -50,19 +53,15 @@
   <header class="appbar">
     <div class="appbar-inner">
       <button class="btn secondary icon-only" id="mainMenuBtn" title="Menu" style="margin-right: 8px;"><span class="material-symbols-outlined">menu</span></button>
-      <div class="title-group ws-switcher-group" id="wsSwitcherWrap" style="cursor: pointer; position: relative;">
-        <div class="title" style="margin-right: 0; padding-right: 6px; border-right: none;">
-          <div class="badge">
+      <div class="title" style="margin-right: auto;">
+        <div class="badge">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
             <path d="M14 2v6h6"></path>
             <path d="M9 15l2 2 4-4"></path>
           </svg>
         </div>
-        </div>
-        <span id="workspaceTitleDisplay" style="font-weight: 750; font-size: 15px; color: var(--text); padding: 4px 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px;">Project Name</span>
-        <span class="material-symbols-outlined ws-dropdown-icon" style="color: var(--muted); font-size: 18px; transition: transform 0.2s;">expand_more</span>
-        <div id="wsDropdownMenu" class="scen-more-menu ws-dropdown-menu" style="top: 100%; left: 0; margin-top: 8px; width: 260px; max-height: 60vh; overflow-y: auto;"></div>
+        SnapSpace
       </div>
       <span id="saveIndicator" style="font-size: 12px; color: var(--primary); font-weight: 700; margin-right: 8px; opacity: 0; transition: opacity 0.3s; display: flex; align-items: center; gap: 4px; pointer-events: none; flex-shrink: 0;"><span class="material-symbols-outlined" style="font-size: 16px;">cloud_done</span> Saved</span>
       <div class="actions">
@@ -71,13 +70,8 @@
             <span class="material-symbols-outlined" style="position: absolute; left: 10px; top: 10px; font-size: 16px; color: var(--muted); pointer-events: none;">search</span>
             <div id="searchDropdown" class="search-dropdown"></div>
         </div>
-        <button class="btn secondary" id="renameTabBtn"><span class="material-symbols-outlined">edit</span> Rename Tab</button>
-        <button class="btn secondary" id="importBtn"><span class="material-symbols-outlined">upload</span> Import</button>
         <input type="file" id="importInput" accept=".html" hidden />
-        <button class="btn danger" id="resetBtn" title="Clear all tabs and notes"><span class="material-symbols-outlined">delete_sweep</span> Reset</button>
-        <button class="btn" id="addScenarioBtn" style="display:none;">Add Note</button>
         <button class="btn" id="quickNoteBtn"><span class="material-symbols-outlined">add</span> Add Note</button>
-        <button class="btn" id="exportHtmlBtn"><span class="material-symbols-outlined">download</span> Export Project</button>
       </div>
     </div>
   </header>

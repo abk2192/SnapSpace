@@ -21,36 +21,6 @@ export class MainPanelView {
     }
 
     bindEvents() {
-        const wsSwitcherWrap = document.getElementById("wsSwitcherWrap");
-        wsSwitcherWrap?.addEventListener("click", (e) => {
-            if (e.target.closest('#wsRenameBtn')) {
-                e.stopPropagation();
-                wsSwitcherWrap.classList.remove('active');
-                dialogService.prompt("Rename Project", this.vm.activeWorkspace?.title || "Project", "Enter new project name:").then((val) => {
-                    if (val !== null && val !== undefined && val.trim() !== "") this.vm.updateProjectTitle(val);
-                });
-                return;
-            }
-            const switchBtn = e.target.closest('[data-switch-ws]');
-            if (switchBtn) {
-                e.stopPropagation();
-                wsSwitcherWrap.classList.remove('active');
-                import('../core/Store.js').then(({store}) => {
-                    store.state.activeWorkspaceId = switchBtn.dataset.switchWs;
-                    globalEvents.publish('workspaces:changed');
-                    globalEvents.publish('workspace:selected');
-                });
-                return;
-            }
-            wsSwitcherWrap.classList.toggle('active');
-        });
-        
-        document.addEventListener('click', (e) => {
-            if (wsSwitcherWrap && !wsSwitcherWrap.contains(e.target)) {
-                wsSwitcherWrap.classList.remove('active');
-            }
-        });
-
         document.addEventListener('click', e => {
             const calDay = e.target.closest('.cal-day');
             if (calDay) { 
@@ -299,34 +269,7 @@ export class MainPanelView {
         });
     }
 
-    renderWorkspaceSwitcher() {
-        const wsDisplay = document.getElementById("workspaceTitleDisplay");
-        if (wsDisplay && this.vm.activeWorkspace) wsDisplay.textContent = this.vm.activeWorkspace.title || "Project";
-        
-        const menu = document.getElementById("wsDropdownMenu");
-        if (menu) {
-            let html = `
-                <button class="btn secondary action-btn" type="button" id="wsRenameBtn">
-                    <span class="material-symbols-outlined">edit</span> <span class="btn-text">Rename Project</span>
-                </button>
-                <div style="height: 1px; background: var(--outline-2); margin: 4px 0;"></div>
-                <div style="padding: 4px 12px; font-size: 11px; font-weight: 800; color: var(--muted); text-transform: uppercase;">Switch Project</div>
-            `;
-            this.vm.workspaces.forEach(ws => {
-                const isActive = ws.id === this.vm.activeWorkspace?.id;
-                html += `
-                    <button class="btn secondary action-btn" type="button" data-switch-ws="${ws.id}" style="${isActive ? 'color: var(--primary); background: var(--primary-light);' : ''}">
-                        <span class="material-symbols-outlined">${isActive ? 'check' : 'workspaces'}</span>
-                        <span class="btn-text" style="flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHtml(ws.title || 'Untitled')}</span>
-                    </button>
-                `;
-            });
-            menu.innerHTML = html;
-        }
-    }
-
     render() {
-        this.renderWorkspaceSwitcher();
         this.renderTabs();
         this.renderPanel();
     }
