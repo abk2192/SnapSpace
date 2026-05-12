@@ -81,7 +81,12 @@ export class MainPanelView {
             if (dupBtn) { this.vm.duplicateScenario(dupBtn.dataset.duplicate); return; }
 
             const linkBtn = e.target.closest("[data-link-note]");
-            if (linkBtn) { globalEvents.publish('search:openLinkMode', linkBtn.dataset.linkNote); return; }
+            if (linkBtn) { 
+                e.stopPropagation();
+                document.querySelectorAll('.scen-more-wrap.active').forEach(w => w.classList.remove('active'));
+                globalEvents.publish('search:openLinkMode', linkBtn.dataset.linkNote); 
+                return; 
+            }
 
             const unlinkBtn = e.target.closest("[data-unlink]");
             if (unlinkBtn) {
