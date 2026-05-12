@@ -293,6 +293,10 @@ async function bootApp() {
     // Load the reactive proxy state
     await store.init();
     
+    // Execute Phase 1 DB Migration in background 
+    // (This runs parallel to your legacy state, ensuring the UI remains unbroken while we build the new DB backend)
+    await dbService.migrateToFlatData();
+
     dialogService.init();
     
     // Global Keyboard Shortcuts
