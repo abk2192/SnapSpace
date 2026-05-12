@@ -455,4 +455,14 @@ export class MainPanelVM {
             }
         });
     }
+
+    async linkItem(sourceId, targetId) {
+        await dbService.linkItems(sourceId, targetId);
+        await this.loadProjectData(false);
+    }
+    
+    async unlinkItem(sourceId, targetId) {
+        await dbService.unlinkItems(sourceId, targetId);
+        await this.loadProjectData(false);
+    }
 }

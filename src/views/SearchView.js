@@ -11,6 +11,7 @@ export class SearchView {
         this.searchBackdrop = document.getElementById("searchBackdrop");
         this.searchTriggerBtn = document.getElementById("searchTriggerBtn");
         this.searchTimeout = null;
+        this.linkModeSourceId = null;
 
         this.init();
     }
@@ -40,6 +41,11 @@ export class SearchView {
             const actions = document.querySelector('.appbar .actions');
             if (appbarInner && actions) appbarInner.insertBefore(this.searchTriggerBtn, actions);
         }
+
+        globalEvents.subscribe('search:openLinkMode', (sourceId) => {
+            this.linkModeSourceId = sourceId;
+            this.open();
+        });
 
         this.bindEvents();
     }
@@ -125,6 +131,13 @@ export class SearchView {
         if(this.searchWrap) this.searchWrap.classList.add("active-search");
         if(this.searchBackdrop) this.searchBackdrop.style.display = "block";
         setTimeout(() => this.searchInput?.focus(), 50);
+        
+        if (this.linkModeSourceId && this.searchInput) {
+            this.searchInput.placeholder = "Search note to link...";
+        } else if (this.searchInput) {
+            this.searchInput.placeholder = "Search Projects...";
+        }
+        
         const q = this.searchInput?.value.trim() || "";
         if(q.length >= 3) {
             if(this.searchDropdown) this.searchDropdown.style.display = "flex";
@@ -139,6 +152,7 @@ export class SearchView {
         if(this.searchInput) this.searchInput.value = "";
         const appbar = document.querySelector('.appbar');
         if(appbar) appbar.classList.remove("search-active");
+        this.linkModeSourceId = null;
     }
 
     highlightText(text, query) {
@@ -164,6 +178,15 @@ export class SearchView {
     }
 
     selectResult(wsId, tabId, scId) {
+        if (this.linkModeSourceId) {
+            if (this.linkModeSourceId !== scId && window.mainPanelVM) {
+                window.mainPanelVM.linkItem(this.linkModeSourceId, scId);
+                window.appAlert("Notes linked successfully!", "Link Created");
+            }
+            this.close();
+            return;
+        }
+
         if (store.state.activeWorkspaceId !== wsId) {
             store.state.activeWorkspaceId = wsId;
             globalEvents.publish('workspaces:changed');
