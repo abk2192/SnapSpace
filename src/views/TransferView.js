@@ -23,7 +23,8 @@ export class TransferView {
                 } return;
             }
             if (e.target.closest('#backupBtn')) {
-                const blob = new Blob([JSON.stringify(this.vm.fullState, null, 2)], { type: 'application/json' });
+                const state = await this.vm.getFullState();
+                const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
                 const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url;
                 a.download = `SnapSpace_Backup_${new Date().toISOString().slice(0, 10)}.json`;
                 document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); 
@@ -40,9 +41,10 @@ export class TransferView {
                         reader.onload = async (event) => {
                             try {
                                 const importedData = JSON.parse(event.target.result);
-                                if (importedData && importedData.workspaces) {
+                                if (importedData && (importedData.workspaces || importedData.version === 2)) {
+                                    const mode = document.querySelector('input[name="restoreMode"]:checked')?.value || "append";
                                     if (await window.appConfirm("WARNING: This will replace ALL your current projects and data. Are you sure you want to proceed?")) {
-                                        this.vm.restoreBackup(importedData); window.appAlert("Data restored successfully!");
+                                        await this.vm.restoreBackup(mode, importedData); window.appAlert("Data restored successfully!");
                                     }
                                 } else window.appAlert("Invalid backup file format.");
                             } catch (err) { window.appAlert("Error parsing backup file."); }
@@ -97,12 +99,13 @@ export class TransferView {
         const exportCancelBtn = document.getElementById("exportCancelBtn"); const exportConfirmBtn = document.getElementById("exportConfirmBtn");
 
         exportHtmlBtn?.addEventListener("click", () => {
-            const project = this.vm.activeProject; if(!project) return;
+            const project = this.vm.activeProject; const tabs = window.mainPanelVM?.tabs || []; if(!project || tabs.length === 0) return;
             const expInput = document.getElementById("exportFilenameInput"); 
             if(expInput) expInput.value = `${(project.title || "Project").replace(/[^a-z0-9]/gi, '_')}_Export_${new Date().toISOString().slice(0,10)}.html`;
               
             const list = document.getElementById("exportChecklist"); if(!list) return; list.innerHTML = "";
-            project.tabs.forEach((tab, tIdx) => {
+            tabs.forEach((tab, tIdx) => {
+                if (tab.isTemporary) return;
                 const group = document.createElement("div"); group.className = "export-tab-group";
                 const tLabel = document.createElement("label"); tLabel.className = "export-tab-label";
                 const tCheck = document.createElement("input"); tCheck.type = "checkbox"; tCheck.checked = true; tCheck.dataset.tabId = tab.id;
@@ -130,13 +133,13 @@ export class TransferView {
         if(exportBackdrop) exportBackdrop.addEventListener("click", (e) => { if(e.target === exportBackdrop) exportCancelBtn?.click(); });
 
         exportConfirmBtn?.addEventListener("click", async () => {
-            const project = this.vm.activeProject; if(!project) return;
+            const project = this.vm.activeProject; const tabs = window.mainPanelVM?.tabs || []; if(!project) return;
             const filteredState = { activeTabId: null, title: project.title, tabs: [] };
             
             document.querySelectorAll('.export-tab-group').forEach(group => {
                 const tCheck = group.querySelector('.export-tab-label input');
                 if (tCheck && (tCheck.checked || tCheck.indeterminate)) {
-                    const originalTab = project.tabs.find(t => t.id === tCheck.dataset.tabId);
+                    const originalTab = tabs.find(t => t.id === tCheck.dataset.tabId);
                     if (originalTab) {
                         const newTab = { ...originalTab, scenarios: [] };
                         group.querySelectorAll('.export-scen-list input:checked').forEach(sCheck => {

@@ -8,7 +8,6 @@ export class MoveItemView {
         this.moveCancelBtn = document.getElementById("moveCancelBtn");
         this.moveConfirmBtn = document.getElementById("moveConfirmBtn");
         this.scenarioToMoveId = null;
-        this.lastMoveStructureHash = null;
         this.bindEvents();
     }
     
@@ -25,12 +24,9 @@ export class MoveItemView {
         });
     }
 
-    open(sid) {
-        const currentHash = this.vm.getTreeHash();
-        if (this.lastMoveStructureHash !== currentHash) {
-            this.moveSelect.innerHTML = this.vm.workspaces.map(ws => { return `<optgroup label="${escapeHtml(ws.title || 'Untitled')}">` + ws.tabs.map(t => `<option value="${ws.id}|${t.id}">${escapeHtml(t.name)}</option>`).join('') + `</optgroup>`; }).join('');
-            this.lastMoveStructureHash = currentHash;
-        }
+    async open(sid) {
+        const workspaces = await this.vm.getWorkspacesWithTabs();
+        this.moveSelect.innerHTML = workspaces.map(ws => { return `<optgroup label="${escapeHtml(ws.title || 'Untitled')}">` + ws.tabs.map(t => `<option value="${ws.id}|${t.id}">${escapeHtml(t.name)}</option>`).join('') + `</optgroup>`; }).join('');
         this.scenarioToMoveId = sid;
         if(this.moveBackdrop) this.moveBackdrop.style.display = 'flex';
     }

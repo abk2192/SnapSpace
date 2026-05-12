@@ -1,12 +1,6 @@
-import { store } from '../core/Store.js';
-
 export class CompareVM {
-    get activeWorkspace() {
-        return store.state?.workspaces.find(w => w.id === store.state.activeWorkspaceId);
-    }
-
     getTabs() {
-        return this.activeWorkspace?.tabs || [];
+        return window.mainPanelVM?.tabs || [];
     }
 
     getScenariosForTab(tabId) {

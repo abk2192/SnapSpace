@@ -107,7 +107,7 @@ export class SearchView {
                     } else if (e.key === "Enter") {
                         e.preventDefault();
                         if (window.mainPanelVM) {
-                            window.mainPanelVM.setTemporarySearchTab(this.searchInput.value.trim(), this.vm.search(this.searchInput.value.trim()));
+                            window.mainPanelVM.setTemporarySearchTab(this.searchInput.value.trim(), []);
                             this.close();
                         } else {
                             const selected = currentIndex >= 0 ? results[currentIndex] : results[0];
@@ -147,8 +147,8 @@ export class SearchView {
         return escapeHtml(text).replace(regex, '<span class="search-hl">$1</span>');
     }
 
-    performSearch(query) {
-        const results = this.vm.search(query);
+    async performSearch(query) {
+        const results = await this.vm.search(query);
         if (results.length === 0) {
             this.searchDropdown.innerHTML = `<div style="text-align:center; padding: 12px; color: var(--muted); font-size: 13px;">No results found for "${escapeHtml(query)}".</div>`;
             return;

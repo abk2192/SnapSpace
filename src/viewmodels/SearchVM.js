@@ -1,55 +1,50 @@
-import { store } from '../core/Store.js';
+import { dbService } from '../services/Database.js';
 
 export class SearchVM {
-    get workspaces() {
-        return store.state?.workspaces || [];
-    }
-
-    search(query) {
+    async search(query) {
         const q = query.toLowerCase();
-        let results = [];
+        const items = await dbService.queryItems(query);
+        
+        const projects = await dbService.getAllProjects();
+        const views = [];
+        for (const p of projects) {
+            views.push(...(await dbService.getViewsByProject(p.id)));
+        }
 
-        this.workspaces.forEach(ws => {
-            const wsMatch = (ws.title || "").toLowerCase().includes(q);
-            ws.tabs.forEach(tab => {
-                const tabMatch = (tab.name || "").toLowerCase().includes(q);
-                tab.scenarios.forEach((sc, idx) => {
-                    let hasMatch = false;
-                    let snippets = [];
-
-                    if (wsMatch) { hasMatch = true; snippets.push({ type: 'Project', text: ws.title || "" }); }
-                    if (tabMatch) { hasMatch = true; snippets.push({ type: 'Tab', text: tab.name || "" }); }
-                    if ((sc.name || "").toLowerCase().includes(q)) { hasMatch = true; snippets.push({ type: 'Title', text: sc.name || "" }); }
-                    
-                    (sc.fields || []).forEach(f => {
-                        const keyStr = f.key || ""; const valStr = f.val || "";
-                        if (keyStr.toLowerCase().includes(q) || valStr.toLowerCase().includes(q)) {
-                            hasMatch = true; snippets.push({ type: 'Field', text: `${keyStr} = ${valStr}` });
-                        }
-                    });
-
-                    // Pure JS HTML Stripping (Keeps the Model separated from the DOM)
-                    const rawText = (sc.evidenceHtml || "").replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
-                    
-                    if (rawText.toLowerCase().includes(q)) {
-                        hasMatch = true;
-                        const matchIdx = rawText.toLowerCase().indexOf(q);
-                        const start = Math.max(0, matchIdx - 30);
-                        const end = Math.min(rawText.length, matchIdx + q.length + 30);
-                        const snippetText = (start > 0 ? "..." : "") + rawText.substring(start, end) + (end < rawText.length ? "..." : "");
-                        snippets.push({ type: 'Notes', text: snippetText });
-                    }
-
-                    if (hasMatch) {
-                        results.push({
-                            wsId: ws.id, tabId: tab.id, scId: sc.id,
-                            wsTitle: ws.title, tabName: tab.name, scName: sc.name || `Item ${idx+1}`,
-                            wsMatch, tabMatch, scMatch: (sc.name || "").toLowerCase().includes(q), snippets
-                        });
-                    }
-                });
+        return items.map(item => {
+            const p = projects.find(pr => pr.id === item.projectId);
+            const tabTag = (item._tags || []).find(t => t.startsWith('tabid:'));
+            const tabId = tabTag ? tabTag.split(':')[1] : null;
+            const v = views.find(vw => vw.id === tabId);
+            
+            const snippets = [];
+            
+            if (p && (p.title || "").toLowerCase().includes(q)) snippets.push({ type: 'Project', text: p.title });
+            if (v && (v.name || "").toLowerCase().includes(q)) snippets.push({ type: 'Tab', text: v.name });
+            if ((item.name || "").toLowerCase().includes(q)) snippets.push({ type: 'Title', text: item.name });
+            
+            (item.fields || []).forEach(f => {
+                if ((f.key || "").toLowerCase().includes(q) || (f.val || "").toLowerCase().includes(q)) {
+                    snippets.push({ type: 'Field', text: `${f.key} = ${f.val}` });
+                }
             });
+
+            const rawText = (item.evidenceHtml || "").replace(/<[^>]*>?/gm, ' ').replace(/\s+/g, ' ').trim();
+            if (rawText.toLowerCase().includes(q)) {
+                const matchIdx = rawText.toLowerCase().indexOf(q);
+                const start = Math.max(0, matchIdx - 30);
+                const end = Math.min(rawText.length, matchIdx + q.length + 30);
+                snippets.push({ type: 'Notes', text: (start > 0 ? "..." : "") + rawText.substring(start, end) + (end < rawText.length ? "..." : "") });
+            }
+
+            return {
+                wsId: item.projectId, tabId: tabId, scId: item.id,
+                wsTitle: p ? p.title : "Unknown", tabName: v ? v.name : "Unknown", scName: item.name || "Item",
+                wsMatch: p && (p.title || "").toLowerCase().includes(q),
+                tabMatch: v && (v.name || "").toLowerCase().includes(q),
+                scMatch: (item.name || "").toLowerCase().includes(q),
+                snippets
+            };
         });
-        return results;
     }
 }

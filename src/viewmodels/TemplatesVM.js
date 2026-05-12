@@ -1,6 +1,7 @@
 import { store } from '../core/Store.js';
 import { globalEvents } from '../core/PubSub.js';
 import { uid } from '../utils/dom.js';
+import { dbService } from '../services/Database.js';
 
 export class TemplatesVM {
     constructor() {
@@ -12,12 +13,10 @@ export class TemplatesVM {
     saveTemplates() { localStorage.setItem('test_recorder_templates', JSON.stringify(this.templates)); }
     
     getScenarioById(sid) {
-        for (const ws of store.state.workspaces) { 
-            for (const t of ws.tabs) { 
-                const sc = t.scenarios.find(s => s.id === sid); 
-                if (sc) return sc; 
-            } 
-        } 
+        if (window.mainPanelVM) {
+            const tab = window.mainPanelVM.tabs.find(t => t.scenarios.some(s => s.id === sid));
+            if (tab) return tab.scenarios.find(s => s.id === sid);
+        }
         return null; 
     }
 
@@ -34,16 +33,27 @@ export class TemplatesVM {
         this.saveTemplates();
     }
     
-    useTemplate(tplId) {
+    async useTemplate(tplId) {
         const tpl = this.templates.find(x => x.id === tplId);
         if (!tpl) return;
+        
+        const projectId = store.state.activeWorkspaceId;
+        const activeTabId = window.mainPanelVM?.activeTabId;
+        
+        if (!projectId || !activeTabId || activeTabId === 'dashboard') {
+            window.appAlert("Please open a project tab to insert a template.");
+            return;
+        }
+        
         const clone = JSON.parse(JSON.stringify(tpl.data));
         clone.id = uid(); clone.name = clone.name || tpl.name; clone.fields.forEach(f => f.id = uid());
+        clone.projectId = projectId;
+        clone._tags = [`tabid:${activeTabId}`, ...clone.fields.map(f => (f.key || "").toLowerCase().trim()).filter(Boolean)];
         const now = Date.now(); clone.createdAt = now; clone.modifiedAt = now;
         
-        const activeWs = store.state.workspaces.find(w => w.id === store.state.activeWorkspaceId);
-        const activeTab = activeWs ? activeWs.tabs.find(t => t.id === activeWs.activeTabId) : null;
+        await dbService.putItem(clone);
+        globalEvents.publish('store:saved');
         
-        if (activeTab) { activeTab.scenarios.unshift(clone); globalEvents.publish('scenarios:changed'); }
+        if (window.mainPanelVM) await window.mainPanelVM.loadProjectData(false);
     }
 }

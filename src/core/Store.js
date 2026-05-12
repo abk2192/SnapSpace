@@ -9,8 +9,7 @@ class Store {
     constructor() {
         this._state = {
             activeWorkspaceId: null,
-            activeTabId: null,
-            workspaces: [] // TEMPORARY FALLBACK to prevent crashes in other VMs during migration
+            activeTabId: null
         };
 
         // Shallow proxy just to track top-level UI state changes
