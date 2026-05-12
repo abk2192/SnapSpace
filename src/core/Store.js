@@ -1,85 +1,35 @@
 import { dbService } from '../services/Database.js';
 import { globalEvents } from './PubSub.js';
-import { uid } from '../utils/dom.js';
-
-/**
- * Deep Proxy Factory
- * Recursively intercepts property changes on deeply nested objects and arrays.
- */
-function createDeepProxy(target, onChange) {
-    const handler = {
-        get(target, property, receiver) {
-            const value = Reflect.get(target, property, receiver);
-            if (typeof value === 'object' && value !== null) {
-                return new Proxy(value, handler);
-            }
-            return value;
-        },
-        set(target, property, value, receiver) {
-            const success = Reflect.set(target, property, value, receiver);
-            if (success) onChange();
-            return success;
-        },
-        deleteProperty(target, property) {
-            const success = Reflect.deleteProperty(target, property);
-            if (success) onChange();
-            return success;
-        }
-    };
-    return new Proxy(target, handler);
-}
 
 /**
  * Central Reactive State Management
+ * Refactored for Phase 4: Now only tracks lightweight UI state instead of the entire data tree.
  */
 class Store {
     constructor() {
-        this.state = null;
-        this.saveTimeout = null;
+        this._state = {
+            activeWorkspaceId: null,
+            activeTabId: null,
+            workspaces: [] // TEMPORARY FALLBACK to prevent crashes in other VMs during migration
+        };
+
+        // Shallow proxy just to track top-level UI state changes
+        this.state = new Proxy(this._state, {
+            set: (target, property, value) => {
+                const changed = target[property] !== value;
+                target[property] = value;
+                if (changed) {
+                    if (property === 'activeWorkspaceId') globalEvents.publish('workspace:selected');
+                    if (property === 'activeTabId') globalEvents.publish('tabs:changed');
+                }
+                return true;
+            }
+        });
     }
 
     async init() {
-        let loadedState = await dbService.load();
-        
-        // Legacy local storage fallback
-        if (!loadedState) {
-            try { 
-                const oldLocal = localStorage.getItem("test_recorder_tabs_v17");
-                if (oldLocal) loadedState = JSON.parse(oldLocal); 
-            } catch (e) {}
-        }
-
-        // Default empty structure if no DB exists
-        if (loadedState && loadedState.workspaces) {
-            // Valid state
-        } else if (loadedState) {
-            // Upgrade from V1 legacy structure
-            loadedState = {
-                activeWorkspaceId: "default",
-                workspaces: [{
-                    id: "default", title: loadedState.workspaceTitle || "Project 1", activeTabId: loadedState.activeTabId, tabs: loadedState.tabs || []
-                }]
-            };
-        } else {
-            // Brand new structure
-            const defaultWsId = uid(); const defaultTabId = uid();
-            loadedState = {
-                activeWorkspaceId: defaultWsId,
-                workspaces: [{
-                    id: defaultWsId, title: "Project 1", activeTabId: "dashboard",
-                    tabs: [{ id: defaultTabId, name: "Tab 1", scenarios: [{ id: uid(), name:`Note ${new Date().toISOString().split('T')[0]} 1`, fields: [], evidenceHtml:"", isOpen: true }] }]
-                }]
-            };
-        }
-
-        // Wrap the raw state in our Proxy engine
-        this.state = createDeepProxy(loadedState, () => this.scheduleSave());
+        // Return the lightweight UI state. Actual data is fetched natively by ViewModels via IndexedDB.
         return this.state;
-    }
-
-    scheduleSave() {
-        clearTimeout(this.saveTimeout);
-        this.saveTimeout = setTimeout(async () => { const success = await dbService.save(this.state); if (success) { globalEvents.publish('store:saved'); } }, 500);
     }
 }
 
