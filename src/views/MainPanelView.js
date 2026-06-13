@@ -53,10 +53,28 @@ export class MainPanelView {
         });
 
         document.addEventListener('click', e => {
+            const calRibbon = e.target.closest('.cal-mobile-ribbon');
+            if (calRibbon) {
+                const wrap = document.querySelector('.cal-body-wrap');
+                if (wrap) {
+                    wrap.classList.toggle('active');
+                    const isActive = wrap.classList.contains('active');
+                    calRibbon.querySelector('.cal-ribbon-chev').style.transform = isActive ? 'rotate(180deg)' : 'none';
+                }
+                return;
+            }
+
             const calDay = e.target.closest('.cal-day');
             if (calDay) { 
                 this.vm.setActiveTab("dashboard", "dashboard");
                 this.vm.setDashboardDateFilter(calDay.dataset.date); 
+                
+                const wrap = document.querySelector('.cal-body-wrap');
+                if (wrap && window.innerWidth <= 900) {
+                    wrap.classList.remove('active');
+                    const ribbonChev = document.querySelector('.cal-mobile-ribbon .cal-ribbon-chev');
+                    if (ribbonChev) ribbonChev.style.transform = 'none';
+                }
                 return; 
             }
             
@@ -261,6 +279,11 @@ export class MainPanelView {
                 let currentIndex = tabs.findIndex(t => t.id === activeId);
                 if (currentIndex === -1) currentIndex = 0;
                 
+                if (xDiff < 0 && (touchStartX < 40 || currentIndex === 0)) {
+                    document.body.classList.add('sidebar-show');
+                    return;
+                }
+
                 if (xDiff > 0) { // Swiped left -> Next tab
                     if (currentIndex < tabs.length - 1) {
                         const targetId = tabs[currentIndex + 1].id;
@@ -410,7 +433,7 @@ export class MainPanelView {
             
             const year = this.vm.calendarYear; const month = this.vm.calendarMonth; 
             const now = new Date();
-            const todayStr = `${year}-${String(month+1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            const trueTodayStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
             const firstDay = new Date(year, month, 1).getDay(); const daysInMonth = new Date(year, month + 1, 0).getDate();
             const monthName = new Date(year, month, 1).toLocaleString('default', { month: 'long' });
             
@@ -420,7 +443,7 @@ export class MainPanelView {
             for (let i = 1; i <= daysInMonth; i++) {
                 const dateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
                 const isSunday = new Date(year, month, i).getDay() === 0;
-                const isToday = dateStr === todayStr; const isSelected = this.vm.dashboardDateFilter === dateStr; const hasNotes = daysWithNotes.has(dateStr);
+                const isToday = dateStr === trueTodayStr; const isSelected = this.vm.dashboardDateFilter === dateStr; const hasNotes = daysWithNotes.has(dateStr);
                 
                 let classes = "cal-day";
                 if (isSunday) classes += " sunday";
@@ -430,8 +453,20 @@ export class MainPanelView {
                 daysHtml += `<div class="${classes}" data-date="${dateStr}">${i}</div>`;
             }
 
+            const activeDateStr = this.vm.dashboardDateFilter || trueTodayStr;
+            const dObj = new Date(activeDateStr + 'T12:00:00'); // Force local noon to avoid timezone shift
+            const formattedDate = dObj.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+            const ribbonText = this.vm.dashboardDateFilter ? `Notes: ${formattedDate}` : `Today: ${formattedDate}`;
+
             calWrap.innerHTML = `
-                <div style="max-width: 400px; width: 100%; margin: 0 auto; padding: 12px 16px; overflow: hidden; box-sizing: border-box;">
+                <div class="cal-mobile-ribbon">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span class="material-symbols-outlined" style="color: var(--primary);">calendar_month</span>
+                        <span class="cal-ribbon-text">${ribbonText}</span>
+                    </div>
+                    <span class="material-symbols-outlined cal-ribbon-chev">expand_more</span>
+                </div>
+                <div class="cal-body-wrap" style="max-width: 400px; width: 100%; margin: 0 auto; padding: 12px 16px; overflow: hidden; box-sizing: border-box;">
                     <div style="font-weight: 800; font-size: 15px; margin-bottom: 12px; color: var(--text); display: flex; align-items: center; justify-content: space-between;">
                         <button class="btn secondary icon-only" id="calPrevBtn" style="padding: 4px; height: 28px; width: 28px; min-height: 0;"><span class="material-symbols-outlined">chevron_left</span></button>
                         <label style="position: relative; cursor: pointer; display: flex; align-items: center; gap: 4px;">
@@ -601,11 +636,11 @@ export class MainPanelView {
             const recent = limit ? allScenarios.slice(0, limit) : allScenarios;
             
             if (recent.length === 0) {
-                wrap.innerHTML = `<div style="padding: 32px; text-align: center; color: var(--muted); border: 1px dashed var(--outline); border-radius: var(--r12); margin-top: 16px;">${this.vm.dashboardDateFilter ? 'No notes found for this date.' : 'No notes yet. Create one to see it on your dashboard!'}</div>`;
+                wrap.innerHTML = `<div style="padding: 32px; text-align: center; color: var(--muted); border: 1px dashed var(--outline); border-radius: var(--r12); margin-top: 8px;">${this.vm.dashboardDateFilter ? 'No notes found for this date.' : 'No notes yet. Create one to see it on your dashboard!'}</div>`;
             } else {
                 const header = document.createElement("div");
                 const filterText = this.vm.dashboardDateFilter ? `Notes from ${this.vm.dashboardDateFilter}` : 'Recent Notes';
-                header.innerHTML = `<div style="font-weight: 800; font-size: 16px; margin: 16px 0 12px; color: var(--text); display: flex; justify-content: space-between; align-items: center;"><span>${filterText}</span>${this.vm.dashboardDateFilter ? `<button class="btn secondary icon-only" id="clearDashFilterBtn" style="padding: 4px; height: 24px; width: 24px; min-height: 0;" title="Clear Filter"><span class="material-symbols-outlined" style="font-size: 16px;">close</span></button>` : ''}</div>`;
+                header.innerHTML = `<div style="font-weight: 800; font-size: 16px; margin: 4px 0 12px; color: var(--text); display: flex; justify-content: space-between; align-items: center;"><span>${filterText}</span>${this.vm.dashboardDateFilter ? `<button class="btn secondary icon-only" id="clearDashFilterBtn" style="padding: 4px; height: 24px; width: 24px; min-height: 0;" title="Clear Filter"><span class="material-symbols-outlined" style="font-size: 16px;">close</span></button>` : ''}</div>`;
                 wrap.appendChild(header);
                 recent.forEach((sc, idx) => { wrap.appendChild(this.renderScenarioCard(sc, idx, true)); });
             }
