@@ -363,7 +363,7 @@ async function bootApp() {
             }
         });
 
-        window.openQuickNote = (sid = null) => {
+        window.openQuickNote = (sid = null, startInEditMode = true) => {
             const tab = window.mainPanelVM?.activeTab || window.mainPanelVM?.tabs[0];
             if(!tab && !sid) { window.appAlert("Please select or create a project/tab first."); return; }
             
@@ -387,7 +387,7 @@ async function bootApp() {
                 qnEditor.innerHTML = sc.evidenceHtml || "";
                 currentFields = JSON.parse(JSON.stringify(sc.fields || []));
                 
-                if (isLocked) {
+                if (isLocked || !startInEditMode) {
                     qnBackdrop.classList.add('qn-read-mode');
                     qnEditor.contentEditable = "false";
                     qnDone.querySelector('.material-symbols-outlined').textContent = 'edit';
@@ -419,7 +419,7 @@ async function bootApp() {
             // Push browser state to handle native back gestures perfectly
             history.pushState({ qnOpen: true }, "");
 
-            if (!isLocked) {
+            if (!isLocked && startInEditMode) {
                 setTimeout(() => { 
                     qnEditor.focus(); 
                     if (!sid) moveCursorToEnd(qnEditor); 

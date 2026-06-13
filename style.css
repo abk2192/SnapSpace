@@ -246,7 +246,7 @@
 
   /* ===== Cards / scenarios ===== */
   details.scenario{ background: var(--surface); border: 1px solid var(--outline-2); border-radius: var(--r12); box-shadow: var(--shadow); margin: 6px 0; transition: all 0.2s ease; position: relative; }
-  details.scenario:has(.scen-more-wrap.active) { z-index: 50; }
+  details.scenario:has(.scen-more-wrap.active) { z-index: 105; }
   
   /* SUMMARY */
   summary{ list-style:none; cursor:pointer; padding: 12px 16px; display:flex; align-items:flex-start; justify-content: space-between; gap: 12px; user-select:none; background: var(--surface); border-radius: var(--r12); transition: background 0.3s ease; }
@@ -295,7 +295,7 @@
   details[open] summary .chev-full { display: block; }
   
   .scen-more-wrap { position: relative; }
-  .scen-more-menu { position: absolute; right: 0; top: 100%; margin-top: 8px; background: var(--surface); border: 1px solid var(--outline-2); border-radius: 8px; box-shadow: var(--shadow-2); display: flex; flex-direction: column; opacity: 0; pointer-events: none; transform: translateY(-10px); transition: all 0.2s ease; z-index: 100; min-width: 160px; padding: 4px; }
+  .scen-more-menu { position: absolute; right: 0; top: 100%; margin-top: 8px; background: var(--surface); border: 1px solid var(--outline-2); border-radius: 8px; box-shadow: var(--shadow-2); display: flex; flex-direction: column; opacity: 0; pointer-events: none; transform: translateY(-10px); transition: all 0.2s ease; z-index: 150; min-width: 160px; padding: 4px; }
   .scen-more-wrap.active .scen-more-menu { opacity: 1; pointer-events: auto; transform: translateY(0); }
   .scen-more-menu .btn { width: 100%; justify-content: flex-start; padding: 10px 12px; border-radius: 6px; box-shadow: none; border: none; font-size: 13px; font-weight: 500; background: transparent; color: var(--text); }
   .scen-more-menu .btn:hover { background: var(--surface-2); }
@@ -424,6 +424,7 @@
 
   body.readonly .evidence { border-color: transparent !important; background: transparent !important; }
   body.readonly #workspaceTitleInput { pointer-events: none; }
+  body.readonly .header-name-input { pointer-events: none; }
 
   /* Read-Only Checklist Tapping */
   body.readonly .evidence div:has(> .editor-checkbox), body.readonly .evidence p:has(> .editor-checkbox), body.readonly .evidence li:has(> .editor-checkbox), .qn-read-mode .evidence div:has(> .editor-checkbox), .qn-read-mode .evidence p:has(> .editor-checkbox), .qn-read-mode .evidence li:has(> .editor-checkbox) { cursor: pointer; border-radius: 6px; padding: 2px; margin-left: -2px; }
@@ -503,6 +504,8 @@
     .appbar .actions .btn:hover, .appbar .actions .btn:active { background: var(--surface-2) !important; }
     .appbar .actions .btn .btn-text { display: inline !important; font-weight: 600; font-size: 14px;}
     .appbar .actions .btn .material-symbols-outlined { margin-right: 12px !important; font-size: 20px !important; color: var(--muted) !important; }
+
+    .appbar .actions #quickNoteBtn, .appbar .actions #addScenarioBtn { display: none !important; }
 
     /* The Mobile Pill (Neutral & Grounded) */
     .mobile-action-pill { display: flex; position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--surface); border: 1px solid var(--outline); border-radius: 999px; padding: 0 24px; justify-content: space-between; box-shadow: var(--shadow-2); z-index: 100; align-items: center; height: 56px; width: 240px; }
@@ -633,3 +636,4 @@
   .qn-backdrop.qn-read-mode .wysiwyg-toolbar { display: none !important; }
   .qn-backdrop.qn-read-mode .qn-title-input { pointer-events: none; }
   .qn-backdrop.qn-read-mode #qnReadModeBtn { display: none !important; }
+  .qn-backdrop.qn-read-mode .add-prop-btn { display: none !important; }

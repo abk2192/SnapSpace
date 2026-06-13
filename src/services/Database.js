@@ -267,8 +267,8 @@ class DatabaseService {
                     if (!sItem.linkedTo.includes(targetId)) sItem.linkedTo.push(targetId);
                     if (!tItem.linkedFrom.includes(sourceId)) tItem.linkedFrom.push(sourceId);
                     
-                    sItem.modifiedAt = Date.now();
-                    tItem.modifiedAt = Date.now();
+                    // sItem.modifiedAt = Date.now();
+                    // tItem.modifiedAt = Date.now();
                     
                     store.put(sItem); store.put(tItem);
                 };
@@ -287,12 +287,12 @@ class DatabaseService {
 
             store.get(sourceId).onsuccess = (e) => {
                 const sItem = e.target.result;
-                if (sItem && sItem.linkedTo) { sItem.linkedTo = sItem.linkedTo.filter(id => id !== targetId); sItem.modifiedAt = Date.now(); store.put(sItem); }
+                if (sItem && sItem.linkedTo) { sItem.linkedTo = sItem.linkedTo.filter(id => id !== targetId); store.put(sItem); }
             };
             
             store.get(targetId).onsuccess = (e) => {
                 const tItem = e.target.result;
-                if (tItem && tItem.linkedFrom) { tItem.linkedFrom = tItem.linkedFrom.filter(id => id !== sourceId); tItem.modifiedAt = Date.now(); store.put(tItem); }
+                if (tItem && tItem.linkedFrom) { tItem.linkedFrom = tItem.linkedFrom.filter(id => id !== sourceId); store.put(tItem); }
             };
         });
     }
