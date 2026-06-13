@@ -1,6 +1,7 @@
 import { store } from '../core/Store.js';
 import { globalEvents } from '../core/PubSub.js';
 import { uid } from '../utils/dom.js';
+import { dbService } from '../services/Database.js';
 
 export class MainPanelVM {
     dashboardDateFilter = null;
@@ -162,13 +163,65 @@ export class MainPanelVM {
         return null;
     }
 
+    // Helper: Dual-Writes a scenario from the legacy memory tree into the flat IndexedDB
+    async _syncScenarioToDB(sid) {
+        let parentWs = null, parentTab = null, sc = null;
+        for (const ws of this.workspaces) {
+            for (const t of ws.tabs) {
+                sc = t.scenarios.find(s => s.id === sid);
+                if (sc) { parentWs = ws; parentTab = t; break; }
+            }
+            if (sc) break;
+        }
+        if (!sc || !parentWs || !parentTab) return;
+
+        const tags = (sc.fields || []).map(f => (f.key || "").toLowerCase().trim()).filter(Boolean);
+        tags.push(`tabId:${parentTab.id}`); // Retain implicit linkage tag
+
+        const flatItem = {
+            id: sc.id,
+            projectId: parentWs.id,
+            name: sc.name || "Untitled",
+            noteDate: sc.noteDate || null,
+            fields: JSON.parse(JSON.stringify(sc.fields || [])),
+            evidenceHtml: sc.evidenceHtml || "",
+            isOpen: sc.isOpen !== false,
+            createdAt: sc.createdAt || Date.now(),
+            modifiedAt: sc.modifiedAt || Date.now(),
+            _tags: tags,
+            linkedTo: sc.linkedTo || [],
+            linkedFrom: sc.linkedFrom || []
+        };
+        await dbService.putItem(flatItem);
+    }
+
     addScenario() {
         let tab = this.activeTab; if(!tab || tab.isTemporary) tab = this.activeWorkspace?.tabs[0]; if(!tab) return null;
         const newId = uid();
         const dateStr = this.dashboardDateFilter || new Date().toISOString().split('T')[0];
         const defaultName = `Note ${dateStr} ${tab.scenarios.length + 1}`;
         const now = Date.now();
-        tab.scenarios.unshift({ id: newId, name: defaultName, noteDate: dateStr, fields: [], evidenceHtml:"", isOpen: true, createdAt: now, modifiedAt: now });
+        
+        // 1. Build the new schema for the flat IndexedDB
+        const newScenario = { 
+            id: newId, 
+            projectId: this.activeWorkspace?.id,
+            name: defaultName, 
+            noteDate: dateStr, 
+            fields: [], 
+            evidenceHtml: "", 
+            isOpen: true, 
+            createdAt: now, 
+            modifiedAt: now,
+            _tags: [`tabId:${tab.id}`], // Required implicit linkage for flat relational views
+            linkedTo: [],
+            linkedFrom: []
+        };
+
+        // 2. Dual-Write: Save to the background DB asynchronously and push to the legacy memory array
+        dbService.putItem(newScenario).catch(console.error);
+        tab.scenarios.unshift(newScenario);
+        
         globalEvents.publish('scenarios:changed');
         return newId;
     }
@@ -185,7 +238,10 @@ export class MainPanelVM {
     toggleAllScenarios() {
         const tab = this.activeTab; if(!tab || tab.isTemporary) return;
         const anyOpen = tab.scenarios.some(sc => sc.isOpen !== false);
-        tab.scenarios.forEach(sc => sc.isOpen = !anyOpen);
+        tab.scenarios.forEach(sc => { 
+            sc.isOpen = !anyOpen; 
+            this._syncScenarioToDB(sc.id).catch(console.error); 
+        });
         globalEvents.publish('scenarios:changed');
     }
     
@@ -199,6 +255,7 @@ export class MainPanelVM {
                 clone.fields.forEach(f => f.id = uid());
                 const now = Date.now(); clone.createdAt = now; clone.modifiedAt = now;
                 t.scenarios.splice(idx + 1, 0, clone);
+                this._syncScenarioToDB(clone.id).catch(console.error);
                 globalEvents.publish('scenarios:changed');
                 return;
             }
@@ -209,6 +266,8 @@ export class MainPanelVM {
         const sc = this._findRealScenario(id);
         if (sc) {
             sc.fields.push({ id: uid(), key: key || "", val: val || "" });
+            sc.modifiedAt = Date.now();
+            this._syncScenarioToDB(id).catch(console.error);
             globalEvents.publish('scenarios:changed');
         }
     }
@@ -217,12 +276,18 @@ export class MainPanelVM {
         const sc = this._findRealScenario(scenarioId);
         if (sc) {
             sc.fields = sc.fields.filter(f => f.id !== fieldId);
+            sc.modifiedAt = Date.now();
+            this._syncScenarioToDB(scenarioId).catch(console.error);
             globalEvents.publish('scenarios:changed');
         }
     }
 
     async deleteScenario(id) {
         if(await window.appConfirm("Are you sure you want to delete this note?")) { 
+            // 1. Delete from the flat IndexedDB
+            await dbService.deleteItem(id);
+            
+            // 2. Clean up legacy memory array
             for (const t of this.workspaces.flatMap(w => w.tabs)) {
                 const idx = t.scenarios.findIndex(s => s.id === id);
                 if (idx !== -1) {
@@ -236,26 +301,26 @@ export class MainPanelVM {
 
     updateScenarioName(sid, name) {
         const sc = this._findRealScenario(sid);
-        if (sc) { sc.name = name; sc.modifiedAt = Date.now(); }
+        if (sc) { sc.name = name; sc.modifiedAt = Date.now(); this._syncScenarioToDB(sid).catch(console.error); }
     }
 
     updateScenarioOpenState(sid, isOpen) {
         const sc = this._findRealScenario(sid);
-        if (sc) sc.isOpen = isOpen; 
+        if (sc) { sc.isOpen = isOpen; this._syncScenarioToDB(sid).catch(console.error); } 
     }
 
     updateFieldKey(sid, fid, key) {
         const sc = this._findRealScenario(sid);
-        if (sc) { const f = sc.fields.find(f => f.id === fid); if(f) { f.key = key; sc.modifiedAt = Date.now(); globalEvents.publish('tags:updated'); } }
+        if (sc) { const f = sc.fields.find(f => f.id === fid); if(f) { f.key = key; sc.modifiedAt = Date.now(); this._syncScenarioToDB(sid).catch(console.error); globalEvents.publish('tags:updated'); } }
     }
 
     updateFieldVal(sid, fid, val) {
         const sc = this._findRealScenario(sid);
-        if (sc) { const f = sc.fields.find(f => f.id === fid); if(f) { f.val = val; sc.modifiedAt = Date.now(); globalEvents.publish('tags:updated'); } }
+        if (sc) { const f = sc.fields.find(f => f.id === fid); if(f) { f.val = val; sc.modifiedAt = Date.now(); this._syncScenarioToDB(sid).catch(console.error); globalEvents.publish('tags:updated'); } }
     }
 
     updateEvidence(sid, html) {
         const sc = this._findRealScenario(sid);
-        if (sc) { sc.evidenceHtml = html; sc.modifiedAt = Date.now(); }
+        if (sc) { sc.evidenceHtml = html; sc.modifiedAt = Date.now(); this._syncScenarioToDB(sid).catch(console.error); }
     }
 }

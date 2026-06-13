@@ -160,16 +160,6 @@ async function bootApp() {
 
     document.getElementById("renameTabBtn")?.remove();
 
-    // Reorder Global Kebab Menu Actions (Only the tools meant for the top bar)
-    const actionsContainer = document.querySelector('.appbar .actions');
-    if (actionsContainer) {
-        const btnOrder = ['importBtn', 'exportHtmlBtn', 'resetBtn'];
-        btnOrder.forEach(id => {
-            const btn = document.getElementById(id);
-            if (btn) actionsContainer.appendChild(btn);
-        });
-    }
-
     // Create a single Toggle Expand/Collapse button for space saving
     const expandAllBtn = document.getElementById('expandAllBtn');
     const collapseAllBtn = document.getElementById('collapseAllBtn');
@@ -254,20 +244,7 @@ async function bootApp() {
         });
         document.getElementById("pillMoreBtn").addEventListener("click", (e) => {
             e.stopPropagation();
-            document.body.classList.toggle("show-mobile-actions");
-        });
-
-        // This listener is now responsible for closing the mobile menu when clicking outside
-        document.addEventListener('click', e => {
-            if (document.body.classList.contains("show-mobile-actions")) {
-                const actions = document.querySelector('.appbar .actions');
-                const mobileMoreBtn = document.getElementById("pillMoreBtn");
-                const clickedActionBtn = e.target.closest('.appbar .actions .btn');
-                // Close if click is on an action, or if click is outside the menu AND not on the toggle button
-                if (clickedActionBtn || (actions && !actions.contains(e.target) && !mobileMoreBtn.contains(e.target) && e.target !== mobileMoreBtn)) {
-                    document.body.classList.remove("show-mobile-actions");
-                }
-            }
+            document.getElementById("mainMenuBtn")?.click();
         });
     }
 
@@ -293,6 +270,10 @@ async function bootApp() {
     // Load the reactive proxy state
     await store.init();
     
+    // Execute Phase 1 DB Migration in background 
+    // (This runs parallel to your legacy state, ensuring the UI remains unbroken while we build the new DB backend)
+    await dbService.migrateToFlatData();
+
     dialogService.init();
     
     // Global Keyboard Shortcuts
@@ -450,13 +431,17 @@ async function bootApp() {
             }
         });
 
-        const saveQuickNoteState = () => {
+        const saveQuickNoteState = async () => {
             if (editingScenarioId) {
-                window.mainPanelVM.updateScenarioName(editingScenarioId, qnTitle.value.trim() || "Note");
-                window.mainPanelVM.updateEvidence(editingScenarioId, qnEditor.innerHTML);
-                let targetSc = null;
-                for (const t of window.mainPanelVM.tabs) { targetSc = t.scenarios.find(s => s.id === editingScenarioId); if (targetSc) break; }
-                if (targetSc) { targetSc.fields = currentFields; targetSc.modifiedAt = Date.now(); globalEvents.publish('scenarios:changed'); }
+                const targetSc = window.mainPanelVM._findRealScenario(editingScenarioId);
+                if (targetSc) {
+                    targetSc.name = qnTitle.value.trim() || "Note";
+                    targetSc.evidenceHtml = qnEditor.innerHTML;
+                    targetSc.fields = currentFields;
+                    targetSc.modifiedAt = Date.now();
+                    await window.mainPanelVM._syncScenarioToDB(editingScenarioId);
+                    globalEvents.publish('scenarios:changed');
+                }
             } else {
                 const isEmptyContent = !qnEditor.textContent.trim() && !qnEditor.querySelector('img') && !qnEditor.querySelector('input[type="checkbox"]');
                 const isDefaultTitle = qnTitle.value.startsWith('Note ');
@@ -464,10 +449,15 @@ async function bootApp() {
                 
                 const newId = window.mainPanelVM?.addScenario();
                 if (newId) {
-                    window.mainPanelVM.updateScenarioName(newId, qnTitle.value.trim() || "Note");
-                    window.mainPanelVM.updateEvidence(newId, qnEditor.innerHTML);
-                    const sc = window.mainPanelVM.tabs.flatMap(t => t.scenarios).find(s => s.id === newId);
-                    if (sc) { sc.fields = currentFields; globalEvents.publish('scenarios:changed'); }
+                    const sc = window.mainPanelVM._findRealScenario(newId);
+                    if (sc) { 
+                        sc.name = qnTitle.value.trim() || "Note";
+                        sc.evidenceHtml = qnEditor.innerHTML;
+                        sc.fields = currentFields;
+                        sc.modifiedAt = Date.now();
+                        await window.mainPanelVM._syncScenarioToDB(newId);
+                        globalEvents.publish('scenarios:changed'); 
+                    }
                     editingScenarioId = newId; 
                 }
             }
@@ -475,20 +465,21 @@ async function bootApp() {
         };
         
         let isClosingQn = false;
-        const closeAndSaveQuickNote = (fromPopState = false) => {
+        const closeAndSaveQuickNote = async (fromPopState = false) => {
             if (isClosingQn || qnBackdrop.style.display === 'none') return;
             isClosingQn = true;
             if (!fromPopState) history.back();
             qnBackdrop.classList.add('qn-animating');
-            setTimeout(() => { qnBackdrop.style.display = 'none'; saveQuickNoteState(); isClosingQn = false; }, 300);
+            await saveQuickNoteState();
+            setTimeout(() => { qnBackdrop.style.display = 'none'; isClosingQn = false; }, 300);
         };
         
-        document.getElementById('qnReadModeBtn')?.addEventListener('click', () => {
+        document.getElementById('qnReadModeBtn')?.addEventListener('click', async () => {
             if (!qnBackdrop.classList.contains('qn-read-mode')) {
                 qnBackdrop.classList.add('qn-read-mode');
                 qnEditor.contentEditable = "false";
                 qnDone.querySelector('.material-symbols-outlined').textContent = 'edit';
-                saveQuickNoteState();
+                await saveQuickNoteState();
             }
         });
 
@@ -499,7 +490,7 @@ async function bootApp() {
             }
         });
 
-        qnDone?.addEventListener('click', () => {
+        qnDone?.addEventListener('click', async () => {
             if (qnBackdrop.classList.contains('qn-read-mode')) {
                 qnBackdrop.classList.remove('qn-read-mode');
                 qnEditor.contentEditable = "true";
@@ -509,7 +500,7 @@ async function bootApp() {
                 qnBackdrop.classList.add('qn-read-mode');
                 qnEditor.contentEditable = "false";
                 qnDone.querySelector('.material-symbols-outlined').textContent = 'edit';
-                saveQuickNoteState();
+                await saveQuickNoteState();
             }
         });
         document.getElementById('qnCloseBtn')?.addEventListener('click', () => closeAndSaveQuickNote(false));
