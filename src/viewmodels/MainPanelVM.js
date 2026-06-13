@@ -360,4 +360,58 @@ export class MainPanelVM {
         const sc = this._findRealScenario(sid);
         if (sc) { sc.evidenceHtml = html; sc.modifiedAt = Date.now(); this._syncScenarioToDB(sid).catch(console.error); }
     }
+
+    openScenario(sid) {
+        const sc = this._findRealScenario(sid);
+        if (!sc) {
+            window.appAlert("Note not found or has been deleted.");
+            return;
+        }
+        
+        let parentWs = null;
+        let parentTab = null;
+        
+        for (const ws of this.workspaces) {
+            for (const t of ws.tabs) {
+                if (t.scenarios.some(s => s.id === sid)) {
+                    parentWs = ws;
+                    parentTab = t;
+                    break;
+                }
+            }
+            if (parentWs) break;
+        }
+        
+        if (parentWs && parentTab) {
+            // If inside the quick note modal, close it before routing
+            const qnBackdrop = document.getElementById('qnBackdrop');
+            if (qnBackdrop && qnBackdrop.style.display === 'flex') document.getElementById('qnCloseBtn')?.click();
+
+            if (this.activeWorkspace?.id !== parentWs.id) {
+                import('../core/Store.js').then(({store}) => {
+                    store.state.activeWorkspaceId = parentWs.id;
+                    globalEvents.publish('workspaces:changed');
+                    globalEvents.publish('workspace:selected');
+                    this.setActiveTab(parentTab.id, 'maximized');
+                    this._scrollToScenario(sid);
+                });
+            } else {
+                this.setActiveTab(parentTab.id, 'maximized');
+                this._scrollToScenario(sid);
+            }
+        }
+    }
+
+    _scrollToScenario(sid) {
+        setTimeout(() => {
+            const targetCard = document.querySelector(`details.scenario[data-sid="${sid}"]`);
+            if (targetCard) { 
+                targetCard.open = true; 
+                targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' }); 
+                targetCard.style.transition = 'box-shadow 0.3s ease';
+                targetCard.style.boxShadow = '0 0 0 2px var(--primary), var(--shadow)';
+                setTimeout(() => { targetCard.style.transition = 'all 0.2s ease'; targetCard.style.boxShadow = ''; }, 2000);
+            }
+        }, 150);
+    }
 }

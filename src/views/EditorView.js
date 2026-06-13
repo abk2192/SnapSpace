@@ -154,7 +154,13 @@ export class EditorView {
 
             const evidenceLink = e.target.closest(".evidence a");
             if (evidenceLink && !evidenceLink.closest(".attachment") && !evidenceLink.hasAttribute("data-dataurl")) {
-                e.preventDefault(); window.open(evidenceLink.href, '_blank');
+                e.preventDefault(); 
+                if (evidenceLink.hasAttribute("data-internal-link") || (evidenceLink.getAttribute("href") || "").startsWith("#note/")) {
+                    const sid = evidenceLink.dataset.internalLink || evidenceLink.getAttribute("href").split("#note/")[1];
+                    if (window.mainPanelVM) window.mainPanelVM.openScenario(sid);
+                } else {
+                    window.open(evidenceLink.href, '_blank');
+                }
             }
 
             const a = e.target.closest("a[data-dataurl]");

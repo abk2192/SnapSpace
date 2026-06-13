@@ -23,10 +23,12 @@ Currently updating ViewModels to write to the new flat IndexedDB while maintaini
 - [x] **Fix Data Loss on Initial Boot (`Store.js`)** - Status: Completed. The default empty memory project wasn't being saved to the flat IndexedDB, causing newly created notes to orphan and vanish on page reload. Fixed by saving default bootstrap structure directly to IndexedDB.
 
 ## Feature Backlog
-- **Internal Note Linking:** Add capabilities to cross-link notes internally.
-    - Add "Copy Internal Link" button in `index.html`.
-    - Add link parser and click interceptor in `EditorView.js`.
-    - Build internal routing/navigation logic in `app.js` / `MainPanelVM.js`.
+- [x] **Internal Note Linking:** Status: Completed. Added a "Copy Link" action to the Note Menu. Internal links are copied as clickable HTML blocks. Clicking these inside the editor routes the user to the target note, automatically switching workspaces and tabs if necessary.
+- [x] **Inline Note Creation & Layout Fixes:** Status: Completed. "Add Note" now creates and focuses notes inline natively in the list view rather than launching the Quick Note modal. Added an expand icon to notes for launching the modal on demand. Fixed a desktop grid layout bug that caused a huge gap between the tabs and the note list.
+- [x] **Note UI Refinement:** Status: Completed. Fixed a choppy layout glitch caused by the sticky summary header detaching and overlapping the note contents during inline creation. Refocused inline creation to immediately drop the user's cursor inside the WYSIWYG editor instead of the note title.
+- [x] **Note Interaction UX Overhaul:** Status: Completed. Removed restrictive click interceptors. The WYSIWYG editor is now completely inline editable. Tapping the title directly modifies it, and tapping the background of an expanded title opens it in full view mode. Removed the obsolete expand/edit icons for a cleaner UI.
+- [x] **Note UX Polish & Bug Fixes:** Status: Completed. Fixed click event bubbling where tapping the title text accidentally launched full view mode. Disabled pointer events on collapsed titles so users can click anywhere to expand. Fixed sticky toolbar overlapping text area upon note creation.
+- [x] **UI Glitch Fixes:** Status: Completed. Restored scroll chaining so scrolling at the end of the Notes area naturally flows to the rest of the page. Bound the inline title input exactly to the character width so clicks to the side of the text perfectly register as background note expansion clicks.
 - **Theme Expansion:** Add more accent colors or UI modes.
 
 ## Last Active Files

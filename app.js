@@ -248,25 +248,6 @@ async function bootApp() {
         });
     }
 
-    // Intercept clicks and focus to prevent inline editing and open Quick Note modal instead
-    document.addEventListener('click', (e) => {
-        const ev = e.target.closest('.scenario .evidence');
-        if (ev && !ev.closest('#qnBackdrop')) {
-            if (e.target.closest('input[type="checkbox"], a, .copy-att, .editor-checkbox')) return;
-            e.preventDefault();
-            const sid = ev.dataset.evidence || ev.closest('details.scenario')?.dataset?.id;
-            if (sid) window.openQuickNote(sid);
-        }
-    });
-
-    document.addEventListener('focusin', (e) => {
-        if (e.target.classList && e.target.classList.contains('evidence') && !e.target.closest('#qnBackdrop')) {
-            e.target.blur();
-            const sid = e.target.dataset.evidence || e.target.closest('details.scenario')?.dataset?.id;
-            if (sid) window.openQuickNote(sid);
-        }
-    });
-
     // Load the reactive proxy state
     await store.init();
     
@@ -408,7 +389,28 @@ async function bootApp() {
             }
         };
 
-        qnBtn?.addEventListener('click', (e) => { e.preventDefault(); window.openQuickNote(null); });
+        qnBtn?.addEventListener('click', (e) => { 
+            e.preventDefault(); 
+            if (window.mainPanelVM) {
+                const newId = window.mainPanelVM.addScenario();
+                if (newId) {
+                    setTimeout(() => {
+                        const targetCard = document.querySelector(`details.scenario[data-sid="${newId}"]`);
+                        if (targetCard) {
+                            targetCard.open = true;
+                            targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            targetCard.style.transition = 'box-shadow 0.3s ease';
+                            targetCard.style.boxShadow = '0 0 0 2px var(--primary), var(--shadow)';
+                            setTimeout(() => { targetCard.style.transition = 'all 0.2s ease'; targetCard.style.boxShadow = ''; }, 2000);
+                        }
+                        const ev = document.querySelector(`.evidence[data-evidence="${newId}"]`);
+                        if (ev) ev.focus({ preventScroll: true });
+                    }, 50);
+                } else {
+                    window.appAlert("Please select or create a project/tab first.");
+                }
+            }
+        });
 
         qnEditor.addEventListener('keyup', (e) => {
             // Keep cursor vertically scrolled into view on Enter
