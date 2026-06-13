@@ -77,13 +77,19 @@
   .title .badge{ width:34px; height:34px; display:grid; place-items:center; border-radius: 12px; background: linear-gradient(135deg, var(--grad-1), var(--grad-2)); color:white; box-shadow: var(--shadow-2); }
   
   /* Unified Title Group Component */
-  .title-group { display: flex; align-items: center; background: var(--surface-2); padding: 4px 6px 4px 4px; border-radius: 12px; border: 1px solid transparent; transition: all 0.2s ease; margin-right: auto; max-width: 100%; flex: 0 1 auto; overflow: hidden;}
+  .title-group { display: flex; align-items: center; background: var(--surface-2); padding: 4px 6px 4px 4px; border-radius: 12px; border: 1px solid transparent; transition: all 0.2s ease; margin-right: auto; max-width: 100%; flex: 0 1 auto; position: relative; }
   .title-group:hover { border-color: var(--outline); background: var(--surface); }
   
   .title-group .title { margin-right: 6px; padding-right: 10px; border-right: 2px solid var(--outline-2); font-size: 15px; min-width: auto; gap: 8px;}
   .title-group .title .badge { width: 30px; height: 30px; border-radius: 8px; margin-right: 0;}
   .title-group .title .badge svg { width: 16px; height: 16px; }
   
+  #workspaceTitleDisplay { padding: 2px 6px; border-radius: 6px; border: 1px solid transparent; transition: all 0.2s; outline: none; cursor: text; margin-left: -6px; }
+  #workspaceTitleDisplay:hover { background: var(--surface-2); }
+  #workspaceTitleDisplay[contenteditable="true"] { background: var(--input-bg); border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); cursor: text; }
+  
+  #wsDropdownMenu { position: absolute; display: flex; flex-direction: column; opacity: 0; pointer-events: none; transform: translateY(-10px); transition: all 0.2s ease; background: var(--surface); border: 1px solid var(--outline-2); border-radius: 8px; box-shadow: var(--shadow-2); z-index: 100; left: 0; right: auto; min-width: 220px; top: 100%; margin-top: 8px; padding: 4px; }
+  #wsSwitcherWrap.active #wsDropdownMenu { opacity: 1; pointer-events: auto; transform: translateY(0); }
 
   .actions{ display:flex; gap:8px; flex: none; flex-wrap: nowrap; justify-content:flex-end; align-items: center; overflow: visible; scrollbar-width: none; }
   .actions::-webkit-scrollbar { display: none; } /* Hide scrollbar for clean look */
@@ -227,8 +233,9 @@
 
   /* Desktop Split-Pane Layout (Calendar persistent) */
   @media (min-width: 900px) {
-    #mainTabsbar { width: calc(100% - 340px); }
-    main { width: calc(100% - 340px); }
+    .app-content { padding-right: 340px; }
+    #mainTabsbar { width: 100%; }
+    main { width: 100%; }
     #dashCalendarWrap { position: fixed; right: 0; top: 64px; height: calc(100vh - 64px); width: 340px; border-bottom: none; border-left: 1px solid var(--outline-2); overflow-y: auto; display: block !important; background: var(--surface); z-index: 40; }
   }
 
@@ -247,11 +254,6 @@
   details[open] > summary { border-radius: var(--r12) var(--r12) 0 0; }
   summary::-webkit-details-marker{ display:none; }
 
-  /* Hide property tags and subtitle when card is expanded (Edit Mode) */
-  body:not(.readonly) details[open] > summary .property-tag {
-    display: none;
-  }
-  
   details[open] > summary .summary-sub {
     display: none;
   }
@@ -280,6 +282,9 @@
   .summary-actions .btn { padding: 6px 10px; font-size: 12px; }
   
   .summary-tags { display: flex; flex-wrap: nowrap; gap: 6px; margin-top: 2px; overflow: hidden; mask-image: linear-gradient(to right, black 85%, transparent 100%); -webkit-mask-image: linear-gradient(to right, black 85%, transparent 100%); }
+  details[open] > summary .summary-tags { flex-wrap: wrap; mask-image: none; -webkit-mask-image: none; overflow: visible; }
+  details:not([open]) .add-prop-btn { display: none !important; }
+
   .tag { font-size: 11px; background: var(--surface-2); border: 1px solid var(--outline-2); padding: 3px 8px; border-radius: 6px; color: var(--muted); white-space: nowrap; user-select: text; }
   .tag b { color: var(--text); font-weight: 700; margin-right: 4px; }
 
@@ -363,8 +368,8 @@
   .tbl-row-controls .tbl-divider { width: 1px; height: 12px; margin: 0 4px; }
   .tbl-col-controls .tbl-divider { width: 12px; height: 1px; margin: 3px 0; }
 
-  /* Hide bottom properties in read-only mode */
-  body.readonly .card-body-properties { display: none; }
+  /* Hide obsolete bottom properties container completely */
+  .card-body-properties { display: none !important; }
 
   .evidence{ border: 1px dashed var(--outline-2); background: var(--evidence-bg); color: var(--text); border-radius: var(--r12); padding: 12px; min-height: 130px; outline:none; line-height: 1.5; transition: all 0.3s ease; }
   .scenario .evidence { max-height: 40vh; overflow-y: auto; }
@@ -447,6 +452,7 @@
     .cal-mobile-ribbon { display: flex !important; }
     .cal-body-wrap { display: none; }
     .cal-body-wrap.active { display: block; }
+    .cal-close-mobile { display: inline-flex !important; }
   }
 
   @media (max-width: 768px){
@@ -618,7 +624,9 @@
   .cal-day.selected.has-notes::after { background: #fff; }
   
   .cal-mobile-ribbon { display: none; padding: 12px 16px; background: var(--surface); border-bottom: 1px solid var(--outline-2); font-weight: 700; color: var(--text); align-items: center; justify-content: space-between; cursor: pointer; user-select: none; }
+  .cal-mobile-ribbon.hidden { display: none !important; }
   .cal-mobile-ribbon .cal-ribbon-chev { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+  .cal-close-mobile { display: none; padding: 4px; height: 28px; width: 28px; min-height: 0; margin-left: 8px; }
 
   /* Read Mode inside Quick Note */
   .qn-backdrop.qn-read-mode #qnEditor { user-select: text; }

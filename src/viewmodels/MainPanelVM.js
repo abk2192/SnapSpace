@@ -348,12 +348,26 @@ export class MainPanelVM {
 
     updateFieldKey(sid, fid, key) {
         const sc = this._findRealScenario(sid);
-        if (sc) { const f = sc.fields.find(f => f.id === fid); if(f) { f.key = key; sc.modifiedAt = Date.now(); this._syncScenarioToDB(sid).catch(console.error); globalEvents.publish('tags:updated'); } }
+        if (sc) { 
+            let f = sc.fields.find(f => f.id === fid); 
+            if (!f) { f = { id: fid, key: "", val: "" }; sc.fields.push(f); }
+            f.key = key; 
+            sc.modifiedAt = Date.now(); 
+            this._syncScenarioToDB(sid).catch(console.error); 
+            globalEvents.publish('tags:updated'); 
+        }
     }
 
     updateFieldVal(sid, fid, val) {
         const sc = this._findRealScenario(sid);
-        if (sc) { const f = sc.fields.find(f => f.id === fid); if(f) { f.val = val; sc.modifiedAt = Date.now(); this._syncScenarioToDB(sid).catch(console.error); globalEvents.publish('tags:updated'); } }
+        if (sc) { 
+            let f = sc.fields.find(f => f.id === fid); 
+            if (!f) { f = { id: fid, key: "", val: "" }; sc.fields.push(f); }
+            f.val = val; 
+            sc.modifiedAt = Date.now(); 
+            this._syncScenarioToDB(sid).catch(console.error); 
+            globalEvents.publish('tags:updated'); 
+        }
     }
 
     updateEvidence(sid, html) {

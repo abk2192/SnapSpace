@@ -104,12 +104,12 @@ window.appPrompt = (msg, defaultVal="", title="Input Required") => {
     });
 };
 
-window.appDualPrompt = () => {
+window.appDualPrompt = (defaultKey = "", defaultVal = "") => {
     return new Promise(resolve => {
         const dlg = document.getElementById("addFieldBackdrop");
         const kInp = document.getElementById("afKeyInput");
         const vInp = document.getElementById("afValInput");
-        kInp.value = ""; vInp.value = "";
+        kInp.value = defaultKey; vInp.value = defaultVal;
         
         const cancel = () => { dlg.style.display = "none"; resolve(null); cleanup(); };
         const save = () => { dlg.style.display = "none"; resolve({ key: kInp.value, val: vInp.value }); cleanup(); };
@@ -377,24 +377,27 @@ async function bootApp() {
                 }
             }
             
+            const isLocked = document.body.classList.contains('readonly');
 
             if (sid) {
                 editingScenarioId = sid;
-                let sc = null;
-                for (const t of window.mainPanelVM.tabs) {
-                    sc = t.scenarios.find(s => s.id === sid);
-                    if (sc) break;
-                }
+                let sc = window.mainPanelVM._findRealScenario(sid);
                 if (!sc) return;
                 qnTitle.value = sc.name || "";
                 qnEditor.innerHTML = sc.evidenceHtml || "";
                 currentFields = JSON.parse(JSON.stringify(sc.fields || []));
                 
-                // Open existing note in edit mode
-                qnBackdrop.classList.remove('qn-read-mode');
-                qnEditor.contentEditable = "true";
-                qnDone.querySelector('.material-symbols-outlined').textContent = 'check';
-                if (qnAddField) qnAddField.style.display = 'grid';
+                if (isLocked) {
+                    qnBackdrop.classList.add('qn-read-mode');
+                    qnEditor.contentEditable = "false";
+                    qnDone.querySelector('.material-symbols-outlined').textContent = 'edit';
+                    if (qnAddField) qnAddField.style.display = 'none';
+                } else {
+                    qnBackdrop.classList.remove('qn-read-mode');
+                    qnEditor.contentEditable = "true";
+                    qnDone.querySelector('.material-symbols-outlined').textContent = 'check';
+                    if (qnAddField) qnAddField.style.display = 'inline-flex';
+                }
             } else {
                 editingScenarioId = null;
                 currentFields = []; 
@@ -402,11 +405,10 @@ async function bootApp() {
                 const dateStr = window.mainPanelVM?.dashboardDateFilter || new Date().toISOString().split('T')[0];
                 qnTitle.value = `Note ${dateStr} ${tab.scenarios.length + 1}`;
                 
-                // Open new note directly in edit mode
                 qnBackdrop.classList.remove('qn-read-mode');
                 qnEditor.contentEditable = "true";
                 qnDone.querySelector('.material-symbols-outlined').textContent = 'check';
-                if (qnAddField) qnAddField.style.display = 'grid';
+                if (qnAddField) qnAddField.style.display = 'inline-flex';
             }
             
             renderQnTags();
@@ -417,8 +419,11 @@ async function bootApp() {
             // Push browser state to handle native back gestures perfectly
             history.pushState({ qnOpen: true }, "");
 
-            if (!sid) {
-                setTimeout(() => { qnEditor.focus(); moveCursorToEnd(qnEditor); }, 50);
+            if (!isLocked) {
+                setTimeout(() => { 
+                    qnEditor.focus(); 
+                    if (!sid) moveCursorToEnd(qnEditor); 
+                }, 50);
             }
         };
 
@@ -531,7 +536,7 @@ async function bootApp() {
                 qnBackdrop.classList.remove('qn-read-mode');
                 qnEditor.contentEditable = "true";
                 qnDone.querySelector('.material-symbols-outlined').textContent = 'check';
-                if (qnAddField) qnAddField.style.display = 'grid';
+            if (qnAddField) qnAddField.style.display = 'inline-flex';
                 setTimeout(() => { qnEditor.focus(); moveCursorToEnd(qnEditor); }, 50);
             } else {
                 qnBackdrop.classList.add('qn-read-mode');

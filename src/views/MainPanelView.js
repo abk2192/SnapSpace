@@ -1,4 +1,4 @@
-import { escapeHtml, escapeAttr } from '../utils/dom.js';
+import { escapeHtml, escapeAttr, uid } from '../utils/dom.js';
 import { globalEvents } from '../core/PubSub.js';
 import { dialogService } from '../services/DialogService.js';
 import { dbService } from '../services/Database.js';
@@ -24,6 +24,36 @@ export class MainPanelView {
     bindEvents() {
         const wsSwitcherWrap = document.getElementById("wsSwitcherWrap");
         wsSwitcherWrap?.addEventListener("click", (e) => {
+            if (e.target.closest('#workspaceTitleDisplay')) {
+                e.stopPropagation();
+                wsSwitcherWrap.classList.remove('active');
+                const display = e.target.closest('#workspaceTitleDisplay');
+                display.contentEditable = "true";
+                display.focus();
+                
+                const range = document.createRange();
+                range.selectNodeContents(display);
+                const sel = window.getSelection();
+                sel.removeAllRanges();
+                sel.addRange(range);
+                
+                const finishEdit = () => {
+                    display.contentEditable = "false";
+                    display.removeEventListener('blur', finishEdit);
+                    display.removeEventListener('keydown', keydownHandler);
+                    const val = display.textContent.trim();
+                    if (val && val !== this.vm.activeWorkspace?.title) this.vm.updateProjectTitle(val);
+                    else display.textContent = this.vm.activeWorkspace?.title || "Project";
+                };
+                const keydownHandler = (e2) => {
+                    if (e2.key === 'Enter') { e2.preventDefault(); display.blur(); }
+                    if (e2.key === 'Escape') { display.textContent = this.vm.activeWorkspace?.title || "Project"; display.blur(); }
+                };
+                display.addEventListener('blur', finishEdit);
+                display.addEventListener('keydown', keydownHandler);
+                return;
+            }
+
             if (e.target.closest('#wsRenameBtn')) {
                 e.stopPropagation();
                 wsSwitcherWrap.classList.remove('active');
@@ -57,10 +87,18 @@ export class MainPanelView {
             if (calRibbon) {
                 const wrap = document.querySelector('.cal-body-wrap');
                 if (wrap) {
-                    wrap.classList.toggle('active');
-                    const isActive = wrap.classList.contains('active');
-                    calRibbon.querySelector('.cal-ribbon-chev').style.transform = isActive ? 'rotate(180deg)' : 'none';
+                    wrap.classList.add('active');
+                    calRibbon.classList.add('hidden');
                 }
+                return;
+            }
+
+            const calClose = e.target.closest('.cal-close-mobile');
+            if (calClose) {
+                const wrap = document.querySelector('.cal-body-wrap');
+                if (wrap) wrap.classList.remove('active');
+                const ribbon = document.querySelector('.cal-mobile-ribbon');
+                if (ribbon) ribbon.classList.remove('hidden');
                 return;
             }
 
@@ -72,8 +110,8 @@ export class MainPanelView {
                 const wrap = document.querySelector('.cal-body-wrap');
                 if (wrap && window.innerWidth <= 900) {
                     wrap.classList.remove('active');
-                    const ribbonChev = document.querySelector('.cal-mobile-ribbon .cal-ribbon-chev');
-                    if (ribbonChev) ribbonChev.style.transform = 'none';
+                    const ribbon = document.querySelector('.cal-mobile-ribbon');
+                    if (ribbon) ribbon.classList.remove('hidden');
                 }
                 return; 
             }
@@ -157,6 +195,31 @@ export class MainPanelView {
                 return;
             }
             
+            const editFBtn = e.target.closest("[data-editfield]");
+            if (editFBtn) {
+                const card = editFBtn.closest('details.scenario');
+                if (card && card.open) {
+                    e.preventDefault(); e.stopPropagation();
+                    const sid = editFBtn.dataset.sid;
+                    const fid = editFBtn.dataset.editfield;
+                    const sc = this.vm._findRealScenario(sid);
+                    const field = sc?.fields.find(f => f.id === fid);
+                    if (field) {
+                        window.appDualPrompt(field.key, field.val).then(res => {
+                            if (res) {
+                                if (!res.key.trim() && !res.val.trim()) {
+                                    this.vm.deleteField(sid, fid);
+                                } else {
+                                    this.vm.updateFieldKey(sid, fid, res.key);
+                                    this.vm.updateFieldVal(sid, fid, res.val);
+                                }
+                            }
+                        });
+                    }
+                    return;
+                }
+            }
+
             const delBtn = e.target.closest("[data-delete]");
             if (delBtn) { this.vm.deleteScenario(delBtn.dataset.delete); return; }
             
@@ -379,6 +442,9 @@ export class MainPanelView {
                 <button class="btn secondary action-btn" type="button" id="wsRenameBtn">
                     <span class="material-symbols-outlined">edit</span> <span class="btn-text">Rename Project</span>
                 </button>
+                <button class="btn secondary action-btn" type="button" id="wsAddProjectBtn">
+                    <span class="material-symbols-outlined">add_circle</span> <span class="btn-text">New Project</span>
+                </button>
                 <div style="height: 1px; background: var(--outline-2); margin: 4px 0;"></div>
                 <div style="padding: 4px 12px; font-size: 11px; font-weight: 800; color: var(--muted); text-transform: uppercase;">Switch Project</div>
             `;
@@ -469,11 +535,12 @@ export class MainPanelView {
                 <div class="cal-body-wrap" style="max-width: 400px; width: 100%; margin: 0 auto; padding: 12px 16px; overflow: hidden; box-sizing: border-box;">
                     <div style="font-weight: 800; font-size: 15px; margin-bottom: 12px; color: var(--text); display: flex; align-items: center; justify-content: space-between;">
                         <button class="btn secondary icon-only" id="calPrevBtn" style="padding: 4px; height: 28px; width: 28px; min-height: 0;"><span class="material-symbols-outlined">chevron_left</span></button>
-                        <label style="position: relative; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                        <label style="position: relative; cursor: pointer; display: flex; align-items: center; gap: 4px; flex: 1; justify-content: center;">
                             <span>${monthName} ${year}</span>
                             <input type="date" id="calDatePicker" style="position: absolute; opacity: 0; width: 100%; height: 100%; cursor: pointer; left: 0; top: 0;" />
                         </label>
                         <button class="btn secondary icon-only" id="calNextBtn" style="padding: 4px; height: 28px; width: 28px; min-height: 0;"><span class="material-symbols-outlined">chevron_right</span></button>
+                        <button class="btn secondary icon-only cal-close-mobile"><span class="material-symbols-outlined">expand_less</span></button>
                     </div>
                     <div style="display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; gap: 4px 0;">${daysHtml}</div>
                 </div>`;
@@ -694,11 +761,14 @@ export class MainPanelView {
             d.ondrop = (e) => { e.preventDefault(); d.classList.remove('drag-over-scenario'); d.draggable = false; const fromIdx = parseInt(e.dataTransfer.getData('text/plain')); this.vm.reorderScenarios(fromIdx, idx); };
         }
 
-        const validFields = (sc.fields || []).filter(f => f.key.trim() || f.val.trim());
-        const tagsHtml = validFields.map(f => `<span class="tag property-tag"><b>${escapeHtml(f.key || "Field")}:</b> ${escapeHtml(f.val || "-")}</span>`).join("");
+        const fieldsHtml = (sc.fields || []).map(f => {
+            const isValid = f.key.trim() || f.val.trim();
+            if (!isValid) return '';
+            return `<span class="tag property-tag" data-editfield="${f.id}" data-sid="${sc.id}" style="cursor:pointer;" title="Edit property"><b>${escapeHtml(f.key || "Field")}:</b> ${escapeHtml(f.val || "-")}</span>`;
+        }).join("");
+
         const linkIds = [...new Set([...(sc.linkedTo || []), ...(sc.linkedFrom || [])])];
-        const hasTagsOrLinks = validFields.length > 0 || linkIds.length > 0;
-        const tagsContainerHtml = `<div class="summary-tags" data-tags-for="${sc.id}" style="${hasTagsOrLinks ? 'display:flex;' : 'display:none;'}">${tagsHtml}</div>`;
+        const tagsContainerHtml = `<div class="summary-tags" data-tags-for="${sc.id}" style="display:flex; flex-wrap:wrap; align-items:center;">${fieldsHtml}<button class="tag add-prop-btn" data-addfield="${sc.id}" style="border: 1px dashed var(--outline); background: transparent; cursor: pointer; color: var(--muted); align-items:center; gap:2px; padding: 3px 8px; display:inline-flex;"><span class="material-symbols-outlined" style="font-size:14px;">add</span> Add Property</button></div>`;
 
         let dashBadge = "";
         let dashSnippet = "";
@@ -736,7 +806,7 @@ export class MainPanelView {
                     return; 
                 }
                 
-                if (e.target.closest('.scen-more-wrap') || e.target.closest('.header-name-input')) {
+                if (e.target.closest('.scen-more-wrap') || e.target.closest('.header-name-input') || e.target.closest('.chev')) {
                     return; 
                 }
 
@@ -773,15 +843,7 @@ export class MainPanelView {
 
         const nameWidth = Math.max(10, (sc.name||"").length + 2) + "ch";
 
-        const fieldsHtml = (sc.fields || []).map(f => `
-            <div class="field-row">
-            <input class="input" data-fkey="${f.id}" data-sid="${sc.id}" value="${escapeAttr(f.key)}" placeholder="Field Name (e.g., Env, Policy)" />
-            <input class="input" data-fval="${f.id}" data-sid="${sc.id}" value="${escapeAttr(f.val)}" placeholder="Value" />
-            <button class="btn secondary del action-btn icon-only" type="button" data-delfield="${f.id}" data-sid="${sc.id}"><span class="material-symbols-outlined">close</span></button>
-            </div>
-        `).join("");
-
-        d.innerHTML = `<summary><div class="summary-content"><div style="display:flex; align-items:center; gap:6px; width: 100%;">${dragHandleHtml}<input class="header-name-input" data-field="name" data-sid="${sc.id}" value="${escapeAttr(sc.name||"")}" placeholder="Item ${idx+1}" readonly style="width: ${nameWidth};" /></div>${dashSnippet}${tagsContainerHtml}</div><div class="summary-actions">${dashBadge}<div class="scen-more-wrap"><button class="btn secondary action-btn icon-only scen-more-btn" type="button" title="More Actions"><span class="material-symbols-outlined">more_vert</span></button><div class="scen-more-menu"><button class="btn secondary action-btn" type="button" title="Edit Name" data-edit-name="${sc.id}"><span class="material-symbols-outlined">edit</span> <span class="btn-text">Edit Name</span></button><button class="btn secondary action-btn" type="button" title="Link Notes" data-linknotes="${sc.id}"><span class="material-symbols-outlined">add_link</span> <span class="btn-text">Link Notes</span></button><button class="btn secondary action-btn" type="button" title="Copy Link" data-copylink="${sc.id}"><span class="material-symbols-outlined">link</span> <span class="btn-text">Copy Link</span></button><button class="btn secondary action-btn" type="button" title="Save as Template" data-template="${sc.id}"><span class="material-symbols-outlined">bookmark_add</span> <span class="btn-text">Save Template</span></button><button class="btn secondary action-btn" type="button" title="Duplicate Item" data-duplicate="${sc.id}"><span class="material-symbols-outlined">content_copy</span> <span class="btn-text">Duplicate</span></button><button class="btn secondary action-btn" type="button" title="Move Item" data-move="${sc.id}"><span class="material-symbols-outlined">move_item</span> <span class="btn-text">Move</span></button><button class="btn danger action-btn" type="button" title="Delete Item" data-delete="${sc.id}"><span class="material-symbols-outlined">delete</span> <span class="btn-text">Delete Item</span></button></div></div><div class="chev" title="Expand"><span class="material-symbols-outlined chev-expand">expand_more</span><span class="material-symbols-outlined chev-full" title="Expand to Full View">open_in_full</span></div></div></summary><div class="card-body"><div class="evidence-wrap"><div class="label" style="margin-bottom: 6px;"><span class="material-symbols-outlined" style="font-size: 14px;">image</span> Notes & Media</div><div class="tbl-controls tbl-row-controls"><button class="tbl-btn tbl-add-row" data-cmd="tableAddRow" title="Add Row Below"><span class="material-symbols-outlined">add</span></button><div class="tbl-divider"></div><button class="tbl-btn tbl-del-row" data-cmd="tableDelRow" title="Delete Row"><span class="material-symbols-outlined">remove</span></button></div><div class="tbl-controls tbl-col-controls"><button class="tbl-btn tbl-add-col" data-cmd="tableAddCol" title="Add Column Right"><span class="material-symbols-outlined">add</span></button><div class="tbl-divider"></div><button class="tbl-btn tbl-del-col" data-cmd="tableDelCol" title="Delete Column"><span class="material-symbols-outlined">remove</span></button></div><div class="wysiwyg-toolbar action-btn"><button class="btn secondary" type="button" data-cmd="bold" title="Bold"><span class="material-symbols-outlined" style="margin:0;">format_bold</span></button><button class="btn secondary" type="button" data-cmd="italic" title="Italic"><span class="material-symbols-outlined" style="margin:0;">format_italic</span></button><button class="btn secondary" type="button" data-cmd="strikeThrough" title="Strikethrough"><span class="material-symbols-outlined" style="margin:0;">strikethrough_s</span></button><button class="btn secondary" type="button" data-cmd="insertUnorderedList" title="Bullet List"><span class="material-symbols-outlined" style="margin:0;">format_list_bulleted</span> <span class="btn-text">List</span></button><button class="btn secondary" type="button" data-cmd="insertOrderedList" title="Numbered List"><span class="material-symbols-outlined" style="margin:0;">format_list_numbered</span> <span class="btn-text">Num List</span></button><button class="btn secondary" type="button" data-cmd="insertCheckbox" title="Insert Checkbox"><span class="material-symbols-outlined" style="margin:0;">check_box</span> <span class="btn-text">Checkbox</span></button><div style="width: 1px; height: 20px; background: var(--outline-2); margin: 0 4px;"></div><button class="btn secondary" type="button" data-cmd="outdent" title="Outdent"><span class="material-symbols-outlined" style="margin:0;">format_indent_decrease</span></button><button class="btn secondary" type="button" data-cmd="indent" title="Indent"><span class="material-symbols-outlined" style="margin:0;">format_indent_increase</span></button><div style="width: 1px; height: 20px; background: var(--outline-2); margin: 0 4px;"></div><button class="btn secondary" type="button" data-cmd="createLink" title="Insert Link"><span class="material-symbols-outlined" style="margin:0;">link</span></button><button class="btn secondary" type="button" data-cmd="insertTable" title="Insert Table"><span class="material-symbols-outlined" style="margin:0;">table_chart</span></button><div style="width: 1px; height: 20px; background: var(--outline-2); margin: 0 4px;"></div><button class="btn secondary action-btn" type="button" data-createfile="${sc.id}" title="Create Text/XML File"><span class="material-symbols-outlined" style="font-size: 16px;">note_add</span> <span class="btn-text">New File</span></button><button class="btn secondary action-btn" type="button" data-attach="${sc.id}" title="Attach File"><span class="material-symbols-outlined" style="font-size: 16px;">attach_file</span> <span class="btn-text">Attach</span></button><button class="btn secondary" type="button" data-cmd="closeKeyboard" title="Close Keyboard"><span class="material-symbols-outlined" style="margin:0; font-size: 20px;">keyboard_hide</span></button></div><div class="evidence" contenteditable="${isLocked ? 'false' : 'true'}" data-evidence="${sc.id}" spellcheck="false"></div><input type="file" hidden data-file="${sc.id}" /></div><div class="card-body-properties" style="margin-top: 16px;"><div class="label" style="justify-content: space-between;"><span style="display:flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size: 14px;">tune</span> Properties</span><button class="btn secondary action-btn icon-only" type="button" data-addfield="${sc.id}" style="padding: 2px; min-height: auto; border: none; background: transparent; color: var(--primary); box-shadow: none;" title="Add Property Field"><span class="material-symbols-outlined" style="font-size: 18px;">add_circle</span></button></div><div class="field-list">${fieldsHtml}</div></div>${dateHtml}</div>`;
+        d.innerHTML = `<summary><div class="summary-content"><div style="display:flex; align-items:center; gap:6px; width: 100%;">${dragHandleHtml}<input class="header-name-input" data-field="name" data-sid="${sc.id}" value="${escapeAttr(sc.name||"")}" placeholder="Item ${idx+1}" readonly style="width: ${nameWidth};" /></div>${dashSnippet}${tagsContainerHtml}</div><div class="summary-actions">${dashBadge}<div class="scen-more-wrap"><button class="btn secondary action-btn icon-only scen-more-btn" type="button" title="More Actions"><span class="material-symbols-outlined">more_vert</span></button><div class="scen-more-menu"><button class="btn secondary action-btn" type="button" title="Edit Name" data-edit-name="${sc.id}"><span class="material-symbols-outlined">edit</span> <span class="btn-text">Edit Name</span></button><button class="btn secondary action-btn" type="button" title="Link Notes" data-linknotes="${sc.id}"><span class="material-symbols-outlined">add_link</span> <span class="btn-text">Link Notes</span></button><button class="btn secondary action-btn" type="button" title="Copy Link" data-copylink="${sc.id}"><span class="material-symbols-outlined">link</span> <span class="btn-text">Copy Link</span></button><button class="btn secondary action-btn" type="button" title="Save as Template" data-template="${sc.id}"><span class="material-symbols-outlined">bookmark_add</span> <span class="btn-text">Save Template</span></button><button class="btn secondary action-btn" type="button" title="Duplicate Item" data-duplicate="${sc.id}"><span class="material-symbols-outlined">content_copy</span> <span class="btn-text">Duplicate</span></button><button class="btn secondary action-btn" type="button" title="Move Item" data-move="${sc.id}"><span class="material-symbols-outlined">move_item</span> <span class="btn-text">Move</span></button><button class="btn danger action-btn" type="button" title="Delete Item" data-delete="${sc.id}"><span class="material-symbols-outlined">delete</span> <span class="btn-text">Delete Item</span></button></div></div><div class="chev" title="Expand"><span class="material-symbols-outlined chev-expand">expand_more</span><span class="material-symbols-outlined chev-full" title="Expand to Full View">open_in_full</span></div></div></summary><div class="card-body"><div class="evidence-wrap"><div class="label" style="margin-bottom: 6px;"><span class="material-symbols-outlined" style="font-size: 14px;">image</span> Notes & Media</div><div class="tbl-controls tbl-row-controls"><button class="tbl-btn tbl-add-row" data-cmd="tableAddRow" title="Add Row Below"><span class="material-symbols-outlined">add</span></button><div class="tbl-divider"></div><button class="tbl-btn tbl-del-row" data-cmd="tableDelRow" title="Delete Row"><span class="material-symbols-outlined">remove</span></button></div><div class="tbl-controls tbl-col-controls"><button class="tbl-btn tbl-add-col" data-cmd="tableAddCol" title="Add Column Right"><span class="material-symbols-outlined">add</span></button><div class="tbl-divider"></div><button class="tbl-btn tbl-del-col" data-cmd="tableDelCol" title="Delete Column"><span class="material-symbols-outlined">remove</span></button></div><div class="wysiwyg-toolbar action-btn"><button class="btn secondary" type="button" data-cmd="bold" title="Bold"><span class="material-symbols-outlined" style="margin:0;">format_bold</span></button><button class="btn secondary" type="button" data-cmd="italic" title="Italic"><span class="material-symbols-outlined" style="margin:0;">format_italic</span></button><button class="btn secondary" type="button" data-cmd="strikeThrough" title="Strikethrough"><span class="material-symbols-outlined" style="margin:0;">strikethrough_s</span></button><button class="btn secondary" type="button" data-cmd="insertUnorderedList" title="Bullet List"><span class="material-symbols-outlined" style="margin:0;">format_list_bulleted</span> <span class="btn-text">List</span></button><button class="btn secondary" type="button" data-cmd="insertOrderedList" title="Numbered List"><span class="material-symbols-outlined" style="margin:0;">format_list_numbered</span> <span class="btn-text">Num List</span></button><button class="btn secondary" type="button" data-cmd="insertCheckbox" title="Insert Checkbox"><span class="material-symbols-outlined" style="margin:0;">check_box</span> <span class="btn-text">Checkbox</span></button><div style="width: 1px; height: 20px; background: var(--outline-2); margin: 0 4px;"></div><button class="btn secondary" type="button" data-cmd="outdent" title="Outdent"><span class="material-symbols-outlined" style="margin:0;">format_indent_decrease</span></button><button class="btn secondary" type="button" data-cmd="indent" title="Indent"><span class="material-symbols-outlined" style="margin:0;">format_indent_increase</span></button><div style="width: 1px; height: 20px; background: var(--outline-2); margin: 0 4px;"></div><button class="btn secondary" type="button" data-cmd="createLink" title="Insert Link"><span class="material-symbols-outlined" style="margin:0;">link</span></button><button class="btn secondary" type="button" data-cmd="insertTable" title="Insert Table"><span class="material-symbols-outlined" style="margin:0;">table_chart</span></button><div style="width: 1px; height: 20px; background: var(--outline-2); margin: 0 4px;"></div><button class="btn secondary action-btn" type="button" data-createfile="${sc.id}" title="Create Text/XML File"><span class="material-symbols-outlined" style="font-size: 16px;">note_add</span> <span class="btn-text">New File</span></button><button class="btn secondary action-btn" type="button" data-attach="${sc.id}" title="Attach File"><span class="material-symbols-outlined" style="font-size: 16px;">attach_file</span> <span class="btn-text">Attach</span></button><button class="btn secondary" type="button" data-cmd="closeKeyboard" title="Close Keyboard"><span class="material-symbols-outlined" style="margin:0; font-size: 20px;">keyboard_hide</span></button></div><div class="evidence" contenteditable="${isLocked ? 'false' : 'true'}" data-evidence="${sc.id}" spellcheck="false"></div><input type="file" hidden data-file="${sc.id}" /></div>${dateHtml}</div>`;
 
         const evidence = d.querySelector(`[data-evidence="${sc.id}"]`);
         evidence.innerHTML = sc.evidenceHtml || "";
@@ -847,21 +909,21 @@ export class MainPanelView {
             cards.forEach((card) => {
                 const sid = card.dataset.sid; const sc = scenarios.find(s => s.id === sid); if(!sc) return;
                 const tagsContainer = card.querySelector(".summary-tags");
-                const validFields = (sc.fields || []).filter(f => f.key.trim() || f.val.trim());
-                if(validFields.length > 0) {
-                    const tagsHtml = validFields.map(f => `<span class="tag property-tag"><b>${escapeHtml(f.key || "Field")}:</b> ${escapeHtml(f.val || "-")}</span>`).join("");
+                
+                const fieldsHtml = (sc.fields || []).map(f => {
+                    const isValid = f.key.trim() || f.val.trim();
+                    if (!isValid) return '';
+                    return `<span class="tag property-tag" data-editfield="${f.id}" data-sid="${sc.id}" style="cursor:pointer;" title="Edit property"><b>${escapeHtml(f.key || "Field")}:</b> ${escapeHtml(f.val || "-")}</span>`;
+                }).join("");
+
                     if(!tagsContainer) { 
-                        card.querySelector('.summary-content').insertAdjacentHTML('beforeend', `<div class="summary-tags" data-tags-for="${sc.id}" style="display:flex;">${tagsHtml}</div>`); 
+                        card.querySelector('.summary-content').insertAdjacentHTML('beforeend', `<div class="summary-tags" data-tags-for="${sc.id}" style="display:flex; flex-wrap:wrap; align-items:center;">${fieldsHtml}<button class="tag add-prop-btn" data-addfield="${sc.id}" style="border: 1px dashed var(--outline); background: transparent; cursor: pointer; color: var(--muted); align-items:center; gap:2px; padding: 3px 8px; display:inline-flex;"><span class="material-symbols-outlined" style="font-size:14px;">add</span> Add Property</button></div>`); 
                     } else { 
                         const links = Array.from(tagsContainer.querySelectorAll('.link-tag'));
-                        tagsContainer.innerHTML = tagsHtml; 
+                        tagsContainer.innerHTML = fieldsHtml + `<button class="tag add-prop-btn" data-addfield="${sc.id}" style="border: 1px dashed var(--outline); background: transparent; cursor: pointer; color: var(--muted); align-items:center; gap:2px; padding: 3px 8px; display:inline-flex;"><span class="material-symbols-outlined" style="font-size:14px;">add</span> Add Property</button>`; 
                         links.forEach(l => tagsContainer.appendChild(l));
                         tagsContainer.style.display = 'flex';
                     }
-                } else if (tagsContainer) { 
-                    const links = Array.from(tagsContainer.querySelectorAll('.link-tag'));
-                    if (links.length > 0) { tagsContainer.innerHTML = ''; links.forEach(l => tagsContainer.appendChild(l)); tagsContainer.style.display = 'flex'; } else { tagsContainer.style.display = 'none'; }
-                }
             });
         });
     }
