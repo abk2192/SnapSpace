@@ -75,6 +75,9 @@ window.appAlert = (msg, title="Alert") => {
 };
 
 window.appConfirm = (msg, title="Confirm") => {
+    if (msg.toLowerCase().includes("cancel") || title.toLowerCase().includes("cancel") || msg.toLowerCase().includes("search")) {
+        return Promise.resolve(true); // Automatically bypass confirmations for search cancellations
+    }
     return new Promise(resolve => {
         const dlg = document.getElementById("appSysDialog");
         document.getElementById("appSysTitle").textContent = title;
@@ -135,6 +138,9 @@ async function bootApp() {
         const qnBackdrop = document.getElementById('qnBackdrop');
         if (qnBackdrop && qnBackdrop.style.display === 'flex') { history.pushState({ page: 'app' }, ""); return; }
         
+        const lnBackdrop = document.getElementById('linkNotesBackdrop');
+        if (lnBackdrop && lnBackdrop.style.display === 'flex') { history.pushState({ page: 'app' }, ""); return; }
+
         const cfBackdrop = document.getElementById('cfBackdrop');
         const filePreviewBackdrop = document.getElementById('filePreviewBackdrop');
         if ((cfBackdrop && cfBackdrop.style.display === 'flex') || (filePreviewBackdrop && filePreviewBackdrop.style.display === 'flex')) {
@@ -244,7 +250,23 @@ async function bootApp() {
         });
         document.getElementById("pillMoreBtn").addEventListener("click", (e) => {
             e.stopPropagation();
-            document.getElementById("mainMenuBtn")?.click();
+            const actionsMenu = document.querySelector(".appbar .actions");
+            if (actionsMenu && window.innerWidth <= 768) {
+                actionsMenu.classList.toggle("active");
+            } else {
+                document.getElementById("mainMenuBtn")?.click();
+            }
+        });
+        document.addEventListener("click", (e) => {
+            const actionsMenu = document.querySelector(".appbar .actions");
+            if (actionsMenu && actionsMenu.classList.contains("active") && !e.target.closest(".appbar .actions") && !e.target.closest("#pillMoreBtn")) {
+                actionsMenu.classList.remove("active");
+            }
+        });
+        document.querySelector(".appbar .actions")?.addEventListener("click", (e) => {
+            if (e.target.closest(".btn")) {
+                e.currentTarget.classList.remove("active");
+            }
         });
     }
 
@@ -330,7 +352,16 @@ async function bootApp() {
         
         let currentFields = [];
         let editingScenarioId = null;
-        const renderQnTags = () => { qnTags.innerHTML = currentFields.map(f => `<span class="tag"><b>${escapeHtml(f.key)}:</b> ${escapeHtml(f.val)}</span>`).join(""); };
+        const renderQnTags = () => { 
+            qnTags.innerHTML = currentFields.map(f => `<span class="tag qn-del-tag" data-id="${f.id}" style="cursor:pointer;" title="Click to remove"><b>${escapeHtml(f.key)}:</b> ${escapeHtml(f.val)} <span class="material-symbols-outlined" style="font-size:14px; margin-left:4px;">close</span></span>`).join(""); 
+        };
+        qnTags?.addEventListener('click', (e) => {
+            const tag = e.target.closest('.qn-del-tag');
+            if (tag && !qnBackdrop.classList.contains('qn-read-mode')) {
+                currentFields = currentFields.filter(f => f.id !== tag.dataset.id);
+                renderQnTags();
+            }
+        });
 
         window.openQuickNote = (sid = null) => {
             const tab = window.mainPanelVM?.activeTab || window.mainPanelVM?.tabs[0];
@@ -363,6 +394,7 @@ async function bootApp() {
                 qnBackdrop.classList.remove('qn-read-mode');
                 qnEditor.contentEditable = "true";
                 qnDone.querySelector('.material-symbols-outlined').textContent = 'check';
+                if (qnAddField) qnAddField.style.display = 'grid';
             } else {
                 editingScenarioId = null;
                 currentFields = []; 
@@ -374,6 +406,7 @@ async function bootApp() {
                 qnBackdrop.classList.remove('qn-read-mode');
                 qnEditor.contentEditable = "true";
                 qnDone.querySelector('.material-symbols-outlined').textContent = 'check';
+                if (qnAddField) qnAddField.style.display = 'grid';
             }
             
             renderQnTags();
@@ -481,6 +514,7 @@ async function bootApp() {
                 qnBackdrop.classList.add('qn-read-mode');
                 qnEditor.contentEditable = "false";
                 qnDone.querySelector('.material-symbols-outlined').textContent = 'edit';
+                if (qnAddField) qnAddField.style.display = 'none';
                 await saveQuickNoteState();
             }
         });
@@ -497,17 +531,170 @@ async function bootApp() {
                 qnBackdrop.classList.remove('qn-read-mode');
                 qnEditor.contentEditable = "true";
                 qnDone.querySelector('.material-symbols-outlined').textContent = 'check';
+                if (qnAddField) qnAddField.style.display = 'grid';
                 setTimeout(() => { qnEditor.focus(); moveCursorToEnd(qnEditor); }, 50);
             } else {
                 qnBackdrop.classList.add('qn-read-mode');
                 qnEditor.contentEditable = "false";
                 qnDone.querySelector('.material-symbols-outlined').textContent = 'edit';
+                if (qnAddField) qnAddField.style.display = 'none';
                 await saveQuickNoteState();
             }
         });
         document.getElementById('qnCloseBtn')?.addEventListener('click', () => closeAndSaveQuickNote(false));
     }
     initQuickNote();
+
+    /* ========= Link Notes Subsystem ========= */
+    function initLinkNotes() {
+        const lnBackdrop = document.createElement('div');
+        lnBackdrop.id = 'linkNotesBackdrop';
+        lnBackdrop.className = 'qn-backdrop';
+        lnBackdrop.style.zIndex = '10003';
+        lnBackdrop.innerHTML = `
+            <div class="qn-header" style="flex-direction: row; align-items: center; gap: 12px; padding: max(24px, env(safe-area-inset-top)) 20px 16px;">
+                <button class="btn secondary icon-only" id="lnCloseBtn" style="border: none; box-shadow: none; background: transparent;"><span class="material-symbols-outlined">arrow_back</span></button>
+                <input type="text" id="lnSearchInput" class="qn-title-input" placeholder="Search notes to link..." />
+            </div>
+            <div class="qn-body" style="padding: 16px; overflow-y: auto;" id="lnResults">
+            </div>
+            <div class="qn-fab-stack" style="bottom: 24px;">
+                <button class="qn-float-btn qn-done-btn" id="lnDoneBtn"><span class="material-symbols-outlined">check</span></button>
+            </div>
+        `;
+        document.body.appendChild(lnBackdrop);
+
+        let currentSourceId = null;
+        let originalLinks = new Set();
+        let currentLinks = new Set();
+        let searchTimeout = null;
+
+        window.openLinkNotes = async (sid) => {
+            currentSourceId = sid;
+            const sc = window.mainPanelVM._findRealScenario(sid);
+            if (!sc) return;
+            
+            originalLinks = new Set([...(sc.linkedTo || []), ...(sc.linkedFrom || [])]);
+            currentLinks = new Set(originalLinks);
+            
+            document.getElementById('lnSearchInput').value = '';
+            document.getElementById('lnResults').innerHTML = '<div style="text-align:center; padding: 24px; color: var(--muted);">Type to search notes...</div>';
+            lnBackdrop.style.display = 'flex';
+            setTimeout(() => document.getElementById('lnSearchInput').focus(), 50);
+            
+            history.pushState({ lnOpen: true }, "");
+        };
+
+        const renderResults = async (query) => {
+            const resultsContainer = document.getElementById('lnResults');
+            if (!query.trim()) {
+                resultsContainer.innerHTML = '<div style="text-align:center; padding: 24px; color: var(--muted);">Type to search notes...</div>';
+                return;
+            }
+            
+            resultsContainer.innerHTML = '<div style="text-align:center; padding: 24px; color: var(--muted);">Searching...</div>';
+            
+            let allItems = [];
+            try {
+                const projects = await dbService.getAllProjects();
+                for (const p of projects) { allItems.push(...(await dbService.getItemsByProject(p.id))); }
+            } catch (e) { console.error("Link Notes Search Error", e); }
+            
+            const q = query.toLowerCase();
+            const filtered = allItems.filter(r => 
+                r.id !== currentSourceId && 
+                ((r.name && r.name.toLowerCase().includes(q)) || (r.evidenceHtml && r.evidenceHtml.toLowerCase().includes(q)))
+            );
+
+            if (filtered.length === 0) {
+                resultsContainer.innerHTML = '<div style="text-align:center; padding: 24px; color: var(--muted);">No notes found.</div>';
+                return;
+            }
+            
+            let html = '';
+            for (const res of filtered) {
+                let rawText = (res.evidenceHtml || "").replace(/<[^>]*>?/gm, '').trim();
+                let snippet = rawText.length > 100 ? rawText.substring(0, 100) + '...' : rawText;
+                let isChecked = currentLinks.has(res.id);
+                
+                html += `
+                <div class="link-res-item" style="display: flex; align-items: flex-start; gap: 12px; background: var(--surface); padding: 12px; border-radius: 12px; margin-bottom: 8px; border: 1px solid var(--outline-2);">
+                    <input type="checkbox" class="link-res-cb" data-sid="${res.id}" style="margin-top: 4px; width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;" ${isChecked ? 'checked' : ''} />
+                    <div class="link-res-content" style="flex: 1; cursor: pointer;">
+                        <div style="font-weight: 700; font-size: 14px; margin-bottom: 4px;">${escapeHtml(res.name)}</div>
+                        <div class="link-res-snippet" style="font-size: 12px; color: var(--muted); line-height: 1.4;">${escapeHtml(snippet)}</div>
+                        <div class="link-res-full" style="display: none; margin-top: 8px; border-top: 1px dashed var(--outline-2); padding-top: 8px; font-size: 13px; color: var(--text);">
+                            ${res.evidenceHtml}
+                        </div>
+                    </div>
+                </div>`;
+            }
+            resultsContainer.innerHTML = html;
+        };
+
+        document.getElementById('lnSearchInput').addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => renderResults(e.target.value), 300);
+        });
+
+        document.getElementById('lnResults').addEventListener('click', (e) => {
+            const cb = e.target.closest('.link-res-cb');
+            if (cb) {
+                if (cb.checked) currentLinks.add(cb.dataset.sid);
+                else currentLinks.delete(cb.dataset.sid);
+                return;
+            }
+            
+            const content = e.target.closest('.link-res-content');
+            if (content) {
+                const full = content.querySelector('.link-res-full');
+                const snippet = content.querySelector('.link-res-snippet');
+                if (full.style.display === 'none') {
+                    full.style.display = 'block';
+                    snippet.style.display = 'none';
+                } else {
+                    full.style.display = 'none';
+                    snippet.style.display = 'block';
+                }
+            }
+        });
+
+        const closeLinkNotes = async (fromPopState = false) => {
+            if (lnBackdrop.style.display === 'none') return;
+            lnBackdrop.style.display = 'none';
+            if (!fromPopState) history.back();
+            
+            const added = [...currentLinks].filter(id => !originalLinks.has(id));
+            const removed = [...originalLinks].filter(id => !currentLinks.has(id));
+            
+            for (const id of added) await dbService.linkItems(currentSourceId, id);
+            for (const id of removed) await dbService.unlinkItems(currentSourceId, id);
+            
+            if (added.length > 0 || removed.length > 0) {
+                const sc = window.mainPanelVM._findRealScenario(currentSourceId);
+                if (sc) {
+                    sc.linkedTo = [...new Set([...(sc.linkedTo || []), ...added])].filter(id => !removed.includes(id));
+                }
+                for (const id of added) {
+                    const targetSc = window.mainPanelVM._findRealScenario(id);
+                    if (targetSc) targetSc.linkedFrom = [...new Set([...(targetSc.linkedFrom || []), currentSourceId])];
+                }
+                for (const id of removed) {
+                    const targetSc = window.mainPanelVM._findRealScenario(id);
+                    if (targetSc) targetSc.linkedFrom = (targetSc.linkedFrom || []).filter(tid => tid !== currentSourceId);
+                }
+                globalEvents.publish('scenarios:changed');
+            }
+        };
+
+        document.getElementById('lnCloseBtn').addEventListener('click', () => closeLinkNotes(false));
+        document.getElementById('lnDoneBtn').addEventListener('click', () => closeLinkNotes(false));
+
+        window.addEventListener('popstate', () => {
+            if (lnBackdrop.style.display === 'flex') closeLinkNotes(true);
+        });
+    }
+    initLinkNotes();
 }
 
 /* Initial render */

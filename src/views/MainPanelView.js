@@ -114,6 +114,12 @@ export class MainPanelView {
             const dupBtn = e.target.closest("[data-duplicate]");
             if (dupBtn) { this.vm.duplicateScenario(dupBtn.dataset.duplicate); return; }
             
+            const linkNotesBtn = e.target.closest("[data-linknotes]");
+            if (linkNotesBtn) {
+                if (window.openLinkNotes) window.openLinkNotes(linkNotesBtn.dataset.linknotes);
+                return;
+            }
+
             const copyLinkBtn = e.target.closest("[data-copylink]");
             if (copyLinkBtn) {
                 const sid = copyLinkBtn.dataset.copylink;
@@ -183,13 +189,16 @@ export class MainPanelView {
                     return;
                 }
                 
-                if (e.target.closest(".chev") || e.target.closest(".drag-handle")) return;
-
+                if (e.target.closest(".drag-handle")) return;
+                
+                const chev = e.target.closest(".chev");
                 const card = summary.closest('details.scenario');
-                if (card && card.open) {
+                if (chev && card && card.open) {
                     e.preventDefault();
                     window.openQuickNote(card.dataset.sid);
+                    return;
                 }
+                if (chev) return; // Allow native toggle if closed and clicking chevron
             }
         });
 
@@ -478,7 +487,14 @@ export class MainPanelView {
             }
 
             btn.addEventListener("click", (e) => {
-                if (e.target.closest("[data-close-temp]")) { e.stopPropagation(); this.vm.closeTemporarySearchTab(); return; }
+                if (e.target.closest("[data-close-temp]")) { 
+                    e.stopPropagation(); 
+                    const originalConfirm = window.appConfirm;
+                    window.appConfirm = async () => true; // Override confirm purely for this component interaction
+                    this.vm.closeTemporarySearchTab(); 
+                    setTimeout(() => { window.appConfirm = originalConfirm; }, 100);
+                    return; 
+                }
                 const close = e.target.closest("[data-close-tab]");
                 if (close){ e.stopPropagation(); this.vm.deleteTab(close.getAttribute("data-close-tab")); return; }
                 if (tab.id === activeTabId && this.vm.viewMode === 'maximized' && !tab.isTemporary) {
@@ -644,7 +660,10 @@ export class MainPanelView {
         }
 
         const validFields = (sc.fields || []).filter(f => f.key.trim() || f.val.trim());
-        const tagsHtml = validFields.map(f => `<span class="tag"><b>${escapeHtml(f.key || "Field")}:</b> ${escapeHtml(f.val || "-")}</span>`).join("");
+        const tagsHtml = validFields.map(f => `<span class="tag property-tag"><b>${escapeHtml(f.key || "Field")}:</b> ${escapeHtml(f.val || "-")}</span>`).join("");
+        const linkIds = [...new Set([...(sc.linkedTo || []), ...(sc.linkedFrom || [])])];
+        const hasTagsOrLinks = validFields.length > 0 || linkIds.length > 0;
+        const tagsContainerHtml = `<div class="summary-tags" data-tags-for="${sc.id}" style="${hasTagsOrLinks ? 'display:flex;' : 'display:none;'}">${tagsHtml}</div>`;
 
         let dashBadge = "";
         let dashSnippet = "";
@@ -660,14 +679,6 @@ export class MainPanelView {
                 dashSnippet = `<div class="summary-sub" style="margin-top: 6px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-wrap; font-size: 12px; color: var(--muted);">${escapeHtml(rawText)}</div>`;
             }
         }
-
-        const fieldsHtml = (sc.fields || []).map(f => `
-            <div class="field-row">
-            <input class="input" data-fkey="${f.id}" data-sid="${sc.id}" value="${escapeAttr(f.key)}" placeholder="Field Name (e.g., Env, Policy)" />
-            <input class="input" data-fval="${f.id}" data-sid="${sc.id}" value="${escapeAttr(f.val)}" placeholder="Value" />
-            <button class="btn secondary del action-btn icon-only" type="button" data-delfield="${f.id}" data-sid="${sc.id}"><span class="material-symbols-outlined">close</span></button>
-            </div>
-        `).join("");
 
         if (isDashboard || isTempSearch) {
             d.addEventListener('click', (e) => {
@@ -727,7 +738,15 @@ export class MainPanelView {
 
         const nameWidth = Math.max(10, (sc.name||"").length + 2) + "ch";
 
-        d.innerHTML = `<summary><div class="summary-content"><div style="display:flex; align-items:center; gap:6px; width: 100%;">${dragHandleHtml}<input class="header-name-input" data-field="name" data-sid="${sc.id}" value="${escapeAttr(sc.name||"")}" placeholder="Item ${idx+1}" readonly style="width: ${nameWidth};" /></div>${dashSnippet}${tagsHtml ? `<div class="summary-tags">${tagsHtml}</div>` : ``}</div><div class="summary-actions">${dashBadge}<div class="scen-more-wrap"><button class="btn secondary action-btn icon-only scen-more-btn" type="button" title="More Actions"><span class="material-symbols-outlined">more_vert</span></button><div class="scen-more-menu"><button class="btn secondary action-btn" type="button" title="Edit Name" data-edit-name="${sc.id}"><span class="material-symbols-outlined">edit</span> <span class="btn-text">Edit Name</span></button><button class="btn secondary action-btn" type="button" title="Copy Link" data-copylink="${sc.id}"><span class="material-symbols-outlined">link</span> <span class="btn-text">Copy Link</span></button><button class="btn secondary action-btn" type="button" title="Save as Template" data-template="${sc.id}"><span class="material-symbols-outlined">bookmark_add</span> <span class="btn-text">Save Template</span></button><button class="btn secondary action-btn" type="button" title="Duplicate Item" data-duplicate="${sc.id}"><span class="material-symbols-outlined">content_copy</span> <span class="btn-text">Duplicate</span></button><button class="btn secondary action-btn" type="button" title="Move Item" data-move="${sc.id}"><span class="material-symbols-outlined">move_item</span> <span class="btn-text">Move</span></button><button class="btn danger action-btn" type="button" title="Delete Item" data-delete="${sc.id}"><span class="material-symbols-outlined">delete</span> <span class="btn-text">Delete Item</span></button></div></div><div class="chev"><span class="material-symbols-outlined">expand_more</span></div></div></summary><div class="card-body"><div class="label" style="justify-content: space-between;"><span style="display:flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size: 14px;">tune</span> Properties</span><button class="btn secondary action-btn icon-only" type="button" data-addfield="${sc.id}" style="padding: 2px; min-height: auto; border: none; background: transparent; color: var(--primary); box-shadow: none;" title="Add Property Field"><span class="material-symbols-outlined" style="font-size: 18px;">add_circle</span></button></div><div class="field-list">${fieldsHtml}</div><div class="evidence-wrap"><div class="label" style="margin-bottom: 6px;"><span class="material-symbols-outlined" style="font-size: 14px;">image</span> Notes & Media</div><div class="tbl-controls tbl-row-controls"><button class="tbl-btn tbl-add-row" data-cmd="tableAddRow" title="Add Row Below"><span class="material-symbols-outlined">add</span></button><div class="tbl-divider"></div><button class="tbl-btn tbl-del-row" data-cmd="tableDelRow" title="Delete Row"><span class="material-symbols-outlined">remove</span></button></div><div class="tbl-controls tbl-col-controls"><button class="tbl-btn tbl-add-col" data-cmd="tableAddCol" title="Add Column Right"><span class="material-symbols-outlined">add</span></button><div class="tbl-divider"></div><button class="tbl-btn tbl-del-col" data-cmd="tableDelCol" title="Delete Column"><span class="material-symbols-outlined">remove</span></button></div><div class="wysiwyg-toolbar action-btn"><button class="btn secondary" type="button" data-cmd="bold" title="Bold"><span class="material-symbols-outlined" style="margin:0;">format_bold</span></button><button class="btn secondary" type="button" data-cmd="italic" title="Italic"><span class="material-symbols-outlined" style="margin:0;">format_italic</span></button><button class="btn secondary" type="button" data-cmd="strikeThrough" title="Strikethrough"><span class="material-symbols-outlined" style="margin:0;">strikethrough_s</span></button><button class="btn secondary" type="button" data-cmd="insertUnorderedList" title="Bullet List"><span class="material-symbols-outlined" style="margin:0;">format_list_bulleted</span> <span class="btn-text">List</span></button><button class="btn secondary" type="button" data-cmd="insertOrderedList" title="Numbered List"><span class="material-symbols-outlined" style="margin:0;">format_list_numbered</span> <span class="btn-text">Num List</span></button><button class="btn secondary" type="button" data-cmd="insertCheckbox" title="Insert Checkbox"><span class="material-symbols-outlined" style="margin:0;">check_box</span> <span class="btn-text">Checkbox</span></button><div style="width: 1px; height: 20px; background: var(--outline-2); margin: 0 4px;"></div><button class="btn secondary" type="button" data-cmd="outdent" title="Outdent"><span class="material-symbols-outlined" style="margin:0;">format_indent_decrease</span></button><button class="btn secondary" type="button" data-cmd="indent" title="Indent"><span class="material-symbols-outlined" style="margin:0;">format_indent_increase</span></button><div style="width: 1px; height: 20px; background: var(--outline-2); margin: 0 4px;"></div><button class="btn secondary" type="button" data-cmd="createLink" title="Insert Link"><span class="material-symbols-outlined" style="margin:0;">link</span></button><button class="btn secondary" type="button" data-cmd="insertTable" title="Insert Table"><span class="material-symbols-outlined" style="margin:0;">table_chart</span></button><div style="width: 1px; height: 20px; background: var(--outline-2); margin: 0 4px;"></div><button class="btn secondary action-btn" type="button" data-createfile="${sc.id}" title="Create Text/XML File"><span class="material-symbols-outlined" style="font-size: 16px;">note_add</span> <span class="btn-text">New File</span></button><button class="btn secondary action-btn" type="button" data-attach="${sc.id}" title="Attach File"><span class="material-symbols-outlined" style="font-size: 16px;">attach_file</span> <span class="btn-text">Attach</span></button><button class="btn secondary" type="button" data-cmd="closeKeyboard" title="Close Keyboard"><span class="material-symbols-outlined" style="margin:0; font-size: 20px;">keyboard_hide</span></button></div><div class="evidence" contenteditable="${isLocked ? 'false' : 'true'}" data-evidence="${sc.id}" spellcheck="false"></div><input type="file" hidden data-file="${sc.id}" /></div>${dateHtml}</div>`;
+        const fieldsHtml = (sc.fields || []).map(f => `
+            <div class="field-row">
+            <input class="input" data-fkey="${f.id}" data-sid="${sc.id}" value="${escapeAttr(f.key)}" placeholder="Field Name (e.g., Env, Policy)" />
+            <input class="input" data-fval="${f.id}" data-sid="${sc.id}" value="${escapeAttr(f.val)}" placeholder="Value" />
+            <button class="btn secondary del action-btn icon-only" type="button" data-delfield="${f.id}" data-sid="${sc.id}"><span class="material-symbols-outlined">close</span></button>
+            </div>
+        `).join("");
+
+        d.innerHTML = `<summary><div class="summary-content"><div style="display:flex; align-items:center; gap:6px; width: 100%;">${dragHandleHtml}<input class="header-name-input" data-field="name" data-sid="${sc.id}" value="${escapeAttr(sc.name||"")}" placeholder="Item ${idx+1}" readonly style="width: ${nameWidth};" /></div>${dashSnippet}${tagsContainerHtml}</div><div class="summary-actions">${dashBadge}<div class="scen-more-wrap"><button class="btn secondary action-btn icon-only scen-more-btn" type="button" title="More Actions"><span class="material-symbols-outlined">more_vert</span></button><div class="scen-more-menu"><button class="btn secondary action-btn" type="button" title="Edit Name" data-edit-name="${sc.id}"><span class="material-symbols-outlined">edit</span> <span class="btn-text">Edit Name</span></button><button class="btn secondary action-btn" type="button" title="Link Notes" data-linknotes="${sc.id}"><span class="material-symbols-outlined">add_link</span> <span class="btn-text">Link Notes</span></button><button class="btn secondary action-btn" type="button" title="Copy Link" data-copylink="${sc.id}"><span class="material-symbols-outlined">link</span> <span class="btn-text">Copy Link</span></button><button class="btn secondary action-btn" type="button" title="Save as Template" data-template="${sc.id}"><span class="material-symbols-outlined">bookmark_add</span> <span class="btn-text">Save Template</span></button><button class="btn secondary action-btn" type="button" title="Duplicate Item" data-duplicate="${sc.id}"><span class="material-symbols-outlined">content_copy</span> <span class="btn-text">Duplicate</span></button><button class="btn secondary action-btn" type="button" title="Move Item" data-move="${sc.id}"><span class="material-symbols-outlined">move_item</span> <span class="btn-text">Move</span></button><button class="btn danger action-btn" type="button" title="Delete Item" data-delete="${sc.id}"><span class="material-symbols-outlined">delete</span> <span class="btn-text">Delete Item</span></button></div></div><div class="chev" title="Expand"><span class="material-symbols-outlined chev-expand">expand_more</span><span class="material-symbols-outlined chev-full" title="Expand to Full View">open_in_full</span></div></div></summary><div class="card-body"><div class="evidence-wrap"><div class="label" style="margin-bottom: 6px;"><span class="material-symbols-outlined" style="font-size: 14px;">image</span> Notes & Media</div><div class="tbl-controls tbl-row-controls"><button class="tbl-btn tbl-add-row" data-cmd="tableAddRow" title="Add Row Below"><span class="material-symbols-outlined">add</span></button><div class="tbl-divider"></div><button class="tbl-btn tbl-del-row" data-cmd="tableDelRow" title="Delete Row"><span class="material-symbols-outlined">remove</span></button></div><div class="tbl-controls tbl-col-controls"><button class="tbl-btn tbl-add-col" data-cmd="tableAddCol" title="Add Column Right"><span class="material-symbols-outlined">add</span></button><div class="tbl-divider"></div><button class="tbl-btn tbl-del-col" data-cmd="tableDelCol" title="Delete Column"><span class="material-symbols-outlined">remove</span></button></div><div class="wysiwyg-toolbar action-btn"><button class="btn secondary" type="button" data-cmd="bold" title="Bold"><span class="material-symbols-outlined" style="margin:0;">format_bold</span></button><button class="btn secondary" type="button" data-cmd="italic" title="Italic"><span class="material-symbols-outlined" style="margin:0;">format_italic</span></button><button class="btn secondary" type="button" data-cmd="strikeThrough" title="Strikethrough"><span class="material-symbols-outlined" style="margin:0;">strikethrough_s</span></button><button class="btn secondary" type="button" data-cmd="insertUnorderedList" title="Bullet List"><span class="material-symbols-outlined" style="margin:0;">format_list_bulleted</span> <span class="btn-text">List</span></button><button class="btn secondary" type="button" data-cmd="insertOrderedList" title="Numbered List"><span class="material-symbols-outlined" style="margin:0;">format_list_numbered</span> <span class="btn-text">Num List</span></button><button class="btn secondary" type="button" data-cmd="insertCheckbox" title="Insert Checkbox"><span class="material-symbols-outlined" style="margin:0;">check_box</span> <span class="btn-text">Checkbox</span></button><div style="width: 1px; height: 20px; background: var(--outline-2); margin: 0 4px;"></div><button class="btn secondary" type="button" data-cmd="outdent" title="Outdent"><span class="material-symbols-outlined" style="margin:0;">format_indent_decrease</span></button><button class="btn secondary" type="button" data-cmd="indent" title="Indent"><span class="material-symbols-outlined" style="margin:0;">format_indent_increase</span></button><div style="width: 1px; height: 20px; background: var(--outline-2); margin: 0 4px;"></div><button class="btn secondary" type="button" data-cmd="createLink" title="Insert Link"><span class="material-symbols-outlined" style="margin:0;">link</span></button><button class="btn secondary" type="button" data-cmd="insertTable" title="Insert Table"><span class="material-symbols-outlined" style="margin:0;">table_chart</span></button><div style="width: 1px; height: 20px; background: var(--outline-2); margin: 0 4px;"></div><button class="btn secondary action-btn" type="button" data-createfile="${sc.id}" title="Create Text/XML File"><span class="material-symbols-outlined" style="font-size: 16px;">note_add</span> <span class="btn-text">New File</span></button><button class="btn secondary action-btn" type="button" data-attach="${sc.id}" title="Attach File"><span class="material-symbols-outlined" style="font-size: 16px;">attach_file</span> <span class="btn-text">Attach</span></button><button class="btn secondary" type="button" data-cmd="closeKeyboard" title="Close Keyboard"><span class="material-symbols-outlined" style="margin:0; font-size: 20px;">keyboard_hide</span></button></div><div class="evidence" contenteditable="${isLocked ? 'false' : 'true'}" data-evidence="${sc.id}" spellcheck="false"></div><input type="file" hidden data-file="${sc.id}" /></div><div class="card-body-properties" style="margin-top: 16px;"><div class="label" style="justify-content: space-between;"><span style="display:flex; align-items:center; gap:4px;"><span class="material-symbols-outlined" style="font-size: 14px;">tune</span> Properties</span><button class="btn secondary action-btn icon-only" type="button" data-addfield="${sc.id}" style="padding: 2px; min-height: auto; border: none; background: transparent; color: var(--primary); box-shadow: none;" title="Add Property Field"><span class="material-symbols-outlined" style="font-size: 18px;">add_circle</span></button></div><div class="field-list">${fieldsHtml}</div></div>${dateHtml}</div>`;
 
         const evidence = d.querySelector(`[data-evidence="${sc.id}"]`);
         evidence.innerHTML = sc.evidenceHtml || "";
@@ -745,7 +764,37 @@ export class MainPanelView {
             }
         });
         if (htmlUpdated) sc.evidenceHtml = evidence.innerHTML; 
+
+        if (linkIds.length > 0) {
+            setTimeout(() => {
+                const container = d.querySelector(`[data-links-for="${sc.id}"]`);
+                if (container) this.renderLinkedNotes(sc.id, linkIds, container);
+            }, 0);
+        }
+
         return d;
+    }
+
+    async renderLinkedNotes(scId, linkIds, container) {
+        if (!linkIds || linkIds.length === 0) return;
+        let html = '';
+        
+        for (const lid of linkIds) {
+            const db = await dbService.init();
+            const item = await new Promise(resolve => {
+                const tx = db.transaction('items', 'readonly');
+                const req = tx.objectStore('items').get(lid);
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => resolve(null);
+            });
+            if (item) {
+                html += `<a href="#note/${item.id}" data-internal-link="${item.id}" class="tag link-tag" style="color: var(--primary); border-color: var(--primary-light); background: var(--primary-light); cursor: pointer; text-decoration: none;"><span class="material-symbols-outlined" style="font-size: 14px; margin-right: 4px;">link</span>${escapeHtml(item.name || "Note")}</a>`;
+            }
+        }
+        if (html) {
+            container.style.display = 'flex';
+            container.insertAdjacentHTML('beforeend', html);
+        }
     }
 
     async updateTagsOnly() {
@@ -762,12 +811,22 @@ export class MainPanelView {
             const cards = [...panel.querySelectorAll("details.scenario")];
             cards.forEach((card) => {
                 const sid = card.dataset.sid; const sc = scenarios.find(s => s.id === sid); if(!sc) return;
-                const tagsContainer = card.querySelector(".summary-tags") || card.querySelector(".summary-sub");
+                const tagsContainer = card.querySelector(".summary-tags");
                 const validFields = (sc.fields || []).filter(f => f.key.trim() || f.val.trim());
                 if(validFields.length > 0) {
-                    const tagsHtml = validFields.map(f => `<span class="tag"><b>${escapeHtml(f.key || "Field")}:</b> ${escapeHtml(f.val || "-")}</span>`).join("");
-                    if(!tagsContainer || tagsContainer.className === "summary-sub") { card.querySelector('.summary-content').innerHTML += `<div class="summary-tags">${tagsHtml}</div>`; } else { tagsContainer.innerHTML = tagsHtml; }
-                } else { if(tagsContainer && tagsContainer.className === "summary-tags") { tagsContainer.remove(); } }
+                    const tagsHtml = validFields.map(f => `<span class="tag property-tag"><b>${escapeHtml(f.key || "Field")}:</b> ${escapeHtml(f.val || "-")}</span>`).join("");
+                    if(!tagsContainer) { 
+                        card.querySelector('.summary-content').insertAdjacentHTML('beforeend', `<div class="summary-tags" data-tags-for="${sc.id}" style="display:flex;">${tagsHtml}</div>`); 
+                    } else { 
+                        const links = Array.from(tagsContainer.querySelectorAll('.link-tag'));
+                        tagsContainer.innerHTML = tagsHtml; 
+                        links.forEach(l => tagsContainer.appendChild(l));
+                        tagsContainer.style.display = 'flex';
+                    }
+                } else if (tagsContainer) { 
+                    const links = Array.from(tagsContainer.querySelectorAll('.link-tag'));
+                    if (links.length > 0) { tagsContainer.innerHTML = ''; links.forEach(l => tagsContainer.appendChild(l)); tagsContainer.style.display = 'flex'; } else { tagsContainer.style.display = 'none'; }
+                }
             });
         });
     }

@@ -253,9 +253,12 @@
   details[open] > summary { border-radius: var(--r12) var(--r12) 0 0; }
   summary::-webkit-details-marker{ display:none; }
 
-  /* Hide tags and subtitle when card is expanded */
-  details[open] summary .summary-tags,
-  details[open] summary .summary-sub {
+  /* Hide property tags and subtitle when card is expanded (Edit Mode) */
+  body:not(.readonly) details[open] > summary .property-tag {
+    display: none;
+  }
+  
+  details[open] > summary .summary-sub {
     display: none;
   }
   
@@ -288,8 +291,9 @@
 
   .chev{ display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 50%; color: var(--muted); transition: background 0.2s; margin-left: 4px; }
   .chev:hover { background: var(--surface-2); color: var(--text); }
-  .chev span.material-symbols-outlined { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-  details[open] summary .chev span.material-symbols-outlined { transform: rotate(180deg); }
+  .chev-full { display: none; }
+  details[open] summary .chev-expand { display: none; }
+  details[open] summary .chev-full { display: block; }
   
   .scen-more-wrap { position: relative; }
   .scen-more-menu { position: absolute; right: 0; top: 100%; margin-top: 8px; background: var(--surface); border: 1px solid var(--outline-2); border-radius: 8px; box-shadow: var(--shadow-2); display: flex; flex-direction: column; opacity: 0; pointer-events: none; transform: translateY(-10px); transition: all 0.2s ease; z-index: 100; min-width: 160px; padding: 4px; }
@@ -364,6 +368,9 @@
   .tbl-divider { background: var(--outline); }
   .tbl-row-controls .tbl-divider { width: 1px; height: 12px; margin: 0 4px; }
   .tbl-col-controls .tbl-divider { width: 12px; height: 1px; margin: 3px 0; }
+
+  /* Hide bottom properties in read-only mode */
+  body.readonly .card-body-properties { display: none; }
 
   .evidence{ border: 1px dashed var(--outline-2); background: var(--evidence-bg); color: var(--text); border-radius: var(--r12); padding: 12px; min-height: 130px; outline:none; line-height: 1.5; transition: all 0.3s ease; }
   .scenario .evidence { max-height: 40vh; overflow-y: auto; }
@@ -456,6 +463,44 @@
     
     .search-trigger-btn { display: none !important; }
     
+    .appbar .actions { 
+        display: none; 
+        position: fixed; 
+        bottom: 90px; 
+        left: 50%; 
+        transform: translateX(calc(-50% + 20px)); 
+        background: var(--surface); 
+        border: 1px solid var(--outline-2); 
+        border-radius: 12px; 
+        padding: 6px; 
+        flex-direction: column; 
+        box-shadow: var(--shadow-2); 
+        z-index: 110;
+        width: 200px;
+        align-items: stretch;
+        gap: 2px;
+    }
+    .appbar .actions.active {
+        display: flex;
+        animation: pillMenuSlideUp 0.2s ease-out;
+    }
+    @keyframes pillMenuSlideUp {
+        from { opacity: 0; transform: translate(calc(-50% + 20px), 10px); }
+        to { opacity: 1; transform: translate(calc(-50% + 20px), 0); }
+    }
+    .appbar .actions .btn {
+        justify-content: flex-start;
+        border: none !important;
+        background: transparent !important;
+        padding: 10px 12px;
+        color: var(--text) !important;
+        box-shadow: none !important;
+        border-radius: 8px;
+    }
+    .appbar .actions .btn:hover, .appbar .actions .btn:active { background: var(--surface-2) !important; }
+    .appbar .actions .btn .btn-text { display: inline !important; font-weight: 600; font-size: 14px;}
+    .appbar .actions .btn .material-symbols-outlined { margin-right: 12px !important; font-size: 20px !important; color: var(--muted) !important; }
+
     /* The Mobile Pill (Neutral & Grounded) */
     .mobile-action-pill { display: flex; position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--surface); border: 1px solid var(--outline); border-radius: 999px; padding: 0 24px; justify-content: space-between; box-shadow: var(--shadow-2); z-index: 100; align-items: center; height: 56px; width: 240px; }
     .pill-btn { background: transparent; border: none; color: var(--muted); padding: 8px; border-radius: 50%; display: grid; place-items: center; cursor: pointer; transition: all 0.2s; }
