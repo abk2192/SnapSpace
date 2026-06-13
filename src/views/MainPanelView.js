@@ -1,6 +1,7 @@
 import { escapeHtml, escapeAttr } from '../utils/dom.js';
 import { globalEvents } from '../core/PubSub.js';
 import { dialogService } from '../services/DialogService.js';
+import { dbService } from '../services/Database.js';
 
 export class MainPanelView {
     constructor(vm) {
@@ -331,9 +332,28 @@ export class MainPanelView {
         this.renderPanel();
     }
 
-    renderTabs() {
+    async renderTabs() {
         if(!this.tabsEl) return;
         const savedScrollLeft = this.tabsEl.scrollLeft;
+
+        const daysWithNotes = new Set();
+        const tabCounts = {};
+        if (this.vm.activeWorkspace) {
+            const items = await dbService.getItemsByProject(this.vm.activeWorkspace.id);
+            items.forEach(sc => {
+                let dStr = sc.noteDate;
+                if (!dStr) {
+                    const d = new Date(sc.createdAt || sc.modifiedAt || Date.now());
+                    dStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                }
+                daysWithNotes.add(dStr);
+                
+                const tabTag = (sc._tags || []).find(t => t.toLowerCase().startsWith('tabid:'));
+                const tId = tabTag ? tabTag.split(':')[1] : null;
+                if (tId) tabCounts[tId] = (tabCounts[tId] || 0) + 1;
+            });
+        }
+
         this.tabsEl.innerHTML = "";
         const tabs = this.vm.tabs;
         const activeTabId = this.vm.activeTabId || (this.vm.activeWorkspace?.activeTabId === "dashboard" ? "dashboard" : null);
@@ -348,18 +368,6 @@ export class MainPanelView {
             const firstDay = new Date(year, month, 1).getDay(); const daysInMonth = new Date(year, month + 1, 0).getDate();
             const monthName = new Date(year, month, 1).toLocaleString('default', { month: 'long' });
             
-            const daysWithNotes = new Set();
-            this.vm.tabs.forEach(t => {
-                t.scenarios.forEach(sc => {
-                    let dStr = sc.noteDate;
-                    if (!dStr) {
-                        const d = new Date(sc.createdAt || sc.modifiedAt || Date.now());
-                        dStr = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-                    }
-                    daysWithNotes.add(dStr);
-                });
-            });
-
             let daysHtml = ''; const dayNames = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
             dayNames.forEach(d => daysHtml += `<div style="font-weight: 700; color: var(--muted); padding: 4px 0; font-size: 11px; text-align: center;">${d}</div>`);
             for (let i = 0; i < firstDay; i++) { daysHtml += `<div></div>`; }
@@ -390,6 +398,8 @@ export class MainPanelView {
                 </div>`;
         } else { calWrap.style.display = "none"; }
 
+        const fragment = document.createDocumentFragment();
+
         // Dashboard Tab
         const dashBtn = document.createElement("button");
         dashBtn.className = "tab" + (activeTabId === "dashboard" ? " active" : "");
@@ -401,7 +411,7 @@ export class MainPanelView {
             </span>
         `;
         dashBtn.addEventListener("click", () => { this.vm.setActiveTab("dashboard", 'dashboard'); });
-        this.tabsEl.appendChild(dashBtn);
+        fragment.appendChild(dashBtn);
 
         tabs.forEach((tab, index) => {
             const btn = document.createElement("button");
@@ -411,7 +421,7 @@ export class MainPanelView {
             let finalHtml = `
             <span class="tab-name-wrapper">
                 <span class="tab-label" title="${escapeAttr(tab.name)}">${escapeHtml(tab.name)}</span>
-                <span class="tab-count">${tab.scenarios.length}</span>
+                <span class="tab-count">${tab.isTemporary ? (tab.scenarios?.length || 0) : (tabCounts[tab.id] || 0)}</span>
             </span>
             `;
             if (tab.isTemporary) {
@@ -447,7 +457,7 @@ export class MainPanelView {
                 }
                 this.vm.setActiveTab(tab.id, 'maximized');
             });
-            this.tabsEl.appendChild(btn);
+            fragment.appendChild(btn);
         });
         const plus = document.createElement("button");
         plus.className = "tab plus"; plus.type = "button"; plus.textContent = "＋ New tab";
@@ -463,8 +473,10 @@ export class MainPanelView {
                 } 
             }, 50);
         });
-        this.tabsEl.appendChild(plus);
+        fragment.appendChild(plus);
 
+        this.tabsEl.innerHTML = "";
+        this.tabsEl.appendChild(fragment);
         this.tabsEl.scrollLeft = savedScrollLeft;
 
         // Ensure active tab and surrounding tabs remain visible on swipe/click
@@ -490,20 +502,38 @@ export class MainPanelView {
         }, 50);
     }
 
-    renderPanel() {
+    async renderPanel() {
         if(!this.tabsEl || !this.panelEl) return;
-        this.panelEl.innerHTML = "";
         
         const activeTabId = this.vm.activeTabId;
+        const currentWsId = this.vm.activeWorkspace?.id;
+        if (!currentWsId && !this.vm.temporarySearchTab) {
+            this.panelEl.innerHTML = "";
+            return;
+        }
+
+        const wrap = document.createElement("div"); wrap.className = "tab-panel"; wrap.style.display = "block";
+
         if (this.vm.viewMode === "dashboard") {
-            const wrap = document.createElement("div"); wrap.className = "tab-panel"; wrap.style.display = "block";
-            
             let allScenarios = [];
-            if (activeTabId === "dashboard") {
-                this.vm.tabs.forEach(t => t.scenarios.forEach(sc => allScenarios.push({ ...sc, _tabId: t.id, _tabName: t.name })));
-            } else {
-                const currentTab = this.vm.tabs.find(t => t.id === activeTabId);
-                if (currentTab) currentTab.scenarios.forEach(sc => allScenarios.push({ ...sc, _tabId: currentTab.id, _tabName: currentTab.name }));
+            if (currentWsId) {
+                if (activeTabId === "dashboard") {
+                    const items = await dbService.getItemsByProject(currentWsId);
+                    const views = await dbService.getViewsByProject(currentWsId);
+                    items.forEach(sc => {
+                        const tabTag = (sc._tags || []).find(t => t.toLowerCase().startsWith('tabid:'));
+                        const tId = tabTag ? tabTag.split(':')[1] : null;
+                        const view = views.find(v => v.id === tId);
+                        allScenarios.push({ ...sc, _tabId: tId, _tabName: view ? view.name : "Unknown", _wsId: currentWsId });
+                    });
+                } else {
+                    const items = await dbService.getItemsByTab(activeTabId);
+                    const views = await dbService.getViewsByProject(currentWsId);
+                    const view = views.find(v => v.id === activeTabId);
+                    items.forEach(sc => {
+                        allScenarios.push({ ...sc, _tabId: activeTabId, _tabName: view ? view.name : "Unknown", _wsId: currentWsId });
+                    });
+                }
             }
             
             if (this.vm.dashboardDateFilter) {
@@ -532,28 +562,37 @@ export class MainPanelView {
                 recent.forEach((sc, idx) => { wrap.appendChild(this.renderScenarioCard(sc, idx, true)); });
             }
 
+            this.panelEl.innerHTML = "";
             this.panelEl.appendChild(wrap);
             const pMeta = document.getElementById("panelMeta"); if (pMeta) pMeta.style.display = "block";
+            const panelHeadActions = document.querySelector('.panel-head > div:nth-child(2)');
+            if (panelHeadActions) panelHeadActions.style.display = "none";
             return;
         }
 
-        const currentTab = this.vm.tabs.find(t => t.id === activeTabId);
-        if (currentTab) {
-            const wrap = document.createElement("div"); wrap.className = "tab-panel";
-            wrap.style.display = "block";
-            const isTemp = currentTab.isTemporary;
-            currentTab.scenarios.forEach((sc, idx) => { wrap.appendChild(this.renderScenarioCard(sc, idx, false, isTemp)); });
-            this.panelEl.appendChild(wrap);
+        let renderScenarios = [];
+        let isTemp = false;
+        if (activeTabId === 'search_results' && this.vm.temporarySearchTab) {
+            renderScenarios = this.vm.temporarySearchTab.scenarios || [];
+            isTemp = true;
+        } else if (activeTabId) {
+            renderScenarios = await dbService.getItemsByTab(activeTabId);
+            renderScenarios.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
         }
         
+        renderScenarios.forEach((sc, idx) => { wrap.appendChild(this.renderScenarioCard(sc, idx, false, isTemp)); });
+        
+        this.panelEl.innerHTML = "";
+        this.panelEl.appendChild(wrap);
+
         const pMeta = document.getElementById("panelMeta"); if (pMeta) pMeta.style.display = "none";
         
         const panelHeadActions = document.querySelector('.panel-head > div:nth-child(2)');
-        if (panelHeadActions) panelHeadActions.style.display = this.vm.viewMode === "dashboard" ? "none" : "flex";
+        if (panelHeadActions) panelHeadActions.style.display = "flex";
 
-        const active = this.vm.activeTab; const toggleAllBtn = document.getElementById('toggleAllBtn');
-        if (toggleAllBtn && active) {
-            const anyOpen = active.scenarios.some(sc => sc.isOpen !== false);
+        const toggleAllBtn = document.getElementById('toggleAllBtn');
+        if (toggleAllBtn && renderScenarios.length > 0) {
+            const anyOpen = renderScenarios.some(sc => sc.isOpen !== false);
             toggleAllBtn.innerHTML = `<span class="material-symbols-outlined">${anyOpen ? 'unfold_less' : 'unfold_more'}</span>`;
             toggleAllBtn.title = anyOpen ? 'Collapse All' : 'Expand All';
         }
@@ -675,15 +714,22 @@ export class MainPanelView {
         return d;
     }
 
-    updateTagsOnly() {
-        const tab = this.vm.activeTab; if (!tab) return;
+    async updateTagsOnly() {
+        const activeTabId = this.vm.activeTabId; if (!activeTabId) return;
+        let scenarios = [];
+        if (activeTabId === 'search_results' && this.vm.temporarySearchTab) {
+            scenarios = this.vm.temporarySearchTab.scenarios;
+        } else {
+            scenarios = await dbService.getItemsByTab(activeTabId);
+        }
+
         const panels = [...document.querySelectorAll(".tab-panel")];
         panels.forEach(panel => {
             const cards = [...panel.querySelectorAll("details.scenario")];
-            cards.forEach((card, idx) => {
-                const sid = card.dataset.sid; const sc = tab.scenarios.find(s => s.id === sid); if(!sc) return;
+            cards.forEach((card) => {
+                const sid = card.dataset.sid; const sc = scenarios.find(s => s.id === sid); if(!sc) return;
                 const tagsContainer = card.querySelector(".summary-tags") || card.querySelector(".summary-sub");
-                const validFields = sc.fields.filter(f => f.key.trim() || f.val.trim());
+                const validFields = (sc.fields || []).filter(f => f.key.trim() || f.val.trim());
                 if(validFields.length > 0) {
                     const tagsHtml = validFields.map(f => `<span class="tag"><b>${escapeHtml(f.key || "Field")}:</b> ${escapeHtml(f.val || "-")}</span>`).join("");
                     if(!tagsContainer || tagsContainer.className === "summary-sub") { card.querySelector('.summary-content').innerHTML += `<div class="summary-tags">${tagsHtml}</div>`; } else { tagsContainer.innerHTML = tagsHtml; }

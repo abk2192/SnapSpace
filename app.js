@@ -272,7 +272,7 @@ async function bootApp() {
     
     // Execute Phase 1 DB Migration in background 
     // (This runs parallel to your legacy state, ensuring the UI remains unbroken while we build the new DB backend)
-    await dbService.migrateToFlatData();
+    await dbService.migrateToFlatData().catch(err => console.error("[DB Migration] Error:", err));
 
     dialogService.init();
     

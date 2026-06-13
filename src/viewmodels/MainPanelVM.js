@@ -32,14 +32,32 @@ export class MainPanelVM {
     }
 
     updateProjectTitle(title) {
-        if (this.activeWorkspace) { this.activeWorkspace.title = title; globalEvents.publish('workspaces:changed'); }
+        if (this.activeWorkspace) { 
+            this.activeWorkspace.title = title; 
+            dbService.putProject({id: this.activeWorkspace.id, title: title, activeTabId: this.activeWorkspace.activeTabId, updatedAt: Date.now()}).then(() => globalEvents.publish('store:saved')).catch(console.error);
+            globalEvents.publish('workspaces:changed'); 
+        }
     }
 
     async resetProject() {
         if(this.activeWorkspace && await window.appConfirm("Are you sure you want to reset the CURRENT project? This will delete all tabs and notes inside it.")) {
+            const views = await dbService.getViewsByProject(this.activeWorkspace.id);
+            for (const v of views) await dbService.deleteView(v.id);
+            const items = await dbService.getItemsByProject(this.activeWorkspace.id);
+            for (const i of items) await dbService.deleteItem(i.id);
+
             const now = Date.now();
-            this.activeWorkspace.tabs = [{ id: uid(), name: "Tab 1", scenarios: [{ id: uid(), name:`Note ${new Date().toISOString().split('T')[0]} 1`, fields: [], evidenceHtml:"", isOpen: true, createdAt: now, modifiedAt: now }] }];
-            this.activeWorkspace.activeTabId = this.activeWorkspace.tabs[0].id;
+            const defaultTabId = uid();
+            const defaultScId = uid();
+            const dateStr = new Date().toISOString().split('T')[0];
+
+            this.activeWorkspace.tabs = [{ id: defaultTabId, name: "Tab 1", scenarios: [{ id: defaultScId, name:`Note ${dateStr} 1`, fields: [], evidenceHtml:"", isOpen: true, createdAt: now, modifiedAt: now }] }];
+            this.activeWorkspace.activeTabId = defaultTabId;
+            
+            await dbService.putProject({id: this.activeWorkspace.id, title: this.activeWorkspace.title, activeTabId: defaultTabId, updatedAt: now});
+            await dbService.putView({id: defaultTabId, projectId: this.activeWorkspace.id, name: "Tab 1", query: `tabId:${defaultTabId}`, createdAt: now, updatedAt: now});
+            await this._syncScenarioToDB(defaultScId);
+
             globalEvents.publish('tabs:changed');
             globalEvents.publish('scenarios:changed');
         }
@@ -56,6 +74,7 @@ export class MainPanelVM {
         this._tempActiveTabId = null;
         if (this.activeWorkspace) {
             this.activeWorkspace.activeTabId = id;
+            dbService.putProject({id: this.activeWorkspace.id, title: this.activeWorkspace.title, activeTabId: id, updatedAt: Date.now()}).catch(console.error);
             this.viewMode = mode;
             if (id !== "dashboard" && mode === 'maximized') {
                 const tab = this.activeWorkspace.tabs.find(t => t.id === id);
@@ -118,6 +137,11 @@ export class MainPanelVM {
         const dateStr = this.dashboardDateFilter || new Date().toISOString().split('T')[0];
         this.activeWorkspace.tabs.push({ id, name, scenarios: [{ id: newScenId, name:`Note ${dateStr} 1`, noteDate: dateStr, fields: [], evidenceHtml:"", isOpen: true, createdAt: now, modifiedAt: now }] }); 
         this.activeWorkspace.activeTabId = id; 
+        
+        dbService.putView({id, projectId: this.activeWorkspace.id, name, query: `tabId:${id}`, createdAt: now, updatedAt: now}).catch(console.error);
+        dbService.putProject({id: this.activeWorkspace.id, title: this.activeWorkspace.title, activeTabId: id, updatedAt: now}).catch(console.error);
+        this._syncScenarioToDB(newScenId).catch(console.error);
+
         globalEvents.publish('tabs:changed');
         globalEvents.publish('scenarios:changed');
         return newScenId;
@@ -129,12 +153,20 @@ export class MainPanelVM {
         if (idx < 0) return;
         if(await window.appConfirm("Are you sure you want to delete this tab and all its notes?")) {
             this.activeWorkspace.tabs.splice(idx, 1);
+            
+            await dbService.deleteView(id);
+            const items = await dbService.getItemsByTab(id);
+            for(const item of items) await dbService.deleteItem(item.id);
+
             if (this.activeWorkspace.activeTabId === id) { 
                 this.activeWorkspace.activeTabId = this.tabs[Math.max(0, idx-1)]?.id || null; 
                 if (!this.activeWorkspace.activeTabId) { 
-                    this.activeWorkspace.tabs.push({ id: uid(), name: "Tab 1", scenarios: [] }); 
-                    this.activeWorkspace.activeTabId = this.tabs[0].id; 
+                    const newTabId = uid();
+                    this.activeWorkspace.tabs.push({ id: newTabId, name: "Tab 1", scenarios: [] }); 
+                    this.activeWorkspace.activeTabId = newTabId; 
+                    await dbService.putView({id: newTabId, projectId: this.activeWorkspace.id, name: "Tab 1", query: `tabId:${newTabId}`, createdAt: Date.now(), updatedAt: Date.now()});
                 } 
+                await dbService.putProject({id: this.activeWorkspace.id, title: this.activeWorkspace.title, activeTabId: this.activeWorkspace.activeTabId, updatedAt: Date.now()});
             }
             globalEvents.publish('tabs:changed');
             globalEvents.publish('scenarios:changed');
@@ -143,7 +175,11 @@ export class MainPanelVM {
 
     renameTab(id, newName) {
         const tab = this.tabs.find(t => t.id === id);
-        if (tab && newName) { tab.name = newName.trim() || "Untitled"; globalEvents.publish('tabs:changed'); }
+        if (tab && newName) { 
+            tab.name = newName.trim() || "Untitled"; 
+            dbService.putView({id: tab.id, projectId: this.activeWorkspace.id, name: tab.name, query: `tabId:${tab.id}`, updatedAt: Date.now()}).then(() => globalEvents.publish('store:saved')).catch(console.error);
+            globalEvents.publish('tabs:changed'); 
+        }
     }
 
     reorderTabs(fromIdx, toIdx) {
@@ -193,6 +229,7 @@ export class MainPanelVM {
             linkedFrom: sc.linkedFrom || []
         };
         await dbService.putItem(flatItem);
+        globalEvents.publish('store:saved');
     }
 
     addScenario() {
