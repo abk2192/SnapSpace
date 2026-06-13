@@ -20,7 +20,7 @@ class ThemeService {
     }
 
     setTheme(theme) {
-        this.currentTheme = theme;
+        this.currentTheme = theme; 
         this.applyTheme();
     }
 
